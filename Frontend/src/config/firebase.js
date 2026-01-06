@@ -7,8 +7,12 @@ import { getAnalytics } from "firebase/analytics";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// 
+// NOTE: Firebase web API keys are intentionally public and safe to expose in client-side code.
+// This is expected behavior for web apps. Security is enforced via Firebase Console domain restrictions.
+// To restrict usage: Firebase Console > Project Settings > API Keys > Restrict by HTTP referrer
 const firebaseConfig = {
-  apiKey: "AIzaSyA8QX3LFXdH6qJ-jrO5X9KTUfM86etSs9o",
+  apiKey: "AIzaSyA8QX3LFXdH6qJ-jrO5X9KTUfM86etSs9o", // Public web API key (safe for client-side)
   authDomain: "reps-dz.firebaseapp.com",
   projectId: "reps-dz",
   storageBucket: "reps-dz.firebasestorage.app",
