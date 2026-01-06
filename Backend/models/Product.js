@@ -1,112 +1,138 @@
 const mongoose = require('mongoose');
+const slugify = require('slugify');
 
 const productSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
+    required: [true, 'Product name is required'],
     trim: true
+  },
+  slug: {
+    type: String,
+    unique: true,
+    lowercase: true
+  },
+  category: {
+    type: String, // Keeping as String for flexibility as no separate Category model exists
+    required: [true, 'Product category is required'],
+    trim: true
+  },
+  shortDescription: {
+    type: String,
+    trim: true,
+    required: [true, 'Short description is required']
   },
   description: {
     type: String,
-    required: true
+    required: [true, 'Full product description is required']
   },
   price: {
     type: Number,
-    required: true,
+    required: [true, 'Price is required'],
     min: 0
   },
-  originalPrice: {
-    type: Number,
-    min: 0
-  },
-  images: [{
-    url: {
-      type: String,
-      required: true
-    },
-    publicId: String,
-    width: Number,
-    height: Number,
-    format: String,
-    size: Number
-  }],
-  category: {
-    type: String,
-    required: true,
-    enum: ['calisthenics', 'gym', 'martial-arts', 'supplements', 'accessories']
-  },
-  inStock: {
-    type: Boolean,
-    default: true
-  },
-  stockQuantity: {
+  discount: {
     type: Number,
     default: 0,
+    min: 0,
+    max: 100
+  },
+  finalPrice: {
+    type: Number,
     min: 0
   },
-  badge: {
-    type: String,
-    enum: ['new', 'sale', 'featured', 'best-seller', null],
-    default: null
+  stock: {
+    type: Number,
+    required: [true, 'Stock quantity is required'],
+    min: 0,
+    default: 0
+  },
+  lowStockAlert: {
+    type: Number,
+    default: 5
+  },
+  variants: {
+    sizes: {
+      type: [String],
+      default: []
+    },
+    colors: {
+      type: [String],
+      default: []
+    }
   },
   specifications: {
     material: String,
-    weightCapacity: String,
-    dimensions: String,
-    installation: String,
-    warranty: String
-  },
-  rating: {
-    average: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 5
+    weight: Number, // in kg
+    maxLoad: Number, // in kg
+    usage: {
+      type: String,
+      enum: ['Indoor', 'Outdoor', 'Both'],
+      default: 'Both'
     },
-    count: {
-      type: Number,
-      default: 0
+    difficulty: {
+      type: String,
+      enum: ['Beginner', 'Intermediate', 'Advanced', 'All Levels'],
+      default: 'All Levels'
+    },
+    bodyTarget: [String]
+  },
+  images: {
+    main: {
+      type: String,
+      required: [true, 'Main product image is required']
+    },
+    gallery: {
+      type: [String],
+      default: []
     }
   },
-  reviews: [{
-    user: String,
-    rating: {
-      type: Number,
-      min: 1,
-      max: 5
-    },
-    comment: String,
-    date: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  tags: [String],
-  featured: {
+  tags: {
+    type: [String],
+    default: []
+  },
+  status: {
+    type: String,
+    enum: ['Active', 'Draft', 'Hidden', 'Out of stock'],
+    default: 'Active'
+  },
+  isFeatured: {
     type: Boolean,
     default: false
-  }
+  },
+  // Legacy fields mapping or preservation if needed, otherwise removed
+  // Added standard fields
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// Indexes for better query performance
-productSchema.index({ name: 'text', description: 'text' });
-productSchema.index({ category: 1 });
-productSchema.index({ price: 1 });
-productSchema.index({ featured: 1 });
-productSchema.index({ inStock: 1 });
-
-// Virtual for discount percentage
-productSchema.virtual('discountPercentage').get(function() {
-  if (this.originalPrice && this.originalPrice > this.price) {
-    return Math.round(((this.originalPrice - this.price) / this.originalPrice) * 100);
+// Middleware to auto-generate slug and finalPrice
+productSchema.pre('save', function(next) {
+  // Generate Slug
+  if (this.isModified('name') || !this.slug) {
+    this.slug = slugify(this.name, { lower: true, strict: true });
   }
-  return 0;
+
+  // Calculate Final Price
+  if (this.isModified('price') || this.isModified('discount')) {
+    const discountAmount = (this.price * (this.discount || 0)) / 100;
+    this.finalPrice = Math.round((this.price - discountAmount) * 100) / 100;
+  }
+
+  // Auto update status if stock is 0
+  if (this.stock === 0 && this.status !== 'Draft' && this.status !== 'Hidden') {
+    this.status = 'Out of stock';
+  }
+
+  next();
 });
 
-// Ensure virtual fields are serialized
-productSchema.set('toJSON', { virtuals: true });
-productSchema.set('toObject', { virtuals: true });
+// Indexes
+productSchema.index({ name: 'text', description: 'text', tags: 'text' });
+productSchema.index({ category: 1 });
+productSchema.index({ status: 1 });
+productSchema.index({ slug: 1 });
 
 module.exports = mongoose.model('Product', productSchema); 

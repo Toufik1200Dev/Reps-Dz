@@ -7,6 +7,7 @@ const { upload } = require('../config/storage');
 // Public routes
 router.get('/', productController.getAllProducts);
 router.get('/featured', productController.getFeaturedProducts);
+router.get('/best-offers', productController.getBestOffers);
 router.get('/categories', productController.getProductCategories);
 router.get('/search', productController.searchProducts);
 router.get('/category/:category', productController.getProductsByCategory);

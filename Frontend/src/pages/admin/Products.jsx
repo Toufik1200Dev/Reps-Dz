@@ -1,666 +1,715 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Box,
-  Button,
-  Chip,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControlLabel,
-  Grid,
-  IconButton,
-  InputAdornment,
-  Paper,
-  Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Tooltip,
-  Typography,
-  Alert,
-} from '@mui/material';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Add as AddIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  Image as ImageIcon,
   Search as SearchIcon,
+  FilterList as FilterIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Close as CloseIcon,
   CloudUpload as CloudUploadIcon,
-  Lock as LockIcon,
+  Check as CheckIcon,
+  Inventory as InventoryIcon,
+  AttachMoney as ActionIcon
 } from '@mui/icons-material';
-import { productsAPI, apiUtils, adminAPI } from '../../services/api';
+import { productsAPI, apiUtils } from '../../services/api';
 
-const placeholderImage = '/placeholder.svg?height=120&width=120';
+/**
+ * Image Upload Component
+ * Uploads file immediately and returns URL to parent
+ */
+const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multiple = false }) => {
+  const [uploading, setUploading] = useState(false);
 
-function normalizeProductFromApi(apiProduct) {
-  if (!apiProduct) return null;
-  
-  // Handle new image structure (objects with url property) and old structure (simple strings)
-  let firstImage = placeholderImage;
-  let images = [];
-  
-  if (Array.isArray(apiProduct.images)) {
-    images = apiProduct.images.map(img => {
-      if (typeof img === 'string') {
-        return img; // Old format: simple string
-      } else if (img && img.url) {
-        return img.url; // New format: object with url property
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    setUploading(true);
+    try {
+      // Upload sequentially or parallel
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('image', file);
+        // Assuming productsAPI.uploadImage exists and returns { url: ... }
+        // If not, we might need to fix this assumption. 
+        // Based on previous file, it returns result.data which has url
+        const res = await productsAPI.uploadImage(file);
+        const url = res.data?.url || res.url; // Adapt based on actual response
+        if (url) onUpload(url);
       }
-      return '';
-    }).filter(Boolean);
-    
-    if (images.length > 0) {
-      firstImage = images[0];
+    } catch (error) {
+      console.error('Upload failed', error);
+      alert('Image upload failed');
+    } finally {
+      setUploading(false);
     }
-  } else if (apiProduct.image) {
-    firstImage = apiProduct.image;
-    images = [apiProduct.image];
-  }
-  
-  return {
-    id: apiProduct._id || apiProduct.id,
-    name: apiProduct.name || '',
-    price: String(apiProduct.price ?? ''),
-    originalPrice: apiProduct.originalPrice ? String(apiProduct.originalPrice) : '',
-    description: apiProduct.description || '',
-    category: apiProduct.category || '',
-    images: images,
-    image: firstImage,
-    stockQuantity: apiProduct.stockQuantity ?? 0,
-    inStock: apiProduct.inStock ?? (apiProduct.stockQuantity > 0),
-    isFeatured: apiProduct.isFeatured ?? false,
-    rating: apiProduct.rating ?? 4.8,
-    reviews: apiProduct.reviews ?? '0+',
-  };
-}
-
-function ProductForm({ initialValue, onSubmit, onCancel, isSubmitting }) {
-  const [form, setForm] = useState(() => initialValue);
-
-  useEffect(() => {
-    console.log('🔄 ProductForm: initialValue changed:', initialValue);
-    console.log('🔄 ProductForm: initialValue.images:', initialValue.images);
-    setForm(initialValue);
-  }, [initialValue]);
-
-  // Debug: Log form state changes
-  useEffect(() => {
-    console.log('📝 ProductForm: form state changed:', form);
-    console.log('📝 ProductForm: form.images:', form.images);
-  }, [form]);
-
-  const handleChange = (field) => (e) => {
-    const value = e?.target?.type === 'checkbox' ? e.target.checked : e.target.value;
-    console.log('✏️ Field change:', field, 'Value:', value);
-    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const [uploadingImages, setUploadingImages] = useState([]);
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-bold mb-2 text-gray-700">{label}</label>
 
-  const handleImageChange = (index, value) => {
-    setForm((prev) => {
-      const images = Array.isArray(prev.images) ? [...prev.images] : [];
-      images[index] = value;
-      return { ...prev, images };
+      {/* Preview Area */}
+      {showPreview && imageUrl && !multiple && (
+        <div className="relative w-32 h-32 mb-3 group">
+          <img src={imageUrl} alt="Preview" className="w-full h-full object-cover rounded-lg border border-gray-200" />
+          <button
+            type="button"
+            onClick={onRemove}
+            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <CloseIcon fontSize="small" />
+          </button>
+        </div>
+      )}
+
+      {/* Upload Button */}
+      <div className="relative">
+        <input
+          type="file"
+          accept="image/*"
+          multiple={multiple}
+          onChange={handleFileChange}
+          className="hidden"
+          id={`param-${label}`}
+          disabled={uploading}
+        />
+        <label
+          htmlFor={`param-${label}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${uploading ? 'bg-gray-100 border-gray-300' : 'bg-gray-50 border-gray-300 hover:border-secondary hover:bg-secondary/10'}`}
+        >
+          <CloudUploadIcon className={uploading ? 'text-gray-400' : 'text-secondary'} />
+          <span className="text-sm font-medium text-gray-600">{uploading ? 'Uploading...' : 'Click to Upload'}</span>
+        </label>
+      </div>
+    </div>
+  );
+};
+
+const ProductForm = ({ initialData, onSubmit, onCancel }) => {
+  const [activeTab, setActiveTab] = useState('general');
+  const [formData, setFormData] = useState({
+    name: '',
+    slug: '',
+    category: '',
+    shortDescription: '',
+    description: '',
+    price: '',
+    discount: 0,
+    stock: 0,
+    lowStockAlert: 5,
+    status: 'Active',
+    variants: { sizes: [], colors: [] },
+    specifications: {
+      material: '',
+      weight: '',
+      maxLoad: '',
+      usage: 'Both',
+      difficulty: 'All Levels',
+      bodyTarget: []
+    },
+    images: { main: '', gallery: [] },
+    tags: []
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        ...initialData,
+        // Ensure nested structures exist
+        variants: initialData.variants || { sizes: [], colors: [] },
+        specifications: initialData.specifications || { material: '', weight: '', maxLoad: '', usage: 'Both', difficulty: 'All Levels', bodyTarget: [] },
+        images: initialData.images || { main: '', gallery: [] },
+        tags: initialData.tags || []
+      });
+    }
+  }, [initialData]);
+
+  const handleChange = (path, value) => {
+    setFormData(prev => {
+      const newData = { ...prev };
+      // Handle simplified nested updates
+      if (path.includes('.')) {
+        const [parent, child] = path.split('.');
+        newData[parent] = { ...newData[parent], [child]: value };
+      } else {
+        newData[path] = value;
+      }
+      return newData;
     });
   };
 
-  const handleFileUpload = async (index, file) => {
-    if (!file) return;
-    
-    console.log('📁 Starting file upload for index:', index, 'File:', file.name);
-    
-    // Set uploading state
-    setUploadingImages(prev => ({ ...prev, [index]: true }));
-    
-    try {
-      const result = await productsAPI.uploadImage(file);
-      console.log('📸 Upload result:', result);
-      
-      // Extract the image URL from the response - backend sends: {success: true, data: {url: "..."}}
-      const imageUrl = result.data?.url;
-      
-      if (imageUrl) {
-        console.log('✅ Image uploaded successfully:', imageUrl);
-        console.log('🔄 Updating form state for index:', index, 'with URL:', imageUrl);
-        
-        // Update the form state directly
-        setForm(prev => {
-          const newImages = [...(prev.images || [])];
-          newImages[index] = imageUrl;
-          console.log('📝 New images array:', newImages);
-          return { ...prev, images: newImages };
-        });
-        
-        console.log('✅ Form state updated successfully');
-      } else {
-        console.error('❌ No image URL in response:', result);
-        console.log('🔍 Response structure:', JSON.stringify(result, null, 2));
-        alert('Upload successful but no image URL received. Please try again.');
-      }
-    } catch (error) {
-      console.error('❌ Failed to upload image:', error);
-      alert(`Failed to upload image: ${error.message}`);
-    } finally {
-      setUploadingImages(prev => ({ ...prev, [index]: false }));
-    }
-  };
+  const handleArrayToggle = (path, value) => {
+    setFormData(prev => {
+      const [parent, child] = path.split('.');
+      const currentArray = parent === 'tags' ? prev.tags : prev[parent][child];
+      const exists = currentArray.includes(value);
 
-  const addImageField = () => {
-    setForm((prev) => ({ ...prev, images: [...(prev.images || []), ''] }));
-  };
+      let newArray;
+      if (exists) newArray = currentArray.filter(item => item !== value);
+      else newArray = [...currentArray, value];
 
-  const removeImageField = (index) => {
-    setForm((prev) => {
-      const images = [...(prev.images || [])];
-      images.splice(index, 1);
-      return { ...prev, images };
+      if (parent === 'tags') return { ...prev, tags: newArray };
+      return {
+        ...prev,
+        [parent]: { ...prev[parent], [child]: newArray }
+      };
     });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(form);
+    onSubmit(formData);
   };
 
+  const tabs = [
+    { id: 'general', label: 'Basic Info' },
+    { id: 'pricing', label: 'Pricing & Stock' },
+    { id: 'variants', label: 'Variants' },
+    { id: 'specs', label: 'Specifications' },
+    { id: 'images', label: 'Images' }
+  ];
+
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-      <Grid container spacing={{ xs: 1, sm: 2 }}>
-        <Grid item xs={12} sm={6}>
-          <TextField label="Name" value={form.name} onChange={handleChange('name')} fullWidth required />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField label="Price" value={form.price} onChange={handleChange('price')} fullWidth required type="number" inputProps={{ step: '0.01', min: '0' }} />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField label="Original Price" value={form.originalPrice} onChange={handleChange('originalPrice')} fullWidth type="number" inputProps={{ step: '0.01' }} />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField label="Category" value={form.category} onChange={handleChange('category')} fullWidth />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField label="Stock Quantity" value={form.stockQuantity} onChange={handleChange('stockQuantity')} fullWidth type="number" />
-        </Grid>
-        <Grid item xs={12}>
-          <TextField label="Description" value={form.description} onChange={handleChange('description')} fullWidth multiline minRows={3} />
-        </Grid>
+    <form onSubmit={handleSubmit} className="flex flex-col h-full">
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 px-6">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === tab.id ? 'border-secondary text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        <Grid item xs={12}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Product Images</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Upload images directly or provide URLs. Images will be stored in Cloudinary.
-          </Typography>
-          {console.log('🎨 Rendering images section. form.images:', form.images)}
-          <Grid container spacing={{ xs: 1, sm: 2 }}>
-            {(form.images || []).map((url, idx) => {
-              console.log(`🎨 Rendering image ${idx}:`, url);
-              return (
-                <Grid item xs={12} sm={6} key={idx}>
-                  <Box sx={{ border: '2px dashed #ddd', borderRadius: 2, p: 2, textAlign: 'center' }}>
-                    {/* Image Preview */}
-                    {url && (
-                      <Box sx={{ mb: 2 }}>
-                        <img 
-                          src={url} 
-                          alt={`Product ${idx + 1}`} 
-                          style={{ 
-                            width: '100%', 
-                            height: '150px', 
-                            objectFit: 'cover', 
-                            borderRadius: 8 
-                          }} 
-                        />
-                      </Box>
-                    )}
-                    
-                    {/* File Upload Input */}
-                    <input
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      id={`image-upload-${idx}`}
-                      type="file"
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        if (file) {
-                          handleFileUpload(idx, file);
-                        }
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        {activeTab === 'general' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold mb-1">Product Name *</label>
+                <input
+                  className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-secondary"
+                  value={formData.name}
+                  onChange={e => handleChange('name', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Category *</label>
+                <select
+                  className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-secondary"
+                  value={formData.category}
+                  onChange={e => handleChange('category', e.target.value)}
+                  required
+                >
+                  <option value="">Select Category</option>
+                  <option value="calisthenics">Calisthenics Equipment</option>
+                  <option value="gym and body building">Gym & Bodybuilding</option>
+                  <option value="clothes">Apparel</option>
+                  <option value="accessories">Accessories</option>
+                  <option value="supplements">Supplements</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-1">Short Description *</label>
+              <input
+                className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-secondary"
+                value={formData.shortDescription}
+                onChange={e => handleChange('shortDescription', e.target.value)}
+                placeholder="Brief summary for cards..."
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-1">Full Description *</label>
+              <textarea
+                className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-secondary h-32"
+                value={formData.description}
+                onChange={e => handleChange('description', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-1">Tags</label>
+              <input
+                className="w-full p-2 border border-gray-200 rounded-lg mb-2"
+                placeholder="Type and press Enter to add tag (Simulated for now, enter comma separated)"
+                onBlur={e => {
+                  if (e.target.value) handleChange('tags', e.target.value.split(',').map(s => s.trim()))
+                }}
+                defaultValue={formData.tags.join(', ')}
+              />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'pricing' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold mb-1">Base Price (DA) *</label>
+                <input
+                  type="number"
+                  className="w-full p-2 border border-gray-200 rounded-lg"
+                  value={formData.price}
+                  onChange={e => handleChange('price', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Discount (%)</label>
+                <input
+                  type="number"
+                  className="w-full p-2 border border-gray-200 rounded-lg"
+                  value={formData.discount}
+                  onChange={e => handleChange('discount', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-gray-50 rounded-xl">
+              <div className="text-sm text-gray-500">Estimated Final Price</div>
+              <div className="text-2xl font-black font-display text-green-600">
+                {formData.price ? (formData.price - (formData.price * (formData.discount / 100))).toLocaleString() : '0'} DA
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold mb-1">Stock Quantity *</label>
+                <input
+                  type="number"
+                  className="w-full p-2 border border-gray-200 rounded-lg"
+                  value={formData.stock}
+                  onChange={e => handleChange('stock', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Low Stock Alert</label>
+                <input
+                  type="number"
+                  className="w-full p-2 border border-gray-200 rounded-lg"
+                  value={formData.lowStockAlert}
+                  onChange={e => handleChange('lowStockAlert', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold mb-1">Status</label>
+              <select
+                className="w-full p-2 border border-gray-200 rounded-lg"
+                value={formData.status}
+                onChange={e => handleChange('status', e.target.value)}
+              >
+                <option value="Active">Active</option>
+                <option value="Draft">Draft</option>
+                <option value="Hidden">Hidden</option>
+                <option value="Out of stock">Out of Stock</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'variants' && (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-bold mb-2">Sizes Available</label>
+              <div className="flex flex-wrap gap-2">
+                {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One Size'].map(size => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => handleArrayToggle('variants.sizes', size)}
+                    className={`px-4 py-2 rounded-lg border text-sm font-bold transition-all ${formData.variants.sizes.includes(size)
+                        ? 'bg-black text-white border-black'
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-black'
+                      }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold mb-2">Colors Available</label>
+              <input
+                type="text"
+                placeholder="Enter color name/hex and Press Enter (Comma separated for now)"
+                className="w-full p-2 border border-gray-200 rounded-lg"
+                defaultValue={formData.variants.colors.join(', ')}
+                onBlur={e => {
+                  if (e.target.value) {
+                    const colors = e.target.value.split(',').map(c => c.trim()).filter(Boolean);
+                    handleChange('variants.colors', colors);
+                  }
+                }}
+              />
+              <div className="flex gap-2 mt-2">
+                {formData.variants.colors.map(c => (
+                  <span key={c} className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-600">{c}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'specs' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold mb-1">Material</label>
+                <input
+                  className="w-full p-2 border border-gray-200 rounded-lg"
+                  value={formData.specifications.material}
+                  onChange={e => handleChange('specifications.material', e.target.value)}
+                  placeholder="e.g. Steel, Wood"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Difficulty Level</label>
+                <select
+                  className="w-full p-2 border border-gray-200 rounded-lg"
+                  value={formData.specifications.difficulty}
+                  onChange={e => handleChange('specifications.difficulty', e.target.value)}
+                >
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                  <option value="All Levels">All Levels</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold mb-1">Weight (kg)</label>
+                <input
+                  type="number"
+                  className="w-full p-2 border border-gray-200 rounded-lg"
+                  value={formData.specifications.weight}
+                  onChange={e => handleChange('specifications.weight', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Max Load (kg)</label>
+                <input
+                  type="number"
+                  className="w-full p-2 border border-gray-200 rounded-lg"
+                  value={formData.specifications.maxLoad}
+                  onChange={e => handleChange('specifications.maxLoad', e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-1">Usage Environment</label>
+              <select
+                className="w-full p-2 border border-gray-200 rounded-lg"
+                value={formData.specifications.usage}
+                onChange={e => handleChange('specifications.usage', e.target.value)}
+              >
+                <option value="Indoor">Indoor</option>
+                <option value="Outdoor">Outdoor</option>
+                <option value="Both">Both</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-2">Body Target Areas</label>
+              <div className="flex flex-wrap gap-2">
+                {['Upper Body', 'Core', 'Legs', 'Full Body', 'Pulling', 'Pushing'].map(area => (
+                  <button
+                    key={area}
+                    type="button"
+                    onClick={() => handleArrayToggle('specifications.bodyTarget', area)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${formData.specifications.bodyTarget.includes(area)
+                        ? 'bg-secondary text-black'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}
+                  >
+                    {area}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'images' && (
+          <div className="space-y-6">
+            <div>
+              <ImageUploader
+                label="Main Product Image (Required)"
+                showPreview={true}
+                imageUrl={formData.images.main}
+                onUpload={(url) => handleChange('images.main', url)}
+                onRemove={() => handleChange('images.main', '')}
+              />
+            </div>
+
+            <div className="border-t border-gray-100 pt-6">
+              <label className="block text-sm font-bold mb-2 text-gray-700">Gallery Images</label>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                {formData.images.gallery.map((url, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group">
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newGallery = formData.images.gallery.filter((_, i) => i !== idx);
+                        handleChange('images.gallery', newGallery);
                       }}
-                    />
-                    <label htmlFor={`image-upload-${idx}`}>
-                      <Button
-                        component="span"
-                        variant="outlined"
-                        startIcon={uploadingImages[idx] ? <ImageIcon /> : <CloudUploadIcon />}
-                        disabled={uploadingImages[idx]}
-                        sx={{ mb: 1 }}
-                      >
-                        {uploadingImages[idx] ? 'Uploading...' : 'Upload Image'}
-                      </Button>
-                    </label>
-                    
-                    {/* URL Input */}
-                    <TextField
-                      value={url}
-                      onChange={(e) => handleImageChange(idx, e.target.value)}
-                      placeholder="Or enter image URL..."
-                      fullWidth
-                      size="small"
-                      sx={{ mt: 1 }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <ImageIcon />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                    
-                    {/* Remove Button */}
-                    <Button 
-                      color="error" 
-                      size="small" 
-                      onClick={() => removeImageField(idx)}
-                      sx={{ mt: 1 }}
+                      className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      Remove
-                    </Button>
-                  </Box>
-                </Grid>
-              );
-            })}
-            <Grid item xs={12}>
-              <Button onClick={addImageField} startIcon={<AddIcon />} variant="outlined">
-                Add Another Image
-              </Button>
-            </Grid>
-          </Grid>
-        </Grid>
+                      <CloseIcon fontSize="small" />
+                    </button>
+                  </div>
+                ))}
+                <ImageUploader
+                  label="Add"
+                  multiple={true}
+                  onUpload={(url) => {
+                    handleChange('images.gallery', [...(formData.images.gallery || []), url]);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-        <Grid item xs={12} md={4}>
-          <FormControlLabel control={<Switch checked={!!form.inStock} onChange={handleChange('inStock')} />} label="In Stock" />
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <FormControlLabel control={<Switch checked={!!form.isFeatured} onChange={handleChange('isFeatured')} />} label="Featured" />
-        </Grid>
-      </Grid>
-
-             <Box sx={{ 
-         display: 'flex', 
-         flexDirection: { xs: 'column', sm: 'row' },
-         justifyContent: 'flex-end', 
-         gap: { xs: 1, sm: 2 }, 
-         mt: 3 
-       }}>
-         <Button 
-           onClick={onCancel} 
-           variant="outlined"
-           fullWidth={{ xs: true, sm: false }}
-           sx={{ order: { xs: 2, sm: 1 } }}
-         >
-           Cancel
-         </Button>
-         <Button 
-           type="submit" 
-           variant="contained" 
-           disabled={isSubmitting}
-           fullWidth={{ xs: true, sm: false }}
-           sx={{ order: { xs: 1, sm: 2 } }}
-         >
-           Save
-         </Button>
-       </Box>
-    </Box>
+      {/* Footer */}
+      <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 rounded-b-2xl">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-6 py-2 rounded-lg font-bold text-gray-500 hover:text-black hover:bg-white transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="px-8 py-2 bg-black text-secondary rounded-lg font-bold hover:bg-gray-900 transition-colors shadow-lg shadow-black/10"
+        >
+          Save Product
+        </button>
+      </div>
+    </form>
   );
-}
+};
 
-export default function Products() {
-  const [submitting, setSubmitting] = useState(false);
+export default function ProductsPage() {
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminError, setAdminError] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter(p => (p.name || '').toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q));
-  }, [products, search]);
-
-  const loadProducts = async () => {
+  const fetchProducts = async () => {
     try {
+      setLoading(true);
       const res = await productsAPI.getAllProducts();
-      const list = res?.data?.products || res?.data || [];
-      setProducts(list.map(normalizeProductFromApi).filter(Boolean));
-    } catch (err) {
-      console.error(err);
+      setProducts(res.data?.products || res.data || []);
+    } catch (error) {
+      console.error('Failed to load products', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadProducts();
+    fetchProducts();
   }, []);
 
-  const openCreate = () => {
-    setEditing({
-      name: '',
-      price: '',
-      originalPrice: '',
-      description: '',
-      category: '',
-      images: [''],
-      stockQuantity: 0,
-      inStock: true,
-      isFeatured: false,
-    });
-    setDialogOpen(true);
-  };
-
-  const openEdit = (product) => {
-    setEditing({ ...product, images: product.images || (product.image ? [product.image] : []) });
-    setDialogOpen(true);
-  };
-
-  const closeDialog = () => {
-    setDialogOpen(false);
-    setEditing(null);
-  };
-
-  const handleSubmit = async (form) => {
-    console.log('🚀 Submitting form:', form);
-    console.log('🔍 Form images:', form.images);
-    console.log('🔍 Form images type:', typeof form.images);
-    console.log('🔍 Form images length:', form.images?.length);
-    
-    setSubmitting(true);
-    try {
-      const payload = {
-        name: form.name,
-        price: parseFloat(form.price),
-        originalPrice: form.originalPrice ? parseFloat(form.originalPrice) : undefined,
-        description: form.description,
-        category: form.category,
-        images: (form.images || []).filter(Boolean),
-        stockQuantity: parseInt(form.stockQuantity || 0, 10),
-        inStock: !!form.inStock,
-        isFeatured: !!form.isFeatured,
-      };
-      
-      console.log('📦 Formatted payload:', payload);
-      console.log('🔍 Payload images:', payload.images);
-      console.log('🔍 Payload images type:', typeof payload.images);
-      console.log('🔍 Payload images length:', payload.images?.length);
-
-      if (editing && editing.id) {
-        console.log('🔄 Updating product:', editing.id);
-        await productsAPI.update(editing.id, payload);
-        console.log('✅ Product updated successfully');
-      } else {
-        console.log('➕ Creating new product');
-        console.log('🔑 Auth headers available:', !!localStorage.getItem('adminPassword'));
-        
-        const result = await productsAPI.create(payload);
-        console.log('✅ Product created successfully:', result);
-      }
-
-      await loadProducts();
-      closeDialog();
-    } catch (error) {
-      console.error('❌ Form submission error:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        status: error.status,
-        response: error.response,
-        stack: error.stack
-      });
-      const { message } = apiUtils.handleError(error);
-      alert(message);
-    } finally {
-      setSubmitting(false);
-    }
+  const handleEdit = (product) => {
+    setEditingProduct(product);
+    setModalOpen(true);
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this product?')) return;
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
     try {
       await productsAPI.delete(id);
-      await loadProducts();
+      fetchProducts();
     } catch (error) {
-      const { message } = apiUtils.handleError(error);
-      alert(message);
+      alert('Failed to delete product');
     }
   };
 
-  const handleAdminLogin = async () => {
-    setAdminError('');
+  const handleFormSubmit = async (data) => {
     try {
-      await adminAPI.login(adminPassword);
-      setAdminPassword(''); // Clear password field
-      alert('Admin login successful! You can now upload images and manage products.');
-    } catch {
-      setAdminError('Invalid admin password. Please try again.');
+      // Convert simplified structure to API payload if needed, 
+      // but our form structure matches schema pretty well.
+      // Handle JSON serialization if the API expects it, but we are sending JSON body.
+      // The service `productsAPI.create` handles JSON or FormData. 
+      // Since we uploading images async, we have URLs in data. So Just JSON is fine.
+
+      if (editingProduct) {
+        await productsAPI.update(editingProduct.id || editingProduct._id, data);
+      } else {
+        await productsAPI.create(data);
+      }
+      setModalOpen(false);
+      setEditingProduct(null);
+      fetchProducts();
+    } catch (error) {
+      console.error(error);
+      alert('Failed to save product: ' + (error.response?.data?.message || error.message));
     }
   };
+
+  const filteredProducts = useMemo(() => {
+    const q = search.toLowerCase();
+    return products.filter(p => p.name.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q));
+  }, [products, search]);
 
   return (
-    <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 } }}>
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: { xs: 'column', sm: 'row' },
-        alignItems: { xs: 'stretch', sm: 'center' }, 
-        justifyContent: 'space-between', 
-        mb: 3,
-        gap: { xs: 2, sm: 0 }
-      }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 'bold', fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>Products</Typography>
-          <Typography variant="body2" color="text.secondary">Manage catalog, add, edit and delete products</Typography>
-        </Box>
-        <Button 
-          variant="contained" 
-          startIcon={<AddIcon />} 
-          onClick={openCreate}
-          fullWidth={{ xs: true, sm: false }}
-          sx={{ minWidth: { sm: 'auto' } }}
+    <div className="max-w-7xl mx-auto p-6 md:p-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-4xl font-display font-black mb-2">Products Management</h1>
+          <p className="text-gray-500">Add, edit, and organize your equipment inventory.</p>
+        </div>
+        <button
+          onClick={() => { setEditingProduct(null); setModalOpen(true); }}
+          className="bg-black text-secondary px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-900 transition-transform hover:-translate-y-1 shadow-lg shadow-black/20"
         >
-          Add Product
-        </Button>
-      </Box>
+          <AddIcon />
+          <span>Add New Product</span>
+        </button>
+      </div>
 
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <TextField
-          placeholder="Search by name or category"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          fullWidth
-          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
-        />
-      </Paper>
+      {/* Toolbar */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-8 flex flex-col md:flex-row gap-4">
+        <div className="flex-1 relative">
+          <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-secondary transition-colors"
+            placeholder="Search products by name, category..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2">
+          <button className="px-4 py-2 border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 flex items-center gap-2">
+            <FilterIcon fontSize="small" /> Filters
+          </button>
+        </div>
+      </div>
 
-      <Box sx={{ mb: 2 }}>
-        <TextField
-          label="Admin Password"
-          type="password"
-          value={adminPassword}
-          onChange={(e) => setAdminPassword(e.target.value)}
-          fullWidth
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <LockIcon />
-              </InputAdornment>
-            ),
-          }}
-          error={!!adminError}
-          helperText={adminError}
-        />
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleAdminLogin}
-          fullWidth
-          sx={{ mt: 2 }}
-        >
-          Login as Admin
-        </Button>
-      </Box>
+      {/* Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50/50 border-b border-gray-100">
+              <tr>
+                <th className="p-4 pl-6 text-sm font-bold text-gray-500 uppercase tracking-wider">Product</th>
+                <th className="p-4 text-sm font-bold text-gray-500 uppercase tracking-wider">Category</th>
+                <th className="p-4 text-sm font-bold text-gray-500 uppercase tracking-wider">Price/Stock</th>
+                <th className="p-4 text-sm font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="p-4 text-right text-sm font-bold text-gray-500 uppercase tracking-wider pr-6">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {loading ? (
+                <tr><td colSpan="5" className="p-8 text-center">Loading...</td></tr>
+              ) : filteredProducts.length === 0 ? (
+                <tr><td colSpan="5" className="p-8 text-center text-gray-500">No products found.</td></tr>
+              ) : (
+                filteredProducts.map(product => (
+                  <tr key={product.id || product._id} className="group hover:bg-gray-50/50 transition-colors">
+                    <td className="p-4 pl-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-lg bg-gray-100 border border-gray-100 overflow-hidden flex-shrink-0">
+                          <img
+                            src={product.images?.main || (product.images?.[0]?.url) || product.image || '/placeholder-product.png'}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-900 group-hover:text-black transition-colors">{product.name}</h3>
+                          <p className="text-xs text-gray-500 line-clamp-1">{product.slug}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold uppercase tracking-wide">
+                        {product.category}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <div className="font-bold text-gray-900 font-mono">
+                        {product.finalPrice ? product.finalPrice.toLocaleString() : product.price?.toLocaleString()} DA
+                      </div>
+                      <div className={`text-xs font-bold ${product.stock > 10 ? 'text-green-600' : 'text-orange-500'}`}>
+                        {product.stock} items left
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${product.status === 'Active' ? 'bg-green-50 text-green-700 border-green-100' :
+                          product.status === 'Draft' ? 'bg-gray-50 text-gray-600 border-gray-100' :
+                            'bg-red-50 text-red-700 border-red-100'
+                        }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${product.status === 'Active' ? 'bg-green-500' :
+                            product.status === 'Draft' ? 'bg-gray-400' :
+                              'bg-red-500'
+                          }`}></span>
+                        {product.status || (product.inStock ? 'Active' : 'Out of stock')}
+                      </span>
+                    </td>
+                    <td className="p-4 pr-6 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => handleEdit(product)} className="p-2 text-gray-400 hover:text-black hover:bg-white rounded-lg transition-all shadow-sm border border-transparent hover:border-gray-100">
+                          <EditIcon fontSize="small" />
+                        </button>
+                        <button onClick={() => handleDelete(product.id || product._id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+                          <DeleteIcon fontSize="small" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center text-sm text-gray-500">
+          <span>Showing {filteredProducts.length} items</span>
+          {/* Pagination could go here */}
+        </div>
+      </div>
 
-            {/* Mobile Card View */}
-      <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-        {filtered.map((p) => (
-          <Paper key={p.id} sx={{ p: 2, mb: 2, borderRadius: 2 }}>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-              <img 
-                src={p.image || placeholderImage} 
-                alt={p.name} 
-                style={{ 
-                  width: 80, 
-                  height: 80, 
-                  objectFit: 'cover', 
-                  borderRadius: 8,
-                  flexShrink: 0
-                }} 
+      {/* Modal Overlay */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-4xl h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <h2 className="text-2xl font-display font-black">
+                {editingProduct ? 'Edit Product' : 'Add New Product'}
+              </h2>
+              <button onClick={() => { setModalOpen(false); setEditingProduct(null); }} className="p-2 hover:bg-gray-100 rounded-full">
+                <CloseIcon />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ProductForm
+                initialData={editingProduct}
+                onSubmit={handleFormSubmit}
+                onCancel={() => { setModalOpen(false); setEditingProduct(null); }}
               />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>{p.name}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  {p.description?.slice(0, 80)}...
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  <Chip label={p.category} size="small" variant="outlined" />
-                  <Chip 
-                    label={p.inStock ? 'In Stock' : 'Out of Stock'} 
-                    color={p.inStock ? 'success' : 'default'} 
-                    size="small" 
-                  />
-                  {p.isFeatured && (
-                    <Chip label="Featured" color="primary" size="small" />
-                  )}
-                </Box>
-                <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', mb: 2 }}>
-                  {Number(p.price).toFixed(2)} DA
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<EditIcon />}
-                    onClick={() => openEdit(p)}
-                    sx={{ flex: 1 }}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    startIcon={<DeleteIcon />}
-                    onClick={() => handleDelete(p.id)}
-                    sx={{ flex: 1 }}
-                  >
-                    Delete
-                  </Button>
-                </Box>
-              </Box>
-            </Box>
-          </Paper>
-        ))}
-        {filtered.length === 0 && (
-          <Paper sx={{ p: 4, textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">No products found</Typography>
-          </Paper>
-        )}
-      </Box>
-
-      {/* Desktop Table View */}
-      <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' } }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Image</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell>Price</TableCell>
-              <TableCell>Stock</TableCell>
-              <TableCell>Featured</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filtered.map((p) => (
-              <TableRow key={p.id} hover>
-                <TableCell>
-                  <img src={p.image || placeholderImage} alt={p.name} style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8 }} />
-                </TableCell>
-                <TableCell>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{p.name}</Typography>
-                  <Typography variant="caption" color="text.secondary">{p.description?.slice(0, 60)}</Typography>
-                </TableCell>
-                <TableCell>{p.category}</TableCell>
-                <TableCell>{Number(p.price).toFixed(2)} DA</TableCell>
-                <TableCell>
-                  {p.inStock ? <Chip label="In Stock" color="success" size="small" /> : <Chip label="Out" color="default" size="small" />}
-                </TableCell>
-                <TableCell>
-                  {p.isFeatured ? <Chip label="Yes" color="primary" size="small" /> : <Chip label="No" size="small" />}
-                </TableCell>
-                <TableCell align="right">
-                  <Tooltip title="Edit">
-                    <IconButton onClick={() => openEdit(p)} size="small"><EditIcon /></IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton onClick={() => handleDelete(p.id)} size="small" color="error"><DeleteIcon /></IconButton>
-                  </Tooltip>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filtered.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
-                  <Typography variant="body2" color="text.secondary">No products found</Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Dialog 
-        open={dialogOpen} 
-        onClose={closeDialog} 
-        maxWidth="md" 
-        fullWidth
-        sx={{
-          '& .MuiDialog-paper': {
-            margin: { xs: 2, sm: 'auto' },
-            width: { xs: 'calc(100% - 32px)', sm: 'auto' },
-            maxWidth: { xs: '100%', sm: '600px' }
-          }
-        }}
-      >
-        <DialogTitle sx={{ 
-          fontSize: { xs: '1.25rem', sm: '1.5rem' },
-          px: { xs: 2, sm: 3 },
-          py: { xs: 2, sm: 2.5 }
-        }}>
-          {editing?.id ? 'Edit Product' : 'Add Product'}
-        </DialogTitle>
-        <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
-          {editing && (
-            <ProductForm initialValue={editing} onSubmit={handleSubmit} onCancel={closeDialog} isSubmitting={submitting} />
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 2.5 } }} />
-      </Dialog>
-    </Container>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
-
-

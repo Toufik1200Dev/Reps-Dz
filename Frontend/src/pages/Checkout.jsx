@@ -32,7 +32,7 @@ import {
   ArrowBack,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { featuredProducts } from '../data/products';
+import { useCart } from '../contexts/CartContext';
 import { ordersAPI, apiUtils } from '../services/api';
 
 const steps = ['Cart Review', 'Shipping Information', 'Payment', 'Confirmation'];
@@ -41,6 +41,7 @@ export default function Checkout() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
+  const { items: cartItems, clearCart } = useCart();
 
   // State
   const [activeStep, setActiveStep] = useState(0);
@@ -59,16 +60,13 @@ export default function Checkout() {
   const [selectedWilaya, setSelectedWilaya] = useState('');
   const [selectedCommune, setSelectedCommune] = useState('');
 
-  // Production-ready empty cart - will be populated from context/state
-  const cartItems = [];
-
   // Production-ready empty data - will be loaded from API
   const [wilayas, setWilayas] = useState([]);
   const [communes, setCommunes] = useState([]);
 
   const calculateSubtotal = () => {
     return cartItems.reduce((total, item) => {
-      const price = parseFloat(item.product.price);
+      const price = parseFloat(item.price) || 0;
       return total + (price * item.quantity);
     }, 0);
   };
@@ -103,21 +101,36 @@ export default function Checkout() {
 
   const handlePlaceOrder = async () => {
     try {
+      // Format cart items for order API (apiUtils expects { product: {...}, quantity: ... })
+      const formattedCartItems = cartItems.map(item => ({
+        product: {
+          id: item.id || item._id,
+          _id: item._id || item.id,
+          price: parseFloat(item.price) || 0,
+          name: item.name,
+        },
+        quantity: item.quantity,
+        size: item.size,
+        color: item.color,
+      }));
+
       const orderData = apiUtils.formatOrderData(
-        cartItems,
+        formattedCartItems,
         { ...shippingInfo, wilaya: selectedWilaya, commune: selectedCommune },
         paymentMethod
       );
-      
+
       const response = await ordersAPI.create(orderData);
       console.log('Order created:', response.data);
-      
-      // TODO: Clear cart after successful order
+
+      // Clear cart after successful order
+      clearCart();
       handleNext();
     } catch (error) {
       const errorInfo = apiUtils.handleError(error);
       console.error('Error placing order:', errorInfo.message);
       // TODO: Show error message to user
+      alert('Error placing order: ' + errorInfo.message);
     }
   };
 
@@ -144,32 +157,38 @@ export default function Checkout() {
             <Typography variant="h6" gutterBottom>
               Review Your Cart
             </Typography>
-            {cartItems.map((item) => (
-              <Card key={item.id} sx={{ mb: 2 }}>
-                <CardContent>
-                  <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={3}>
-                      <img
-                        src={item.product.image}
-                        alt={item.product.name}
-                        style={{ width: '100%', height: 'auto', borderRadius: 8 }}
-                      />
+            {cartItems.map((item) => {
+              const itemId = item.id || item._id;
+              const itemImage = item.image || item.images?.[0]?.url || item.images?.[0] || '';
+              const itemPrice = parseFloat(item.price) || 0;
+
+              return (
+                <Card key={itemId} sx={{ mb: 2 }}>
+                  <CardContent>
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid size={{ xs: 3 }}>
+                        <img
+                          src={itemImage}
+                          alt={item.name}
+                          style={{ width: '100%', height: 'auto', borderRadius: 8 }}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 6 }}>
+                        <Typography variant="h6">{item.name}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Quantity: {item.quantity}
+                        </Typography>
+                      </Grid>
+                      <Grid size={{ xs: 3 }}>
+                        <Typography variant="h6" align="right">
+                          {(itemPrice * item.quantity).toLocaleString('en-US', { maximumFractionDigits: 0 })} DA
+                        </Typography>
+                      </Grid>
                     </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="h6">{item.product.name}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Quantity: {item.quantity}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={3}>
-                      <Typography variant="h6" align="right">
-                        ${(parseFloat(item.product.price) * item.quantity).toFixed(2)}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </Box>
         );
 
@@ -180,7 +199,7 @@ export default function Checkout() {
               Shipping Information
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="First Name"
@@ -189,7 +208,7 @@ export default function Checkout() {
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Last Name"
@@ -198,7 +217,7 @@ export default function Checkout() {
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Email"
@@ -208,7 +227,7 @@ export default function Checkout() {
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Phone"
@@ -217,7 +236,7 @@ export default function Checkout() {
                   required
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Street Address"
@@ -226,7 +245,7 @@ export default function Checkout() {
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth required>
                   <InputLabel>Wilaya</InputLabel>
                   <Select
@@ -242,7 +261,7 @@ export default function Checkout() {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth required>
                   <InputLabel>Commune</InputLabel>
                   <Select
@@ -261,7 +280,7 @@ export default function Checkout() {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="City"
@@ -270,7 +289,7 @@ export default function Checkout() {
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Postal Code"
@@ -369,7 +388,7 @@ export default function Checkout() {
 
       <Grid container spacing={4}>
         {/* Main Content */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Card>
             <CardContent>
               {/* Stepper */}
@@ -410,7 +429,7 @@ export default function Checkout() {
         </Grid>
 
         {/* Order Summary */}
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Card sx={{ position: 'sticky', top: 20 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -418,18 +437,23 @@ export default function Checkout() {
               </Typography>
 
               {/* Items */}
-              {cartItems.map((item) => (
-                <Box key={item.id} sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">
-                      {item.product.name} x {item.quantity}
-                    </Typography>
-                    <Typography variant="body2">
-                      {(parseFloat(item.product.price) * item.quantity).toFixed(2)} DA
-                    </Typography>
+              {cartItems.map((item) => {
+                const itemId = item.id || item._id;
+                const itemPrice = parseFloat(item.price) || 0;
+
+                return (
+                  <Box key={itemId} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2">
+                        {item.name} x {item.quantity}
+                      </Typography>
+                      <Typography variant="body2">
+                        {(itemPrice * item.quantity).toLocaleString('en-US', { maximumFractionDigits: 0 })} DA
+                      </Typography>
+                    </Box>
                   </Box>
-                </Box>
-              ))}
+                );
+              })}
 
               <Divider sx={{ my: 2 }} />
 
@@ -437,21 +461,21 @@ export default function Checkout() {
               <Box sx={{ mb: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="body2">Subtotal</Typography>
-                  <Typography variant="body2">{calculateSubtotal().toFixed(2)} DA</Typography>
+                  <Typography variant="body2">{calculateSubtotal().toLocaleString('en-US', { maximumFractionDigits: 0 })} DA</Typography>
                 </Box>
               </Box>
               <Box sx={{ mb: 1 }}>
                 <Box sx={{ display: 'space-between' }}>
                   <Typography variant="body2">Shipping</Typography>
                   <Typography variant="body2">
-                    {calculateShipping() === 0 ? 'Free' : `${calculateShipping().toFixed(2)} DA`}
+                    {calculateShipping() === 0 ? 'Free' : `${calculateShipping().toLocaleString('en-US', { maximumFractionDigits: 0 })} DA`}
                   </Typography>
                 </Box>
               </Box>
               <Box sx={{ mb: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="body2">Tax</Typography>
-                  <Typography variant="body2">{calculateTax().toFixed(2)} DA</Typography>
+                  <Typography variant="body2">{calculateTax().toLocaleString('en-US', { maximumFractionDigits: 0 })} DA</Typography>
                 </Box>
               </Box>
 
@@ -462,14 +486,14 @@ export default function Checkout() {
                   Total
                 </Typography>
                 <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold' }}>
-                  {calculateTotal().toFixed(2)} DA
+                  {calculateTotal().toLocaleString('en-US', { maximumFractionDigits: 0 })} DA
                 </Typography>
               </Box>
 
               {/* Free Shipping Alert */}
               {calculateSubtotal() < 10000 && (
                 <Alert severity="info" sx={{ mt: 2 }}>
-                  Add {(10000 - calculateSubtotal()).toFixed(2)} DA more for free shipping!
+                  Add {(10000 - calculateSubtotal()).toLocaleString('en-US', { maximumFractionDigits: 0 })} DA more for free shipping!
                 </Alert>
               )}
             </CardContent>

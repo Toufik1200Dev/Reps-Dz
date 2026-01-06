@@ -1,27 +1,13 @@
 import React, { useState } from 'react';
 import {
-  Container,
-  Typography,
-  Grid,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Box,
-  IconButton,
-  Paper,
-  Divider,
-} from '@mui/material';
-import {
   Phone,
   Email,
   LocationOn,
   Facebook,
   Instagram,
-  Twitter,
-  LinkedIn,
   Send,
   ContactSupport,
+  WhatsApp,
 } from '@mui/icons-material';
 
 export default function ContactUs() {
@@ -46,525 +32,203 @@ export default function ContactUs() {
     });
   };
 
+  const handleWhatsApp = () => {
+    const phoneNumber = '+213782442033';
+    const message = encodeURIComponent('Hello REPS-DZ! I would like to know more about your products.');
+    window.open(`https://wa.me/${phoneNumber.replace(/[^0-9]/g, '')}?text=${message}`, '_blank');
+  };
+
   const contactInfo = [
     {
-      icon: <Phone sx={{ fontSize: 40, color: 'white' }} />,
+      icon: <Phone className="text-3xl" />,
       title: 'Phone',
-      details: ['+213782442033'],
-      color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      details: ['+213 782 442 033'],
+      bgColor: 'bg-secondary',
+      color: 'text-black',
     },
     {
-      icon: <Email sx={{ fontSize: 40, color: 'white' }} />,
+      icon: <Email className="text-3xl" />,
       title: 'Email',
-      details: ['titoubarz@gmail.com', 'rahmanitoufik1200@gmail.com'],
-      color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      details: ['rahmanitoufik1200@gmail.com'],
+      bgColor: 'bg-secondary',
+      color: 'text-black',
     },
     {
-      icon: <LocationOn sx={{ fontSize: 40, color: 'white' }} />,
+      icon: <LocationOn className="text-3xl" />,
       title: 'Address',
-      details: ['Algiers', ' Bab Ezzouar Douzi'],
-      color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      details: ['Algiers, Bab Ezzouar'],
+      bgColor: 'bg-secondary',
+      color: 'text-black',
     },
   ];
 
   const socialLinks = [
-    { icon: <Facebook />, name: 'Facebook', url: '#', color: '#1877f2' },
-    { icon: <Instagram />, name: 'Instagram', url: 'https://www.instagram.com/toufik_titouu/', color: '#e4405f' },
-    { icon: <Tiktok />, name: 'Tiktok', url: 'https://www.tiktok.com/@toufiktitou911', color: '#1da1f2' },
+    {
+      icon: <Facebook />,
+      name: 'Facebook',
+      url: '#',
+      color: 'text-blue-600 hover:bg-blue-600'
+    },
+    {
+      icon: <Instagram />,
+      name: 'Instagram',
+      url: 'https://www.instagram.com/toufik_titouu/',
+      color: 'text-pink-600 hover:bg-pink-600'
+    },
+    {
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+          <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+        </svg>
+      ),
+      name: 'TikTok',
+      url: 'https://www.tiktok.com/@toufiktitou911',
+      color: 'text-black hover:bg-black hover:text-white'
+    },
   ];
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <Box
-        sx={{
-          background: 'var(--primary-gradient)',
-          py: 10,
-          position: 'relative',
-          overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-            animation: 'float 20s ease-in-out infinite',
-          },
-          '@keyframes float': {
-            '0%, 100%': { transform: 'translateY(0px)' },
-            '50%': { transform: 'translateY(-20px)' },
-          },
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              textAlign: 'center',
-              color: 'white',
-              position: 'relative',
-              zIndex: 1,
-              animation: 'fadeInUp 0.8s ease-out',
-              '@keyframes fadeInUp': {
-                '0%': {
-                  opacity: 0,
-                  transform: 'translateY(30px)',
-                },
-                '100%': {
-                  opacity: 1,
-                  transform: 'translateY(0)',
-                },
-              },
-            }}
-          >
-            <ContactSupport sx={{ fontSize: 80, mb: 3, opacity: 0.9 }} />
-            <Typography
-              variant="h2"
-              sx={{
-                fontWeight: '900',
-                mb: 3,
-                textShadow: '0 4px 8px rgba(0,0,0,0.3)',
-                fontSize: { xs: '2.5rem', md: '3.5rem' }
-              }}
-            >
-              Get In Touch / تواصل معنا
-            </Typography>
-            <Typography
-              variant="h6"
-              sx={{
-                opacity: 0.9,
-                maxWidth: 700,
-                mx: 'auto',
-                lineHeight: 1.8,
-                fontSize: { xs: '1rem', md: '1.25rem' }
-              }}
-            >
-              Have questions about our sports equipment? We're here to help!
-              Reach out to us and we'll get back to you as soon as possible.
-              <br />
-              هل لديك أسئلة حول معداتنا الرياضية؟ نحن هنا للمساعدة!
-              تواصل معنا وسنرد عليك في أقرب وقت ممكن.
-            </Typography>
-          </Box>
-        </Container>
-      </Box>
+      <div className="bg-gradient-to-br from-black to-dark-900 py-16 md:py-24 text-white text-center px-4 relative overflow-hidden">
+        <div className="relative z-10 max-w-4xl mx-auto">
+          <ContactSupport className="text-7xl mb-6 opacity-90 text-secondary" />
+          <h1 className="font-display font-black text-4xl md:text-6xl mb-4">
+            GET IN <span className="text-secondary">TOUCH</span>
+          </h1>
+          <p className="text-gray-300 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+            Have questions about our equipment? We're here to help! Reach out to us and we'll get back to you as soon as possible.
+          </p>
+        </div>
+        {/* Background Overlay */}
+        <div className="absolute inset-0 opacity-10 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1600')] bg-cover bg-center" />
+      </div>
 
-      <Container maxWidth="lg" sx={{ py: 10 }}>
-        <Grid container spacing={8}>
-          {/* Contact Information */}
-          <Grid item xs={12} md={4}>
-            <Box
-              sx={{
-                animation: 'slideInLeft 0.8s ease-out',
-                '@keyframes slideInLeft': {
-                  '0%': {
-                    opacity: 0,
-                    transform: 'translateX(-30px)',
-                  },
-                  '100%': {
-                    opacity: 1,
-                    transform: 'translateX(0)',
-                  },
-                },
-              }}
-            >
-              <Typography
-                variant="h4"
-                sx={{
-                  mb: 5,
-                  fontWeight: '800',
-                  background: 'var(--primary-gradient)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                Contact Information / معلومات الاتصال
-              </Typography>
+      <div className="max-w-7xl mx-auto px-4 py-16 md:py-24">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
 
-              <Box sx={{ mb: 5 }}>
-                {contactInfo.map((info, index) => (
-                  <Card
-                    key={index}
-                    sx={{
-                      mb: 4,
-                      background: info.color,
-                      borderRadius: 3,
-                      border: 'none',
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
-                      },
-                      animation: `slideInUp 0.6s ease-out ${index * 0.1}s both`,
-                      '@keyframes slideInUp': {
-                        '0%': {
-                          opacity: 0,
-                          transform: 'translateY(30px)',
-                        },
-                        '100%': {
-                          opacity: 1,
-                          transform: 'translateY(0)',
-                        },
-                      },
-                    }}
-                  >
-                    <CardContent sx={{ p: 4, color: 'white' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                        <Box
-                          sx={{
-                            p: 2,
-                            borderRadius: '50%',
-                            background: 'rgba(255, 255, 255, 0.2)',
-                            mr: 3,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backdropFilter: 'blur(10px)',
-                          }}
-                        >
-                          {info.icon}
-                        </Box>
-                        <Typography variant="h6" sx={{ fontWeight: '700', color: 'white' }}>
-                          {info.title}
-                        </Typography>
-                      </Box>
-                      {info.details.map((detail, detailIndex) => (
-                        <Typography
-                          key={detailIndex}
-                          variant="body1"
-                          sx={{
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            mb: detailIndex < info.details.length - 1 ? 1 : 0,
-                            fontSize: '1.1rem',
-                            fontWeight: 500,
-                          }}
-                        >
-                          {detail}
-                        </Typography>
+          {/* Contact Info Sidebar */}
+          <div className="md:col-span-4 space-y-8">
+            <div className="space-y-6">
+              {contactInfo.map((info, index) => (
+                <div
+                  key={index}
+                  className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`${info.bgColor} ${info.color} p-4 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110`}>
+                      {info.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg mb-2">{info.title}</h3>
+                      {info.details.map((detail, idx) => (
+                        <p key={idx} className="text-gray-500 font-medium">{detail}</p>
                       ))}
-                    </CardContent>
-                  </Card>
-                ))}
-              </Box>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-              {/* Social Links */}
-              <Typography
-                variant="h6"
-                sx={{
-                  mb: 4,
-                  fontWeight: '700',
-                  color: 'text.primary',
-                }}
-              >
-                Follow Us / تابعنا
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
+            {/* WhatsApp Button */}
+            <button
+              onClick={handleWhatsApp}
+              className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white py-4 px-6 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+            >
+              <WhatsApp className="text-2xl" />
+              Chat on WhatsApp
+            </button>
+
+            {/* Social Links */}
+            <div>
+              <h3 className="font-bold text-xl mb-4">Follow Us</h3>
+              <div className="flex gap-4">
                 {socialLinks.map((social, index) => (
-                  <IconButton
+                  <a
                     key={index}
-                    sx={{
-                      p: 2.5,
-                      background: 'white',
-                      border: '2px solid rgba(0,0,0,0.05)',
-                      borderRadius: '50%',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-5px) scale(1.1)',
-                        boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                        background: social.color,
-                        color: 'white',
-                        borderColor: social.color,
-                      },
-                      animation: `bounceIn 0.6s ease-out ${index * 0.1}s both`,
-                      '@keyframes bounceIn': {
-                        '0%': {
-                          opacity: 0,
-                          transform: 'scale(0.3)',
-                        },
-                        '50%': {
-                          opacity: 1,
-                          transform: 'scale(1.05)',
-                        },
-                        '70%': {
-                          transform: 'scale(0.9)',
-                        },
-                        '100%': {
-                          opacity: 1,
-                          transform: 'scale(1)',
-                        },
-                      },
-                    }}
+                    href={social.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:text-white ${social.color}`}
                   >
                     {social.icon}
-                  </IconButton>
+                  </a>
                 ))}
-              </Box>
-            </Box>
-          </Grid>
+              </div>
+            </div>
+          </div>
 
           {/* Contact Form */}
-          <Grid item xs={12} md={8}>
-            <Box
-              sx={{
-                animation: 'slideInRight 0.8s ease-out',
-                '@keyframes slideInRight': {
-                  '0%': {
-                    opacity: 0,
-                    transform: 'translateX(30px)',
-                  },
-                  '100%': {
-                    opacity: 1,
-                    transform: 'translateX(0)',
-                  },
-                },
-              }}
-            >
-              <Typography
-                variant="h4"
-                sx={{
-                  mb: 5,
-                  fontWeight: '800',
-                  background: 'var(--primary-gradient)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                Send Us a Message / أرسل لنا رسالة
-              </Typography>
-
-              <Paper
-                component="form"
-                onSubmit={handleSubmit}
-                sx={{
-                  p: 5,
-                  background: 'white',
-                  borderRadius: 4,
-                  border: '1px solid rgba(0,0,0,0.05)',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-                  animation: 'slideInUp 0.8s ease-out 0.2s both',
-                  '@keyframes slideInUp': {
-                    '0%': {
-                      opacity: 0,
-                      transform: 'translateY(30px)',
-                    },
-                    '100%': {
-                      opacity: 1,
-                      transform: 'translateY(0)',
-                    },
-                  },
-                }}
-              >
-                <Grid container spacing={4}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Full Name / الاسم الكامل"
+          <div className="md:col-span-8">
+            <div className="bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-gray-100">
+              <h2 className="font-display font-black text-3xl md:text-4xl mb-8">Send Us a Message</h2>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold ml-1">Full Name</label>
+                    <input
+                      type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                          transition: 'all 0.3s ease',
-                          '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                          },
-                          '&.Mui-focused': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                          },
-                        },
-                      }}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
+                      placeholder="John Doe"
                     />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Email / البريد الإلكتروني"
-                      name="email"
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold ml-1">Email Address</label>
+                    <input
                       type="email"
+                      name="email"
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                          transition: 'all 0.3s ease',
-                          '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                          },
-                          '&.Mui-focused': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                          },
-                        },
-                      }}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
+                      placeholder="john@example.com"
                     />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Subject / الموضوع"
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleChange}
-                      required
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                          transition: 'all 0.3s ease',
-                          '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                          },
-                          '&.Mui-focused': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                          },
-                        },
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Message / الرسالة"
-                      name="message"
-                      value={formData.message}
-                      onChange={handleChange}
-                      multiline
-                      rows={6}
-                      required
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                          transition: 'all 0.3s ease',
-                          '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                          },
-                          '&.Mui-focused': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                          },
-                        },
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      size="large"
-                      startIcon={<Send />}
-                      sx={{
-                        background: 'var(--primary-gradient)',
-                        borderRadius: '50px',
-                        px: 6,
-                        py: 2,
-                        textTransform: 'none',
-                        fontWeight: 'bold',
-                        fontSize: '1.1rem',
-                        transition: 'all 0.3s ease',
-                        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-                        '&:hover': {
-                          transform: 'translateY(-3px)',
-                          boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
-                          background: 'var(--secondary-gradient)',
-                        },
-                        '&:active': {
-                          transform: 'translateY(-1px)',
-                        },
-                      }}
-                    >
-                      Send Message / إرسال الرسالة
-                    </Button>
-                  </Grid>
-                </Grid>
-              </Paper>
-            </Box>
-          </Grid>
-        </Grid>
+                  </div>
+                </div>
 
-        {/* Map Section */}
-        <Box sx={{ mt: 12 }}>
-          <Typography
-            variant="h4"
-            sx={{
-              mb: 6,
-              fontWeight: '800',
-              textAlign: 'center',
-              background: 'var(--primary-gradient)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            Find Us / اعثر علينا
-          </Typography>
-          <Card
-            sx={{
-              background: 'white',
-              borderRadius: 4,
-              border: '1px solid rgba(0,0,0,0.05)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-              overflow: 'hidden',
-              animation: 'fadeIn 1s ease-out',
-              '@keyframes fadeIn': {
-                '0%': { opacity: 0 },
-                '100%': { opacity: 1 },
-              },
-            }}
-          >
-            <Box
-              sx={{
-                height: 450,
-                background: 'var(--primary-gradient)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-                },
-              }}
-            >
-              <Box
-                sx={{
-                  textAlign: 'center',
-                  color: 'white',
-                  zIndex: 1,
-                  position: 'relative',
-                }}
-              >
-                <LocationOn sx={{ fontSize: 80, mb: 3, opacity: 0.9 }} />
-                <Typography variant="h4" sx={{ fontWeight: '700', mb: 2 }}>
-                  TitouBarz Store
-                </Typography>
-                <Typography variant="h6" sx={{ opacity: 0.9, mb: 2 }}>
-                  123 Sports Street, Algiers, Algeria 16000
-                </Typography>
-                <Typography variant="body1" sx={{ opacity: 0.8 }}>
-                  Open: Monday - Saturday, 9:00 AM - 8:00 PM
-                </Typography>
-              </Box>
-            </Box>
-          </Card>
-        </Box>
-      </Container>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold ml-1">Subject</label>
+                  <input
+                    type="text"
+                    name="subject"
+                    value={formData.subject}
+                    onChange={handleChange}
+                    required
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors"
+                    placeholder="How can we help you?"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold ml-1">Message</label>
+                  <textarea
+                    name="message"
+                    value={formData.message}
+                    onChange={handleChange}
+                    required
+                    rows="6"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-colors resize-none"
+                    placeholder="Tell us more about your inquiry..."
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="bg-black text-secondary hover:bg-secondary hover:text-black font-bold text-lg py-4 px-10 rounded-xl shadow-lg hover:shadow-gold transition-all duration-300 w-full md:w-auto flex items-center justify-center gap-2"
+                >
+                  <Send className="text-xl" />
+                  Send Message
+                </button>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 }

@@ -7,23 +7,33 @@ import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import Order from './pages/Order';
 import ContactUs from './pages/ContactUs';
+import Programs from './pages/Programs';
 import AdminLayout from './components/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
 import Orders from './pages/admin/Orders';
 import Products from './pages/admin/Products';
+import Analytics from './pages/admin/Analytics';
 import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
 import { AdminAuthProvider } from './contexts/AdminAuthContext';
 import { CartProvider } from './contexts/CartContext';
+import { trackVisitor } from './utils/analytics';
 import './App.css';
 
 function App() {
+  // Track visitor on app load
+  React.useEffect(() => {
+    trackVisitor();
+  }, []);
+
   return (
     <AdminAuthProvider>
       <CartProvider>
         <Router>
           <div className="App">
             <Routes>
+              {/* Public Routes */}
               {/* Public Routes */}
               <Route path="/" element={
                 <>
@@ -70,11 +80,29 @@ function App() {
                   <Footer />
                 </>
               } />
+              <Route path="/order" element={
+                <>
+                  <Header />
+                  <main>
+                    <Order />
+                  </main>
+                  <Footer />
+                </>
+              } />
               <Route path="/contact" element={
                 <>
                   <Header />
                   <main>
                     <ContactUs />
+                  </main>
+                  <Footer />
+                </>
+              } />
+              <Route path="/programs" element={
+                <>
+                  <Header />
+                  <main>
+                    <Programs />
                   </main>
                   <Footer />
                 </>
@@ -90,7 +118,7 @@ function App() {
                 <Route path="orders" element={<Orders />} />
                 <Route path="products" element={<Products />} />
                 <Route path="customers" element={<div>Customers Management (Coming Soon)</div>} />
-                <Route path="analytics" element={<div>Analytics (Coming Soon)</div>} />
+                <Route path="analytics" element={<Analytics />} />
                 <Route path="shipping" element={<div>Shipping Management (Coming Soon)</div>} />
                 <Route path="support" element={<div>Support Management (Coming Soon)</div>} />
                 <Route path="settings" element={<div>Settings (Coming Soon)</div>} />

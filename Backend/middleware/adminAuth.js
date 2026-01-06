@@ -8,7 +8,7 @@ const adminAuth = (req, res, next) => {
     });
   }
   
-  const expectedPassword = process.env.ADMIN_PASSWORD;
+  const expectedPassword = process.env.ADMIN_PASSWORD || 'toUfik99T@';
   
   if (!expectedPassword) {
     console.error('❌ ADMIN_PASSWORD environment variable not set');

@@ -13,8 +13,10 @@ const productRoutes = require('./routes/productRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const userRoutes = require('./routes/userRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const cartRoutes = require('./routes/cartRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const programRoutes = require('./routes/programRoutes');
 
 // Import middleware
 const adminAuth = require('./middleware/adminAuth');
@@ -33,7 +35,14 @@ if (!fs.existsSync(uploadsDir)) {
 // Add CORS middleware to allow frontend requests
 app.use((req, res, next) => {
   // Allow requests from your frontend domain
-  res.header('Access-Control-Allow-Origin', 'https://barz-o.web.app');
+  const allowedOrigins = process.env.NODE_ENV === 'production' 
+    ? ['https://reps-dz.web.app', 'https://reps-dz.firebaseapp.com']
+    : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   
   // Allow specific HTTP methods
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -62,7 +71,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Basic route
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'Welcome to TitouBarz API',
+    message: 'Welcome to REPS-DZ API',
     version: '1.0.0',
     status: 'running',
     database: 'MongoDB connected'
@@ -73,7 +82,7 @@ app.get('/', (req, res) => {
 app.get('/api/status', (req, res) => {
   try {
     res.json({
-      message: 'TitouBarz API Status',
+      message: 'REPS-DZ API Status',
       version: '1.0.0',
       status: 'running',
       database: 'MongoDB connected',
@@ -99,8 +108,10 @@ app.use('/api/products', productRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/cart', cartRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/programs', programRoutes);
 
 // Admin routes with password protection
 app.use('/api/admin/orders', adminAuth, orderRoutes);
@@ -129,4 +140,4 @@ app.listen(PORT, () => {
   console.log(`🗄️  Database: MongoDB connected`);
 });
 
-module.exports = app; 
+module.exports = app;

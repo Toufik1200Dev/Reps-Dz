@@ -1,27 +1,30 @@
 services:
   - type: web
-    name: titoubarz-backend
+    name: shoppy-barz-backend
     env: node
     plan: free
     rootDir: Backend
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /api/products
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
+      # IMPORTANT: Replace these with your actual values in Render Dashboard
+      # Do NOT commit real credentials here!
       - key: MONGODB_URI
-        value: mongodb+srv://[username]:[password]@[cluster].mongodb.net/titoubarz?retryWrites=true&w=majority
+        sync: false  # Set this manually in Render Dashboard
       - key: CLOUDINARY_CLOUD_NAME
-        value: [your_cloud_name]
+        sync: false  # Set this manually in Render Dashboard
       - key: CLOUDINARY_API_KEY
-        value: [your_api_key]
+        sync: false  # Set this manually in Render Dashboard
       - key: CLOUDINARY_API_SECRET
-        value: [your_api_secret]
+        sync: false  # Set this manually in Render Dashboard
       - key: FRONTEND_URL
-        value: https://barz-o.web.app
+        sync: false  # Set this after deploying frontend
       - key: JWT_SECRET
-        value: [your_jwt_secret_key_here]
+        sync: false  # Set this manually in Render Dashboard
       - key: ADMIN_PASSWORD
-        value: [your_admin_password_here]
+        sync: false  # Set this manually in Render Dashboard

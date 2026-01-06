@@ -1,413 +1,289 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
-  Typography,
-  Grid,
-  Card,
-  CardContent,
-  CardMedia,
-  Button,
-  Box,
-  Chip,
   Rating,
-  IconButton,
+  CircularProgress
 } from '@mui/material';
 import {
   ShoppingCart,
-  Favorite,
   ArrowForward,
   LocalShipping,
   Security,
   Support,
   FitnessCenter,
   Star,
-  TrendingUp,
-  ChevronLeft,
-  ChevronRight,
+  Instagram,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useCart } from '../contexts/CartContext';
 import { productsAPI } from '../services/api';
 import HeroSlider from '../components/HeroSlider';
 
-// Production-ready empty products - will be loaded from API
-const defaultFeaturedProducts = [];
+// Featured Categories
+import wallMountedImg from '../assets/imgs/wallmountedbarresIMG.png';
+import paralellesImg from '../assets/imgs/paralellesIMG.webp';
+import accessoiresImg from '../assets/imgs/accessoiresIMG.webp';
 
+const featuredCategories = [
+  {
+    title: 'Wall Mounted Barres',
+    image: wallMountedImg,
+    path: '/shop?category=Equipment',
+    count: 'Best Seller'
+  },
+  {
+    title: 'Paralelles',
+    image: paralellesImg,
+    path: '/shop?category=Equipment',
+    count: 'Top Rated'
+  },
+  {
+    title: 'Accessoires',
+    image: accessoiresImg,
+    path: '/shop?category=Accessories',
+    count: 'Essential'
+  }
+];
 
+// Why Choose Us
+const whyChooseUs = [
+  {
+    icon: <FitnessCenter className="text-4xl text-black" />,
+    title: 'Built for Athletes',
+    description: 'Professional-grade equipment designed by calisthenics experts'
+  },
+  {
+    icon: <LocalShipping className="text-4xl text-black" />,
+    title: 'Fast Delivery',
+    description: 'Quick shipping across Algeria - get your gear in 24-48 hours'
+  },
+  {
+    icon: <Star className="text-4xl text-black" />,
+    title: 'Premium Quality',
+    description: 'Durable, battle-tested materials that last for years'
+  },
+  {
+    icon: <Support className="text-4xl text-black" />,
+    title: 'Local Support',
+    description: 'Expert customer service in Algeria - we speak your language'
+  }
+];
 
 export default function Home() {
   const navigate = useNavigate();
-  const { addToCart, isInCart } = useCart();
-  const [featuredProducts, setFeaturedProducts] = useState(defaultFeaturedProducts);
-  const [error, setError] = useState(null);
+  const { addToCart } = useCart();
+  const [bestSellers, setBestSellers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchFeaturedProducts = async () => {
+    const fetchProducts = async () => {
       try {
-        const products = await productsAPI.getFeaturedProducts();
-        // Ensure products have both _id and id for compatibility
-        const productsWithIds = products.map(product => ({
-          ...product,
-          id: product._id || product.id
-        }));
-        setFeaturedProducts(productsWithIds);
-      } catch {
-        console.log('Using fallback products. API load failed.');
-        // Keep using default products
-        setError('API connection failed, showing default products');
+        setLoading(true);
+        const [featured, offers] = await Promise.all([
+          productsAPI.getFeaturedProducts().catch(() => []),
+          productsAPI.getBestOffers(8).catch(() => [])
+        ]);
+
+        const allProducts = [...(featured || []), ...(offers || [])];
+        const uniqueProducts = allProducts.filter((product, index, self) =>
+          index === self.findIndex(p => (p._id || p.id) === (product._id || product.id))
+        ).slice(0, 8);
+
+        setBestSellers(uniqueProducts.map(p => ({
+          ...p,
+          id: p._id || p.id
+        })));
+      } catch (err) {
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchFeaturedProducts();
+    fetchProducts();
   }, []);
 
-  const handleAddToCart = (product) => {
+  const handleAddToCart = (product, e) => {
+    e.stopPropagation();
     addToCart(product);
-    console.log('Added to cart:', product.name);
   };
-
-  const handleAddToWishlist = (product) => {
-    console.log('Add to wishlist:', product);
-    // TODO: Implement wishlist functionality
-  };
-
-  const features = [
-    {
-      icon: <LocalShipping />,
-      title: 'Shipping Service',
-      description: 'Shipping service across algeria in less than 24 hours',
-    },
-    {
-      icon: <Security />,
-      title: 'Secure Payment',
-      description: '100% secure payment processing',
-    },
-    {
-      icon: <Support />,
-      title: '24/7 Support',
-      description: 'Round the clock customer support',
-    },
-    {
-      icon: <FitnessCenter />,
-      title: 'Premium Quality',
-      description: 'Top-grade calisthenics equipment',
-    },
-  ];
 
   return (
-    <div>
-      {/* Hero Section with HeroSlider */}
+    <div className="bg-light min-h-screen font-sans">
       <HeroSlider />
 
-      {/* Features Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Typography 
-          variant="h3" 
-          component="h2" 
-          gutterBottom 
-          align="center" 
-          sx={{ 
-            mb: 6,
-            fontWeight: 'bold',
-            background: 'linear-gradient(45deg, #000 30%, #FFD700 90%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
-          }}
-        >
-          Why Choose Us
-        </Typography>
-        <Grid container spacing={4}>
-          {features.map((feature, index) => (
-            <Grid item xs={12} sm={6} md={3} key={index}>
-              <Box
-                sx={{
-                  textAlign: 'center',
-                  p: 4,
-                  borderRadius: 3,
-                  background: 'white',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  transition: 'all 0.3s ease',
-                  border: '1px solid rgba(0,0,0,0.05)',
-                  '&:hover': {
-                    transform: 'translateY(-8px)',
-                    boxShadow: '0 16px 40px rgba(0,0,0,0.15)',
-                    borderColor: '#FFD700',
-                  },
-                }}
-              >
-                <Box 
-                  sx={{ 
-                    color: '#FFD700', 
-                    mb: 3, 
-                    fontSize: '3.5rem',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    height: 80
-                  }}
+      {/* Quick Features Strip */}
+      <div className="bg-black text-secondary py-3 md:py-4 border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+            {[
+              { icon: LocalShipping, text: "Fast Shipping" },
+              { icon: Security, text: "Secure Payment" },
+              { icon: Support, text: "24/7 Support" },
+              { icon: FitnessCenter, text: "Premium Quality" }
+            ].map((f, i) => (
+              <div key={i} className="flex items-center justify-center gap-1 md:gap-2 opacity-80 hover:opacity-100 transition-opacity">
+                <f.icon className="text-lg md:text-xl" />
+                <span className="text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-wider">{f.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Categories Section */}
+      <section className="py-12 md:py-16 lg:py-24 px-4 max-w-[1400px] mx-auto">
+        <div className="text-center mb-8 md:mb-12 lg:mb-16">
+          <h2 className="font-display font-black text-3xl sm:text-4xl md:text-5xl mb-3 md:mb-4">SHOP BY <span className="text-stroke">CATEGORY</span></h2>
+          <p className="text-sm md:text-base text-gray-500 max-w-2xl mx-auto px-4">Find the perfect equipment tailored to your training needs.</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          {featuredCategories.map((cat, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              viewport={{ once: true }}
+              className="group cursor-pointer relative h-[300px] sm:h-[350px] md:h-[400px] rounded-xl md:rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow"
+              onClick={() => navigate(cat.path)}
+            >
+              <div className="absolute inset-0 bg-gray-200">
+                <img src={cat.image} alt={cat.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+
+              <div className="absolute bottom-0 left-0 w-full p-8 text-white translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                <span className="text-secondary text-xs font-bold uppercase tracking-wider mb-2 block">{cat.count}</span>
+                <h3 className="font-display font-bold text-3xl mb-4">{cat.title}</h3>
+                <div className="flex items-center text-sm font-bold uppercase tracking-wide opacity-0 group-hover:opacity-100 transition-opacity delay-100 text-secondary">
+                  Shop Now <ArrowForward className="ml-2 text-xs" />
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Best Sellers */}
+      <section className="py-12 md:py-16 bg-white">
+        <div className="max-w-[1400px] mx-auto px-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 md:mb-12 gap-4">
+            <div>
+              <h2 className="font-display font-black text-3xl sm:text-4xl md:text-5xl mb-2">BEST SELLERS</h2>
+              <p className="text-sm md:text-base text-gray-500">Top-rated gear chosen by champions.</p>
+            </div>
+            <button
+              onClick={() => navigate('/shop')}
+              className="flex items-center gap-2 text-black font-bold uppercase tracking-wider hover:text-secondary transition-colors text-sm md:text-base"
+            >
+              View All <ArrowForward className="text-sm" />
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <CircularProgress sx={{ color: '#FFD700' }} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
+              {bestSellers.map((product, idx) => (
+                <div
+                  key={product.id || idx}
+                  className="group bg-white rounded-xl cursor-pointer"
+                  onClick={() => navigate(`/product/${product.id}`)}
                 >
-                  {feature.icon}
-                </Box>
-                <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-                  {feature.title}
-                </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                  {feature.description}
-                </Typography>
-              </Box>
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
+                  <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100 mb-4">
+                    <img
+                      src={product.images?.main || product.image || product.images?.[0]?.url || 'https://via.placeholder.com/400'}
+                      alt={product.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    {product.originalPrice && product.price < product.originalPrice && (
+                      <span className="absolute top-4 left-4 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                        SALE
+                      </span>
+                    )}
+                    <button
+                      onClick={(e) => handleAddToCart(product, e)}
+                      className="absolute bottom-4 right-4 bg-white text-black p-3 rounded-full shadow-lg translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black hover:text-secondary"
+                    >
+                      <ShoppingCart />
+                    </button>
+                  </div>
 
-      {/* Featured Products Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 6 }}>
-          <Typography 
-            variant="h3" 
-            component="h2" 
-            sx={{ 
-              fontWeight: 'bold',
-              background: 'linear-gradient(45deg, #000 30%, #FFD700 90%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}
-          >
-            Featured Products
-          </Typography>
-          <Button
-            endIcon={<ArrowForward />}
-            onClick={() => navigate('/shop')}
-            sx={{ 
-              textTransform: 'none', 
-              fontWeight: 'bold',
-              fontSize: '1.1rem',
-              px: 3,
-              py: 1.5,
-              borderRadius: '25px',
-              background: '#000',
-              color: '#FFD700',
-              '&:hover': {
-                background: '#333',
-                transform: 'translateX(5px)',
-                transition: 'transform 0.3s ease'
-              }
-            }}
-          >
-            View All
-          </Button>
-        </Box>
+                  <div>
+                    <h3 className="font-bold text-lg mb-1 group-hover:text-secondary transition-colors line-clamp-1">{product.name}</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Rating value={product.rating?.average || 5} size="small" readOnly />
+                      <span className="text-xs text-gray-500 font-medium">({product.rating?.count || 42})</span>
+                    </div>
+                    <div className="flex items-baseline gap-3">
+                      <span className="font-display font-bold text-xl">{parseFloat(product.price).toLocaleString()} DA</span>
+                      {product.originalPrice && (
+                        <span className="text-sm text-gray-400 line-through">{parseFloat(product.originalPrice).toLocaleString()} DA</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-        {error && (
-          <Box sx={{ textAlign: 'center', mb: 4, p: 2, bgcolor: 'warning.light', borderRadius: 2 }}>
-            <Typography color="warning.dark">
-              {error} - Showing default products
-            </Typography>
-          </Box>
-        )}
+          <div className="mt-12 text-center md:hidden">
+            <button
+              onClick={() => navigate('/shop')}
+              className="btn-primary"
+            >
+              View All Products
+            </button>
+          </div>
+        </div>
+      </section>
 
-        <Grid container spacing={4}>
-          {featuredProducts.map((product) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={product._id}>
-              <Card
-                sx={{
-                  height: '100%',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  borderRadius: 3,
-                  overflow: 'hidden',
-                  border: '1px solid rgba(0,0,0,0.05)',
-                  '&:hover': {
-                    transform: 'translateY(-8px)',
-                    boxShadow: '0 16px 40px rgba(0,0,0,0.15)',
-                    borderColor: '#FFD700',
-                  },
-                }}
-                onClick={() => navigate(`/product/${product._id}`)}
+      {/* Value Props */}
+      <section className="py-12 md:py-16 lg:py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+            {whyChooseUs.map((item, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                viewport={{ once: true }}
+                className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-gold/20 transition-all border border-gray-100 text-center"
               >
-                <CardMedia
-                  component="img"
-                  height="250"
-                  image={product.images[0] || '/placeholder-image.jpg'}
-                  alt={product.name}
-                  sx={{ objectFit: 'cover' }}
-                />
-                <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                    <Typography variant="h6" component="h3" gutterBottom sx={{ fontWeight: 'bold', flex: 1 }}>
-                      {product.name}
-                    </Typography>
-                    {product.badge && (
-                      <Chip
-                        label={product.badge}
-                        sx={{ 
-                          textTransform: 'capitalize',
-                          fontWeight: 'bold',
-                          ml: 1,
-                          background: '#FFD700',
-                          color: '#000'
-                        }}
-                      />
-                    )}
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Rating value={product.rating?.average || 0} precision={0.1} readOnly size="small" />
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                      ({product.rating?.count || 0})
-                    </Typography>
-                  </Box>
+                <div className="w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-6 text-secondary">
+                  {item.icon}
+                </div>
+                <h3 className="font-display font-bold text-xl mb-3">{item.title}</h3>
+                <p className="text-gray-500 leading-relaxed">{item.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.6 }}>
-                    {product.description.substring(0, 80)}...
-                  </Typography>
-
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#FFD700' }}>
-                      {product.price} DA
-                    </Typography>
-                    {product.originalPrice && (
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ textDecoration: 'line-through' }}
-                      >
-                        {product.originalPrice} DA
-                      </Typography>
-                    )}
-                  </Box>
-
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                      variant="contained"
-                      size="medium"
-                      startIcon={<ShoppingCart />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToCart(product);
-                      }}
-                      sx={{ 
-                        flex: 1, 
-                        textTransform: 'none',
-                        fontWeight: 'bold',
-                        borderRadius: '25px',
-                        py: 1,
-                        background: isInCart(product.id) ? '#666' : '#000',
-                        color: '#FFD700',
-                        '&:hover': {
-                          background: isInCart(product.id) ? '#555' : '#333'
-                        }
-                      }}
-                    >
-                      {isInCart(product.id) ? 'In Cart' : 'Add to Cart'}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="medium"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToWishlist(product);
-                      }}
-                      sx={{ 
-                        p: 1,
-                        borderRadius: '50%',
-                        minWidth: 48,
-                        height: 48,
-                        borderColor: '#FFD700',
-                        color: '#FFD700',
-                        '&:hover': {
-                          background: '#FFD700',
-                          color: '#000'
-                        }
-                      }}
-                    >
-                      <Favorite />
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
-
-      {/* CTA Section */}
-      <Box
-        sx={{
-          background: 'linear-gradient(45deg, #000 30%, #333 90%)',
-          color: 'white',
-          py: 8,
-          textAlign: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Background Pattern */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'radial-gradient(circle at 80% 80%, rgba(255,215,0,0.1) 0%, transparent 50%), radial-gradient(circle at 20% 20%, rgba(255,215,0,0.1) 0%, transparent 50%)',
-            zIndex: 1,
-          }}
-        />
-        
-        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 2 }}>
-          <Typography 
-            variant="h3" 
-            component="h2" 
-            gutterBottom 
-            sx={{ 
-              fontWeight: 'bold',
-              mb: 4,
-              textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
-              color: '#FFD700'
-            }}
-          >
-            Ready to Transform Your Training?
-          </Typography>
-          <Typography 
-            variant="h5" 
-            gutterBottom 
-            sx={{ 
-              mb: 6, 
-              opacity: 0.9,
-              textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
-            }}
-          >
-            Join thousands of athletes who trust TitouBarz for their calisthenics journey
-          </Typography>
-          <Button
-            variant="contained"
-            size="large"
+      {/* CTA */}
+      <section className="py-16 md:py-20 lg:py-24 bg-dark-900 text-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=1600')] bg-cover bg-center bg-fixed" />
+        <div className="relative z-10 max-w-4xl mx-auto px-4 md:px-6">
+          <h2 className="font-display font-black text-3xl sm:text-4xl md:text-5xl lg:text-7xl text-white mb-4 md:mb-6 uppercase">
+            Start Your <span className="text-secondary">Journey</span>
+          </h2>
+          <p className="text-gray-300 text-base md:text-lg lg:text-xl mb-8 md:mb-10 max-w-2xl mx-auto">
+            Equip yourself with the best tools in the game. Join the movement today.
+          </p>
+          <button
             onClick={() => navigate('/shop')}
-            sx={{
-              background: '#FFD700',
-              color: '#000',
-              '&:hover': { 
-                background: '#FFED4E',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 8px 25px rgba(255,215,0,0.3)'
-              },
-              px: 6,
-              py: 2,
-              borderRadius: '50px',
-              textTransform: 'none',
-              fontWeight: 'bold',
-              fontSize: '1.1rem',
-              transition: 'all 0.3s ease',
-              boxShadow: '0 4px 15px rgba(255,215,0,0.2)'
-            }}
+            className="bg-secondary text-black font-bold text-base md:text-lg px-8 md:px-12 py-3 md:py-4 rounded-full hover:bg-white transition-all shadow-lg hover:shadow-gold duration-300 transform hover:-translate-y-1"
           >
-            Start Shopping
-          </Button>
-        </Container>
-      </Box>
+            Shop Now
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

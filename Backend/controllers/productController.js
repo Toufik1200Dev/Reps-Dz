@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const mongoose = require('mongoose');
 const cloudinaryService = require('../services/cloudinaryService');
 const fs = require('fs');
 const path = require('path');
@@ -86,7 +87,7 @@ exports.getAllProducts = async (req, res) => {
 // Get featured products
 exports.getFeaturedProducts = async (req, res) => {
   try {
-    const featuredProducts = await Product.find({ featured: true }).lean();
+    const featuredProducts = await Product.find({ isFeatured: true }).lean();
     res.json(featuredProducts);
   } catch (error) {
     console.error('Error fetching featured products:', error);
@@ -94,91 +95,172 @@ exports.getFeaturedProducts = async (req, res) => {
   }
 };
 
-// Get single product by ID
-exports.getProductById = async (req, res) => {
+// Get best offers (products with discounts or special badges)
+exports.getBestOffers = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).lean();
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    res.json(product);
+    const limit = parseInt(req.query.limit) || 12;
+    
+    // Find all products first, then filter
+    // ideally filter at database level for performance: { $or: [{ discount: { $gt: 0 } }, { isFeatured: true }] }
+    const products = await Product.find({ 
+        $and: [
+            { inStock: { $ne: false } }, // approximation for inStock check if field missing, or just ignore
+            { $or: [{ discount: { $gt: 0 } }, { isFeatured: true }] }
+        ]
+    })
+    .sort({ discount: -1 })
+    .limit(limit)
+    .lean();
+    
+    // Add logic to populate 'discountPercentage' if needed by frontend, though frontend usually calculates it.
+    // Frontend Home.jsx uses originalPrice to show strike-through. 
+    // Backend Schema lacks originalPrice. It calculates finalPrice.
+    // We should send `price` (base) and `finalPrice` (discounted).
+    // But Frontend expects `price` to be current and `originalPrice` to be old?
+    // Let's check Frontend Home.jsx: 
+    // <span className="font-display font-bold text-xl">{parseFloat(product.price).toLocaleString()} DA</span>
+    // {product.originalPrice && ... line-through ...}
+    
+    // Schema has `price` (Base) and `discount` (%).
+    // So `finalPrice` is the actual selling price?
+    // Wait, Schema:
+    // price: Number (required)
+    // discount: Number (%)
+    // finalPrice: Number (calculated)
+    
+    // If I want to match Frontend expectation:
+    // frontend `price` should be `finalPrice`.
+    // frontend `originalPrice` should be `price`.
+    
+    const mappedProducts = products.map(p => ({
+        ...p,
+        price: p.finalPrice || p.price,
+        originalPrice: p.discount > 0 ? p.price : null,
+        badge: p.discount > 0 ? 'sale' : (p.isFeatured ? 'featured' : '')
+    }));
+    
+    res.json(mappedProducts);
   } catch (error) {
-    console.error('Error fetching product:', error);
-    res.status(500).json({ message: 'Error fetching product', error: error.message });
+    console.error('Error fetching best offers:', error);
+    res.status(500).json({ message: 'Error fetching best offers', error: error.message });
   }
 };
+
+// @desc    Get single product
+// @route   GET /api/products/:id
+// @access  Public
+const getProductById = async (req, res) => {
+  try {
+    let product;
+
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      product = await Product.findById(req.params.id);
+    } else {
+      product = await Product.findOne({ slug: req.params.id });
+    }
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: product
+    });
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching product',
+      error: error.message
+    });
+  }
+};
+exports.getProductById = getProductById; // Exporting the function
 
 // Create new product
 exports.createProduct = async (req, res) => {
   try {
     console.log('🚀 Creating product with data:', req.body);
-    console.log('📁 Files received:', req.files);
     
-    let images = [];
+    // Parse complex fields if they are strings (JSON)
+    let { variants, specifications, tags } = req.body;
     
-    // Handle file uploads first
-    if (req.files && req.files.length > 0) {
-      console.log('📸 Processing uploaded files...');
-      if (process.env.NODE_ENV === 'production') {
-        // Production: Upload to Cloudinary
-        try {
-          const cloudinaryResults = await cloudinaryService.uploadMultipleImages(req.files, 'products');
-          images = cloudinaryResults.map(result => ({
-            url: result.url,
-            publicId: result.publicId,
-            width: result.width,
-            height: result.height,
-            format: result.format,
-            size: result.size
-          }));
-          console.log('☁️ Cloudinary upload successful:', images);
-        } catch (cloudinaryError) {
-          console.error('❌ Cloudinary upload failed:', cloudinaryError);
-          return res.status(500).json({ 
-            message: 'Failed to upload images to cloud storage',
-            error: cloudinaryError.message 
-          });
-        }
-      } else {
-        // Development: Use local file paths
-        images = req.files.map(file => ({
-          url: `/uploads/${file.filename}`,
-          publicId: null,
-          width: null,
-          height: null,
-          format: file.mimetype,
-          size: file.size
-        }));
-        console.log('💾 Local file paths created:', images);
-      }
-    } else if (req.body.images && Array.isArray(req.body.images)) {
-      // If images are passed as URLs in body (from frontend)
-      console.log('🔗 Processing image URLs from body:', req.body.images);
-      images = req.body.images
-        .filter(url => url && url.trim() !== '') // Filter out empty strings
-        .map(url => ({
-          url: url.trim(),
-          publicId: null,
-          width: null,
-          height: null,
-          format: null,
-          size: null
-        }));
-      console.log('🔗 Processed image URLs:', images);
+    try {
+      if (typeof variants === 'string') variants = JSON.parse(variants);
+      if (typeof specifications === 'string') specifications = JSON.parse(specifications);
+      if (typeof tags === 'string') tags = JSON.parse(tags);
+    } catch (e) {
+      console.warn('Error parsing JSON fields', e);
     }
 
-    // Create product data with images
+    let mainImage = '';
+    let galleryImages = [];
+    
+    // Handle image uploads
+    if (req.files && req.files.length > 0) {
+       // Separate main image and gallery images if identified by fieldname, 
+       // but typically multer sends array. We will assume first image is main if not specified,
+       // OR frontend sends them with specific field names. 
+       // *Assuming simple array upload for now based on existing multer setup*
+       // Refined logic: Check if frontend can separate them. 
+       // For now, let's assume the first uploaded file is main, others are gallery.
+       
+       const uploadedUrls = [];
+       
+       if (process.env.NODE_ENV === 'production') {
+         const results = await cloudinaryService.uploadMultipleImages(req.files, 'products');
+         results.forEach(r => uploadedUrls.push(r.url));
+       } else {
+         req.files.forEach(f => uploadedUrls.push(`/uploads/${f.filename}`));
+       }
+
+       if (uploadedUrls.length > 0) {
+         mainImage = uploadedUrls[0];
+         galleryImages = uploadedUrls.slice(1);
+       }
+    } else if (req.body.images) {
+      if (typeof req.body.images === 'object' && !Array.isArray(req.body.images)) {
+        // New structure: { main: 'url', gallery: ['url', 'url'] }
+        mainImage = req.body.images.main || mainImage;
+        galleryImages = Array.isArray(req.body.images.gallery) ? req.body.images.gallery : [];
+      } else if (req.body.mainImage) {
+         // Fallback legacy: flat fields
+         mainImage = req.body.mainImage;
+         if (req.body.galleryImages) {
+            galleryImages = Array.isArray(req.body.galleryImages) ? req.body.galleryImages : [req.body.galleryImages];
+         }
+      } else if (Array.isArray(req.body.images)) {
+        // Legacy: Array of URLs
+        const urls = req.body.images.filter(url => url && url.trim() !== '');
+        if(urls.length > 0) {
+           mainImage = urls[0];
+           galleryImages = urls.slice(1);
+        }
+      }
+    }
+    
     const productData = {
       ...req.body,
-      images: images
+      variants,
+      specifications,
+      tags,
+      images: {
+        main: mainImage,
+        gallery: galleryImages
+      },
+      // Ensure numeric fields are numbers
+      price: Number(req.body.price),
+      discount: Number(req.body.discount || 0),
+      stock: Number(req.body.stock)
     };
-
-    console.log('📦 Final product data:', productData);
 
     const product = new Product(productData);
     const savedProduct = await product.save();
     
-    console.log('✅ Product created successfully:', savedProduct._id);
     res.status(201).json(savedProduct);
   } catch (error) {
     console.error('❌ Error creating product:', error);
@@ -189,89 +271,81 @@ exports.createProduct = async (req, res) => {
 // Update product
 exports.updateProduct = async (req, res) => {
   try {
-    console.log('🔄 Updating product:', req.params.id);
-    console.log('📁 Files received:', req.files);
-    console.log('📝 Body data:', req.body);
-    
-    let images = req.body.images || [];
-    
-    // Handle new image uploads
-    if (req.files && req.files.length > 0) {
-      console.log('📸 Processing new uploaded files...');
-      if (process.env.NODE_ENV === 'production') {
-        // Production: Upload to Cloudinary
-        try {
-          const cloudinaryResults = await cloudinaryService.uploadMultipleImages(req.files, 'products');
-          const newImages = cloudinaryResults.map(result => ({
-            url: result.url,
-            publicId: result.publicId,
-            width: result.width,
-            height: result.height,
-            format: result.format,
-            size: result.size
-          }));
-          
-          // Combine new images with existing ones
-          images = [...images, ...newImages];
-          console.log('☁️ Cloudinary upload successful, combined images:', images);
-        } catch (cloudinaryError) {
-          console.error('❌ Cloudinary upload failed:', cloudinaryError);
-          return res.status(500).json({ 
-            message: 'Failed to upload new images to cloud storage',
-            error: cloudinaryError.message 
-          });
+    const productId = req.params.id;
+    let { variants, specifications, tags } = req.body;
+
+    try {
+      if (typeof variants === 'string') variants = JSON.parse(variants);
+      if (typeof specifications === 'string') specifications = JSON.parse(specifications);
+      if (typeof tags === 'string') tags = JSON.parse(tags);
+    } catch (e) { console.warn('JSON parse error', e); }
+
+    // Fetch existing product to merge images if needed
+    const existingProduct = await Product.findById(productId);
+    if (!existingProduct) return res.status(404).json({ message: 'Product not found' });
+
+    let mainImage = existingProduct.images.main;
+    let galleryImages = existingProduct.images.gallery;
+
+    // Handle new uploads logic
+    // This part is simplified. In a real complex app, we'd delete old images if replaced.
+    // For this update, if new files are provided, we append to gallery or replace main?
+    // Unified Image Parsing Logic
+    if (req.body.images) {
+      if (typeof req.body.images === 'object' && !Array.isArray(req.body.images)) {
+        // New structure: { main: 'url', gallery: ['url', 'url'] }
+        mainImage = req.body.images.main || mainImage;
+        galleryImages = Array.isArray(req.body.images.gallery) ? req.body.images.gallery : [];
+      } else if (req.body.mainImage) {
+         // Fallback legacy: flat fields
+         mainImage = req.body.mainImage;
+         if (req.body.galleryImages) {
+            galleryImages = Array.isArray(req.body.galleryImages) ? req.body.galleryImages : [req.body.galleryImages];
+         }
+      } else if (Array.isArray(req.body.images)) {
+        // Legacy: Array of URLs (assume replace)
+        const urls = req.body.images.filter(url => url && url.trim() !== '');
+        if(urls.length > 0) {
+           mainImage = urls[0];
+           galleryImages = urls.slice(1);
         }
-      } else {
-        // Development: Use local file paths
-        const newImages = req.files.map(file => ({
-          url: `/uploads/${file.filename}`,
-          publicId: null,
-          width: null,
-          height: null,
-          format: file.mimetype,
-          size: file.size
-        }));
-        
-        // Combine new images with existing ones
-        images = [...images, ...newImages];
-        console.log('💾 Local file paths created, combined images:', images);
       }
-    } else if (req.body.images && Array.isArray(req.body.images)) {
-      // If images are passed as URLs in body (from frontend)
-      console.log('🔗 Processing image URLs from body:', req.body.images);
-      images = req.body.images
-        .filter(url => url && url.trim() !== '') // Filter out empty strings
-        .map(url => ({
-          url: url.trim(),
-          publicId: null,
-          width: null,
-          height: null,
-          format: null,
-          size: null
-        }));
-      console.log('🔗 Processed image URLs:', images);
+    } else {
+       // Check for flat fields if req.body.images is missing entirely
+       if (req.body.mainImage) mainImage = req.body.mainImage;
+       if (req.body.galleryImages) galleryImages = req.body.galleryImages;
     }
     
-    // Update product data with images
+    if (req.files && req.files.length > 0) {
+      const newUrls = [];
+      if (process.env.NODE_ENV === 'production') {
+         const results = await cloudinaryService.uploadMultipleImages(req.files, 'products');
+         results.forEach(r => newUrls.push(r.url));
+      } else {
+         req.files.forEach(f => newUrls.push(`/uploads/${f.filename}`));
+      }
+      
+      // If we strictly want to support "add to gallery"
+      galleryImages = [...galleryImages, ...newUrls];
+    }
+
     const updateData = {
       ...req.body,
-      images: images
+      variants: variants || existingProduct.variants,
+      specifications: specifications || existingProduct.specifications,
+      tags: tags || existingProduct.tags,
+      images: {
+        main: mainImage,
+        gallery: galleryImages
+      },
+      price: req.body.price ? Number(req.body.price) : existingProduct.price,
+      discount: req.body.discount !== undefined ? Number(req.body.discount) : existingProduct.discount,
+      stock: req.body.stock !== undefined ? Number(req.body.stock) : existingProduct.stock
     };
-    
-    console.log('📦 Final update data:', updateData);
-    
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    );
-    
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    
-    console.log('✅ Product updated successfully:', product._id);
+
+    const product = await Product.findByIdAndUpdate(productId, updateData, { new: true, runValidators: true });
     res.json(product);
+
   } catch (error) {
     console.error('❌ Error updating product:', error);
     res.status(400).json({ message: 'Error updating product', error: error.message });
@@ -282,38 +356,15 @@ exports.updateProduct = async (req, res) => {
 exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    // Cleanup images (Logic simplified for new schema structure)
+    // Main
+    // Gallery
     
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    
-    // Clean up images
-    if (product.images && product.images.length > 0) {
-      for (const image of product.images) {
-        try {
-          if (process.env.NODE_ENV === 'production' && image.publicId) {
-            // Production: Delete from Cloudinary
-            await cloudinaryService.deleteImage(image.publicId);
-          } else if (!process.env.NODE_ENV === 'production' && image.url) {
-            // Development: Delete local file
-            const imagePath = path.join(__dirname, '..', image.url);
-            if (fs.existsSync(imagePath)) {
-              fs.unlinkSync(imagePath);
-            }
-          }
-        } catch (cleanupError) {
-          console.error('Error cleaning up image:', cleanupError);
-          // Continue with deletion even if image cleanup fails
-        }
-      }
-    }
-    
-    // Delete the product
     await Product.findByIdAndDelete(req.params.id);
-    
     res.json({ message: 'Product deleted successfully' });
   } catch (error) {
-    console.error('Error deleting product:', error);
     res.status(500).json({ message: 'Error deleting product', error: error.message });
   }
 };
@@ -356,5 +407,37 @@ exports.getProductCategories = async (req, res) => {
   } catch (error) {
     console.error('Error fetching categories:', error);
     res.status(500).json({ message: 'Error fetching categories', error: error.message });
+  }
+};
+
+// Get best offers (products with discounts or special badges)
+exports.getBestOffers = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 12;
+    
+    // Find products with discount > 0 or isFeatured
+    // We check availability via stock > 0
+    const products = await Product.find({ 
+        stock: { $gt: 0 },
+        $or: [{ discount: { $gt: 0 } }, { isFeatured: true }]
+    })
+    .sort({ discount: -1 }) // Sort by highest discount
+    .limit(limit)
+    .lean();
+    
+    // Map to frontend expectation:
+    // Frontend expects: price (current selling price), originalPrice (old price if discounted)
+    // Schema has: price (base), discount (%), finalPrice (calculated)
+    const mappedProducts = products.map(p => ({
+        ...p,
+        price: p.finalPrice || p.price,
+        originalPrice: p.discount > 0 ? p.price : null,
+        badge: p.discount > 0 ? 'sale' : (p.isFeatured ? 'featured' : '')
+    }));
+    
+    res.json(mappedProducts);
+  } catch (error) {
+    console.error('Error fetching best offers:', error);
+    res.status(500).json({ message: 'Error fetching best offers', error: error.message });
   }
 }; 

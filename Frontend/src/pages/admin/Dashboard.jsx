@@ -1,25 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Container,
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Button,
-  Chip,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Avatar,
-  LinearProgress,
-  useTheme,
-  useMediaQuery,
-  IconButton,
-  Menu,
-  MenuItem,
-} from '@mui/material';
+import React, { useState } from 'react';
 import {
   TrendingUp,
   ShoppingCart,
@@ -28,19 +7,14 @@ import {
   Inventory,
   LocalShipping,
   Assessment,
-  MoreVert,
   Add,
   Visibility,
-  Edit,
-  Delete,
+  MoreVert
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
-  const [anchorEl, setAnchorEl] = useState(null);
 
   // Mock data - in real app, fetch from API
   const [stats, setStats] = useState({
@@ -105,278 +79,183 @@ export default function Dashboard() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending':
-        return 'warning';
-      case 'confirmed':
-        return 'info';
-      case 'shipped':
-        return 'primary';
-      case 'delivered':
-        return 'success';
-      case 'cancelled':
-        return 'error';
-      default:
-        return 'default';
+      case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'confirmed': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'shipped': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+      case 'delivered': return 'bg-green-100 text-green-700 border-green-200';
+      case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const StatCard = ({ title, value, icon, color, subtitle, onClick }) => (
-    <Card
-      sx={{
-        height: '100%',
-        cursor: onClick ? 'pointer' : 'default',
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-        '&:hover': onClick ? {
-          transform: 'translateY(-5px)',
-          boxShadow: theme.shadows[8],
-        } : {},
-      }}
+  const StatCard = ({ title, value, icon, subtitle, colorClass, onClick }) => (
+    <div
       onClick={onClick}
+      className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-lg ${onClick ? 'cursor-pointer hover:-translate-y-1' : ''}`}
     >
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box>
-            <Typography variant="h4" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
-              {value}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              {title}
-            </Typography>
-            {subtitle && (
-              <Typography variant="caption" color="text.secondary">
-                {subtitle}
-              </Typography>
-            )}
-          </Box>
-          <Avatar
-            sx={{
-              backgroundColor: `${color}.light`,
-              color: `${color}.main`,
-              width: 56,
-              height: 56,
-            }}
-          >
-            {icon}
-          </Avatar>
-        </Box>
-      </CardContent>
-    </Card>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-3xl font-black font-display mb-1">{value}</h2>
+          <p className="text-gray-500 font-medium">{title}</p>
+        </div>
+        <div className={`p-3 rounded-xl ${colorClass}`}>
+          {icon}
+        </div>
+      </div>
+      {subtitle && (
+        <div className="flex items-center gap-1 text-sm text-green-600 font-bold">
+          <TrendingUp fontSize="small" />
+          <span>{subtitle}</span>
+        </div>
+      )}
+    </div>
   );
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h3" component="h1" gutterBottom>
-          Dashboard
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Welcome back! Here's what's happening with your store today.
-        </Typography>
-      </Box>
+      <div className="mb-8">
+        <h1 className="text-3xl font-display font-black mb-2">Dashboard</h1>
+        <p className="text-gray-500">Welcome back! Here's what's happening with your store today.</p>
+      </div>
 
-      {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Revenue"
-            value={`$${stats.totalRevenue.toLocaleString()}`}
-            icon={<AttachMoney />}
-            color="success"
-            subtitle="+12% from last month"
-            onClick={() => navigate('/admin/analytics')}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Orders"
-            value={stats.totalOrders}
-            icon={<ShoppingCart />}
-            color="primary"
-            subtitle="+8% from last month"
-            onClick={() => navigate('/admin/orders')}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Customers"
-            value={stats.totalCustomers}
-            icon={<People />}
-            color="info"
-            subtitle="+15% from last month"
-            onClick={() => navigate('/admin/customers')}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Products"
-            value={stats.totalProducts}
-            icon={<Inventory />}
-            color="warning"
-            subtitle={`${stats.lowStockProducts} low stock`}
-            onClick={() => navigate('/admin/products')}
-          />
-        </Grid>
-      </Grid>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard
+          title="Total Revenue"
+          value={`$${stats.totalRevenue.toLocaleString()}`}
+          icon={<AttachMoney className="text-green-600" />}
+          colorClass="bg-green-50"
+          subtitle="+12% from last month"
+          onClick={() => navigate('/admin/analytics')}
+        />
+        <StatCard
+          title="Total Orders"
+          value={stats.totalOrders}
+          icon={<ShoppingCart className="text-blue-600" />}
+          colorClass="bg-blue-50"
+          subtitle="+8% from last month"
+          onClick={() => navigate('/admin/orders')}
+        />
+        <StatCard
+          title="Total Customers"
+          value={stats.totalCustomers}
+          icon={<People className="text-purple-600" />}
+          colorClass="bg-purple-50"
+          subtitle="+15% from last month"
+          onClick={() => navigate('/admin/customers')}
+        />
+        <StatCard
+          title="Total Products"
+          value={stats.totalProducts}
+          icon={<Inventory className="text-orange-600" />}
+          colorClass="bg-orange-50"
+          subtitle={`${stats.lowStockProducts} low stock`}
+          onClick={() => navigate('/admin/products')}
+        />
+      </div>
 
-      <Grid container spacing={3}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Orders */}
-        <Grid item xs={12} lg={8}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" component="h2">
-                  Recent Orders
-                </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => navigate('/admin/orders')}
-                >
-                  View All
-                </Button>
-              </Box>
-              <List>
-                {recentOrders.map((order) => (
-                  <ListItem
-                    key={order.id}
-                    sx={{
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 1,
-                      mb: 1,
-                    }}
-                  >
-                    <ListItemAvatar>
-                      <Avatar sx={{ backgroundColor: 'primary.light' }}>
-                        <ShoppingCart />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={order.orderNumber}
-                      secondary={`${order.customer} • $${order.amount} • ${order.date}`}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="font-bold text-lg">Recent Orders</h2>
+              <button
+                onClick={() => navigate('/admin/orders')}
+                className="text-sm font-bold text-secondary bg-black px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                View All
+              </button>
+            </div>
+            <div className="divide-y divide-gray-50">
+              {recentOrders.map((order) => (
+                <div key={order.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gray-100 rounded-full text-gray-500">
+                      <ShoppingCart fontSize="small" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">{order.orderNumber}</p>
+                      <p className="text-xs text-gray-500">{order.customer} • ${order.amount} • {order.date}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(order.status)}`}>
+                      {order.status}
+                    </span>
+                    <button className="text-gray-400 hover:text-black">
+                      <Visibility fontSize="small" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar Column */}
+        <div className="space-y-8">
+          {/* Quick Actions */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 className="font-bold text-lg mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => navigate('/admin/products/new')}
+                className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 hover:border-secondary hover:bg-secondary/5 transition-all group"
+              >
+                <Add className="mb-2 text-gray-600 group-hover:text-black" />
+                <span className="text-xs font-bold text-gray-600 group-hover:text-black">Add Product</span>
+              </button>
+              <button
+                onClick={() => navigate('/admin/analytics')}
+                className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 hover:border-secondary hover:bg-secondary/5 transition-all group"
+              >
+                <Assessment className="mb-2 text-gray-600 group-hover:text-black" />
+                <span className="text-xs font-bold text-gray-600 group-hover:text-black">Analytics</span>
+              </button>
+              <button
+                onClick={() => navigate('/admin/orders')}
+                className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 hover:border-secondary hover:bg-secondary/5 transition-all group"
+              >
+                <LocalShipping className="mb-2 text-gray-600 group-hover:text-black" />
+                <span className="text-xs font-bold text-gray-600 group-hover:text-black">Orders</span>
+              </button>
+              <button
+                onClick={() => navigate('/admin/customers')}
+                className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 hover:border-secondary hover:bg-secondary/5 transition-all group"
+              >
+                <People className="mb-2 text-gray-600 group-hover:text-black" />
+                <span className="text-xs font-bold text-gray-600 group-hover:text-black">Customers</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Top Products */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 className="font-bold text-lg mb-4">Top Products</h2>
+            <div className="space-y-6">
+              {topProducts.map((product) => (
+                <div key={product.id}>
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="font-bold text-sm text-gray-800">{product.name}</h4>
+                      <p className="text-xs text-gray-500">{product.sales} sales • Stock: {product.stock}</p>
+                    </div>
+                    <span className="font-bold text-sm">${product.revenue.toLocaleString()}</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-secondary"
+                      style={{ width: `${(product.sales / 50) * 100}%` }}
                     />
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Chip
-                        label={order.status}
-                        color={getStatusColor(order.status)}
-                        size="small"
-                      />
-                      <IconButton size="small">
-                        <Visibility />
-                      </IconButton>
-                    </Box>
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Quick Actions & Top Products */}
-        <Grid item xs={12} lg={4}>
-          <Grid container spacing={3}>
-            {/* Quick Actions */}
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" component="h2" gutterBottom>
-                    Quick Actions
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        startIcon={<Add />}
-                        onClick={() => navigate('/admin/products/new')}
-                        sx={{ mb: 1 }}
-                      >
-                        Add Product
-                      </Button>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Button
-                        variant="outlined"
-                        fullWidth
-                        startIcon={<Assessment />}
-                        onClick={() => navigate('/admin/analytics')}
-                        sx={{ mb: 1 }}
-                      >
-                        View Analytics
-                      </Button>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Button
-                        variant="outlined"
-                        fullWidth
-                        startIcon={<LocalShipping />}
-                        onClick={() => navigate('/admin/orders')}
-                      >
-                        Manage Orders
-                      </Button>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Button
-                        variant="outlined"
-                        fullWidth
-                        startIcon={<People />}
-                        onClick={() => navigate('/admin/customers')}
-                      >
-                        View Customers
-                      </Button>
-                    </Grid>
-                  </Grid>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Top Products */}
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" component="h2" gutterBottom>
-                    Top Products
-                  </Typography>
-                  {topProducts.map((product, index) => (
-                    <Box key={product.id} sx={{ mb: 2 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                          {product.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          ${product.revenue.toFixed(2)}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {product.sales} sales
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Stock: {product.stock}
-                        </Typography>
-                      </Box>
-                      <LinearProgress
-                        variant="determinate"
-                        value={(product.sales / 50) * 100}
-                        sx={{ mt: 1 }}
-                      />
-                    </Box>
-                  ))}
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Grid>
-      </Grid>
-    </Container>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

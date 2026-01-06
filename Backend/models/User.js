@@ -136,6 +136,18 @@ const userSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  cart: [{
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product'
+    },
+    quantity: {
+      type: Number,
+      default: 1
+    },
+    size: String,
+    color: String
+  }],
   reviews: [{
     product: {
       type: mongoose.Schema.Types.ObjectId,

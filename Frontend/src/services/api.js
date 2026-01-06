@@ -93,6 +93,13 @@ export const productsAPI = {
     return response.json();
   },
 
+  // Get best offers (products with discounts)
+  getBestOffers: async (limit = 12) => {
+    const response = await fetch(`${API_BASE_URL}/products/best-offers?limit=${limit}`);
+    if (!response.ok) throw new Error('Failed to fetch best offers');
+    return response.json();
+  },
+
   // Get single product by ID
   getProductById: async (id) => {
     const response = await fetch(`${API_BASE_URL}/products/${id}`);
@@ -125,30 +132,22 @@ export const productsAPI = {
 
   // Create new product
   create: async (productData) => {
-    const response = await fetch(`${API_BASE_URL}/products`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders()
-      },
-      body: JSON.stringify(productData)
-    });
-    if (!response.ok) throw new Error('Failed to create product');
-    return response.json();
+    // Check if productData is FormData, if so, let axios handle headers
+    const isFormData = productData instanceof FormData;
+    // Axios automatically sets 'Content-Type: multipart/form-data' for FormData
+    // For JSON, the default 'application/json' from the axios instance is used.
+    const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+    const response = await api.post('/products', productData, config);
+    return response.data;
   },
 
   // Update existing product
   update: async (id, productData) => {
-    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders()
-      },
-      body: JSON.stringify(productData)
-    });
-    if (!response.ok) throw new Error('Failed to update product');
-    return response.json();
+    // Check if productData is FormData
+    const isFormData = productData instanceof FormData;
+    const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+    const response = await api.put(`/products/${id}`, productData, config);
+    return response.data;
   },
 
   // Delete product
@@ -349,6 +348,16 @@ export const deliveryAPI = {
   getStats: () => api.get('/delivery/stats'),
 };
 
+// Cart API
+export const cartAPI = {
+  get: () => api.get('/cart'),
+  add: (item) => api.post('/cart/add', item),
+  update: (itemId, quantity) => api.put(`/cart/${itemId}`, { quantity }),
+  remove: (itemId) => api.delete(`/cart/${itemId}`),
+  clear: () => api.delete('/cart'),
+  sync: (items) => api.post('/cart/sync', { items })
+};
+
 // Contact API
 export const contactAPI = {
   submit: (contactData) => api.post('/contact', contactData),
@@ -379,14 +388,17 @@ export const apiUtils = {
 
   // Format order data for API
   formatOrderData: (cartItems, shippingInfo, paymentMethod) => {
-    const items = cartItems.map(item => ({
-      product: item.product.id,
-      quantity: item.quantity,
-      price: parseFloat(item.product.price),
-      total: parseFloat(item.product.price) * item.quantity,
-    }));
+    const products = cartItems.map(item => ({
+        product: item.product._id || item.product.id,
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+        size: item.size,    // Add size
+        color: item.color,  // Add color
+        image: item.product.images?.[0]?.url || item.product.image
+      }));
 
-    const subtotal = items.reduce((total, item) => total + item.total, 0);
+    const subtotal = products.reduce((total, item) => total + (item.price * item.quantity), 0);
     const deliveryFee = subtotal > 100 ? 0 : 15;
     const total = subtotal + deliveryFee;
 

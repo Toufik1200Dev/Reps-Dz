@@ -1,9 +1,9 @@
-import React from "react"
-import { Box, Typography, Button, Container, useTheme, useMediaQuery, Chip } from "@mui/material"
-import { ChevronLeft, ChevronRight, FitnessCenter, PlayArrow, Star } from "@mui/icons-material"
-import pic1 from "../assets/imgs/pic1.jpg" 
-import pic2 from "../assets/imgs/pic2.jpg" 
-import pic3 from "../assets/imgs/pic3.jpg" 
+import React, { useState, useEffect } from "react"
+import { ChevronLeft, ChevronRight } from "@mui/icons-material"
+import { motion, AnimatePresence } from "framer-motion"
+import pic1 from "../assets/imgs/pic1.jpg"
+import pic2 from "../assets/imgs/pic2.jpg"
+import pic3 from "../assets/imgs/pic3.jpg"
 
 const slides = [
   {
@@ -15,8 +15,6 @@ const slides = [
     image: pic1,
     buttonText: "Shop Now",
     badge: "Best Seller",
-    rating: 4.9,
-    reviews: "2.5k+ reviews"
   },
   {
     id: 2,
@@ -26,8 +24,6 @@ const slides = [
     image: pic3,
     buttonText: "Explore Products",
     badge: "New Arrival",
-    rating: 4.8,
-    reviews: "1.8k+ reviews"
   },
   {
     id: 3,
@@ -37,15 +33,11 @@ const slides = [
     image: pic2,
     buttonText: "Get Started",
     badge: "Premium",
-    rating: 4.9,
-    reviews: "3.2k+ reviews"
   },
 ]
 
 export default function HeroSlider() {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"))
-  const [currentSlide, setCurrentSlide] = React.useState(0)
+  const [currentSlide, setCurrentSlide] = useState(0)
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length)
@@ -55,319 +47,87 @@ export default function HeroSlider() {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setInterval(nextSlide, 6000)
     return () => clearInterval(timer)
   }, [])
 
   return (
-    <Box
-      sx={{
-        position: "relative",
-        height: { xs: "85vh", md: "90vh" },
-        overflow: "hidden",
-        background: "var(--dark-gradient)",
-        borderRadius: { xs: "0 0 24px 24px", md: "0 0 32px 32px" },
-        boxShadow: "var(--shadow-heavy)",
-      }}
-    >
-      {slides.map((slide, index) => (
-        <Box
-          key={slide.id}
-          sx={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            opacity: index === currentSlide ? 1 : 0,
-            transition: "opacity 1s ease-in-out",
-            backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.6) 100%), url(${slide.image})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            display: "flex",
-            alignItems: "center",
-            "&::before": {
-              content: '""',
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: "radial-gradient(circle at 30% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%)",
-              pointerEvents: "none",
-            }
-          }}
-        >
-          <Container maxWidth="lg">
-            <Box
-              sx={{
-                color: "white",
-                maxWidth: { xs: "100%", md: "60%" },
-                textAlign: { xs: "center", md: "left" },
-                position: "relative",
-                zIndex: 2,
+    <div className="relative h-[75vh] md:h-[85vh] w-full overflow-hidden bg-black">
+      <AnimatePresence mode="wait">
+        {slides.map((slide, index) => {
+          if (index !== currentSlide) return null;
+
+          return (
+            <motion.div
+              key={slide.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8 }}
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{
+                backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.85) 100%), url(${slide.image})`
               }}
             >
-              {/* Badge */}
-              <Chip
-                label={slide.badge}
-                size="small"
-                sx={{
-                  mb: 2,
-                  background: "var(--accent-gradient)",
-                  color: "white",
-                  fontWeight: "bold",
-                  fontSize: "0.75rem",
-                  height: "24px",
-                  "& .MuiChip-label": {
-                    px: 1.5,
-                  },
-                }}
-              />
-
-              {/* Rating */}
-              <Box sx={{ display: "flex", alignItems: "center", mb: 2, justifyContent: { xs: "center", md: "flex-start" } }}>
-                <Box sx={{ display: "flex", alignItems: "center", mr: 1 }}>
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      sx={{
-                        fontSize: "1rem",
-                        color: i < Math.floor(slide.rating) ? "#FFD700" : "rgba(255,255,255,0.3)",
-                      }}
-                    />
-                  ))}
-                </Box>
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  {slide.rating} ({slide.reviews})
-                </Typography>
-              </Box>
-
-              <Typography
-                variant="h6"
-                sx={{
-                  mb: 1,
-                  color: "var(--accent-color)",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: 2,
-                  fontSize: { xs: "0.875rem", md: "1rem" },
-                }}
-              >
-                {slide.subtitle}
-              </Typography>
-              
-              <Typography
-                variant={isMobile ? "h3" : "h1"}
-                sx={{
-                  mb: 3,
-                  fontWeight: "900",
-                  lineHeight: 1.1,
-                  background: "linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%)",
-                  backgroundClip: "text",
-                  textFillColor: "transparent",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  fontSize: { xs: "2.5rem", md: "4rem", lg: "4.5rem" },
-                }}
-              >
-                {slide.title}
-              </Typography>
-              
-              <Typography
-                variant="h6"
-                sx={{
-                  mb: 4,
-                  opacity: 0.95,
-                  lineHeight: 1.7,
-                  fontSize: { xs: "1rem", md: "1.25rem" },
-                  maxWidth: "600px",
-                }}
-              >
-                {slide.description}
-              </Typography>
-              
-              <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", justifyContent: { xs: "center", md: "flex-start" } }}>
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<FitnessCenter />}
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    fontSize: "1.1rem",
-                    borderRadius: "50px",
-                    textTransform: "none",
-                    fontWeight: "bold",
-                    background: "var(--primary-gradient)",
-                    boxShadow: "var(--shadow-medium)",
-                    transition: "var(--transition)",
-                    "&:hover": {
-                      transform: "translateY(-3px)",
-                      boxShadow: "var(--shadow-heavy)",
-                      background: "var(--secondary-gradient)",
-                    },
-                  }}
-                >
-                  {slide.buttonText}
-                </Button>
-                
-                <Button
-                  variant="outlined"
-                  size="large"
-                  startIcon={<PlayArrow />}
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    fontSize: "1.1rem",
-                    borderRadius: "50px",
-                    textTransform: "none",
-                    fontWeight: "bold",
-                    borderColor: "rgba(255,255,255,0.3)",
-                    color: "white",
-                    transition: "var(--transition)",
-                    "&:hover": {
-                      borderColor: "white",
-                      backgroundColor: "rgba(255,255,255,0.1)",
-                      transform: "translateY(-3px)",
-                    },
-                  }}
-                >
-                  Watch Demo
-                </Button>
-              </Box>
-            </Box>
-          </Container>
-        </Box>
-      ))}
+              <div className="h-full w-full max-w-[1400px] mx-auto px-4 md:px-8 flex items-center">
+                <div className="w-full md:w-[65%] lg:w-[55%] text-white z-10 pl-6 md:pl-12">
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.6 }}
+                  >
+                    <div className="inline-block bg-secondary text-black text-xs font-bold px-3 py-1.5 rounded mb-6 uppercase tracking-wider">
+                      {slide.badge}
+                    </div>
+                    <p className="text-secondary font-semibold tracking-[0.2em] uppercase mb-4 text-sm md:text-base">
+                      {slide.subtitle}
+                    </p>
+                    <h1 className="font-display font-black text-5xl md:text-7xl lg:text-8xl leading-[0.9] mb-8 tracking-tight">
+                      {slide.title}
+                    </h1>
+                    <p className="text-gray-300 text-lg md:text-xl leading-relaxed mb-10 max-w-xl">
+                      {slide.description}
+                    </p>
+                    <button
+                      onClick={() => window.location.href = '/shop'}
+                      className="bg-secondary hover:bg-accent text-black text-lg font-bold px-10 py-4 rounded-full shadow-lg hover:shadow-gold transition-all duration-300 transform hover:-translate-y-1"
+                    >
+                      {slide.buttonText}
+                    </button>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
 
       {/* Navigation Arrows */}
-      <Box
-        sx={{
-          position: "absolute",
-          top: "50%",
-          left: { xs: 10, md: 30 },
-          transform: "translateY(-50%)",
-          zIndex: 3,
-        }}
+      <button
+        onClick={prevSlide}
+        className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 text-white bg-black/40 hover:bg-black/60 backdrop-blur-sm p-3 md:p-4 rounded-full border border-white/20 transition-all hover:border-secondary group"
       >
-        <Button
-          onClick={prevSlide}
-          sx={{
-            minWidth: 56,
-            height: 56,
-            borderRadius: "50%",
-            background: "rgba(255,255,255,0.15)",
-            backdropFilter: "blur(10px)",
-            color: "white",
-            border: "1px solid rgba(255,255,255,0.2)",
-            transition: "var(--transition)",
-            "&:hover": {
-              background: "rgba(255,255,255,0.25)",
-              transform: "scale(1.1)",
-            },
-          }}
-        >
-          <ChevronLeft />
-        </Button>
-      </Box>
-      
-      <Box
-        sx={{
-          position: "absolute",
-          top: "50%",
-          right: { xs: 10, md: 30 },
-          transform: "translateY(-50%)",
-          zIndex: 3,
-        }}
+        <ChevronLeft className="text-3xl md:text-4xl group-hover:text-secondary transition-colors" />
+      </button>
+      <button
+        onClick={nextSlide}
+        className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 text-white bg-black/40 hover:bg-black/60 backdrop-blur-sm p-3 md:p-4 rounded-full border border-white/20 transition-all hover:border-secondary group"
       >
-        <Button
-          onClick={nextSlide}
-          sx={{
-            minWidth: 56,
-            height: 56,
-            borderRadius: "50%",
-            background: "rgba(255,255,255,0.15)",
-            backdropFilter: "blur(10px)",
-            color: "white",
-            border: "1px solid rgba(255,255,255,0.2)",
-            transition: "var(--transition)",
-            "&:hover": {
-              background: "rgba(255,255,255,0.25)",
-              transform: "scale(1.1)",
-            },
-          }}
-        >
-          <ChevronRight />
-        </Button>
-      </Box>
+        <ChevronRight className="text-3xl md:text-4xl group-hover:text-secondary transition-colors" />
+      </button>
 
       {/* Slide Indicators */}
-      <Box
-        sx={{
-          position: "absolute",
-          bottom: { xs: 20, md: 40 },
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          gap: 1.5,
-          zIndex: 3,
-        }}
-      >
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-20">
         {slides.map((_, index) => (
-          <Box
+          <button
             key={index}
             onClick={() => setCurrentSlide(index)}
-            sx={{
-              width: index === currentSlide ? 40 : 12,
-              height: 12,
-              borderRadius: "6px",
-              background: index === currentSlide 
-                ? "var(--accent-gradient)" 
-                : "rgba(255,255,255,0.4)",
-              cursor: "pointer",
-              transition: "var(--transition)",
-              "&:hover": {
-                background: index === currentSlide 
-                  ? "var(--accent-gradient)" 
-                  : "rgba(255,255,255,0.7)",
-              },
-            }}
+            className={`h-1.5 rounded-full transition-all duration-300 ${index === currentSlide ? 'w-12 bg-secondary' : 'w-3 bg-white/40 hover:bg-white/60'
+              }`}
           />
         ))}
-      </Box>
-
-      {/* Floating elements for visual appeal */}
-      <Box
-        sx={{
-          position: "absolute",
-          top: "20%",
-          right: "10%",
-          width: 100,
-          height: 100,
-          background: "var(--accent-gradient)",
-          borderRadius: "50%",
-          opacity: 0.1,
-          animation: "float 6s ease-in-out infinite",
-          zIndex: 1,
-        }}
-      />
-      
-      <Box
-        sx={{
-          position: "absolute",
-          bottom: "30%",
-          right: "5%",
-          width: 60,
-          height: 60,
-          background: "var(--success-gradient)",
-          borderRadius: "50%",
-          opacity: 0.1,
-          animation: "float 4s ease-in-out infinite reverse",
-          zIndex: 1,
-        }}
-      />
-    </Box>
+      </div>
+    </div>
   )
 }

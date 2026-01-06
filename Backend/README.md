@@ -212,12 +212,6 @@ npm run dev
 npm test
 ```
 
-### Database Seeding
-```bash
-# Add seed data for testing
-npm run seed
-```
-
 ## Production Deployment
 
 1. Set `NODE_ENV=production`

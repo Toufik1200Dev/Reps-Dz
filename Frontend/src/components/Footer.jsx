@@ -1,62 +1,30 @@
 import React from 'react';
 import {
-  Box,
   Container,
-  Grid,
   Typography,
-  Link,
-  TextField,
-  Button,
-  IconButton,
+  Grid,
 } from '@mui/material';
 import {
   Facebook,
-  Twitter,
   Instagram,
   YouTube,
-  LinkedIn,
-  Email,
   Phone,
   LocationOn,
-  Send,
-  FitnessCenter,
-  LocalShipping,
-  Security,
-  Support,
 } from '@mui/icons-material';
+import logo from '../assets/logo/logo.png';
 
 const footerLinks = {
   products: [
-    { label: 'Pull-Up Bars', href: '/products/pull-up-bars' },
-    { label: 'Parallel Bars', href: '/products/parallel-bars' },
-    { label: 'Gymnastic Rings', href: '/products/rings' },
-    { label: 'Resistance Bands', href: '/products/bands' },
-    { label: 'Training Mats', href: '/products/mats' },
-    { label: 'Weighted Vests', href: '/products/vests' },
-  ],
-  training: [
-    { label: 'Workout Plans', href: '/training/plans' },
-    { label: 'Video Tutorials', href: '/training/videos' },
-    { label: 'Exercise Library', href: '/training/exercises' },
-    { label: 'Training Programs', href: '/training/programs' },
-    { label: 'Nutrition Guide', href: '/training/nutrition' },
-    { label: 'Progress Tracking', href: '/training/progress' },
+    { label: 'Pull-Up Bars', href: '/shop?category=calisthenics' },
+    { label: 'Parallel Bars', href: '/shop?category=calisthenics' },
+    { label: 'Gymnastic Rings', href: '/shop?category=calisthenics' },
+    { label: 'Resistance Bands', href: '/shop?category=calisthenics' },
   ],
   support: [
     { label: 'Contact Us', href: '/contact' },
-    { label: 'Shipping Info', href: '/shipping' },
-    { label: 'Returns & Exchanges', href: '/returns' },
-    { label: 'Size Guide', href: '/size-guide' },
-    { label: 'Installation Guide', href: '/installation' },
+    { label: 'Shipping Policy', href: '/shipping' },
+    { label: 'Returns', href: '/returns' },
     { label: 'FAQ', href: '/faq' },
-  ],
-  company: [
-    { label: 'About Us', href: '/about' },
-    { label: 'Our Story', href: '/story' },
-    { label: 'Careers', href: '/careers' },
-    { label: 'Press', href: '/press' },
-    { label: 'Privacy Policy', href: '/privacy' },
-    { label: 'Terms of Service', href: '/terms' },
   ],
 };
 
@@ -66,412 +34,95 @@ const socialLinks = [
   { icon: <YouTube />, href: '#', label: 'YouTube' },
 ];
 
-const features = [
-  {
-    icon: <FitnessCenter />,
-    title: 'Premium Quality',
-    description: 'Built to last with high-grade materials',
-  },
-  {
-    icon: <LocalShipping />,
-    title: 'Free Shipping',
-    description: 'On orders over $50',
-  },
-  {
-    icon: <Security />,
-    title: 'Secure Payment',
-    description: '100% secure checkout',
-  },
-  {
-    icon: <Support />,
-    title: '24/7 Support',
-    description: 'Expert help when you need it',
-  },
-];
-
 export default function Footer() {
   return (
-    <Box sx={{ background: 'var(--dark-gradient)', color: 'white' }}>
-      {/* Newsletter Section */}
-      <Box
-        sx={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-          py: 6,
-        }}
-      >
-        <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: '900',
-                  mb: 2,
-                  background: 'linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%)',
-                  backgroundClip: 'text',
-                  textFillColor: 'transparent',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                Stay Updated
+    <footer className="bg-dark-900 text-white pt-16 pb-8 border-t border-white/5">
+      <Container maxWidth="lg">
+        <Grid container spacing={8}>
+          {/* Brand Info */}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <img src={logo} alt="REPS-DZ" className="w-12 h-12 object-contain" />
+                <Typography variant="h4" className="font-display font-black tracking-tighter text-white">
+                  REPS<span className="text-secondary">-DZ</span>
+                </Typography>
+              </div>
+              <Typography variant="body2" className="text-gray-400 leading-relaxed mb-6">
+                Premium calisthenics equipment designed for athletes who demand the best.
+                Built to last, built for performance.
               </Typography>
-              <Typography variant="h6" sx={{ opacity: 0.9, mb: 3 }}>
-                Get the latest training tips, new products, and exclusive offers delivered to your inbox.
-              </Typography>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <TextField
-                  placeholder="Enter your email"
-                  variant="outlined"
-                  size="large"
-                  sx={{
-                    flex: 1,
-                    minWidth: '250px',
-                    '& .MuiOutlinedInput-root': {
-                      color: 'white',
-                      '& fieldset': {
-                        borderColor: 'rgba(255, 255, 255, 0.3)',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: 'rgba(255, 255, 255, 0.5)',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: 'var(--accent-color)',
-                      },
-                      '& input::placeholder': {
-                        color: 'rgba(255, 255, 255, 0.7)',
-                        opacity: 1,
-                      },
-                    },
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  endIcon={<Send />}
-                  sx={{
-                    background: 'var(--accent-gradient)',
-                    borderRadius: '50px',
-                    px: 4,
-                    py: 1.5,
-                    textTransform: 'none',
-                    fontWeight: 'bold',
-                    transition: 'var(--transition)',
-                    '&:hover': {
-                      background: 'var(--secondary-gradient)',
-                      transform: 'translateY(-2px)',
-                    },
-                  }}
-                >
-                  Subscribe
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* Main Footer Content */}
-      <Container maxWidth="lg" sx={{ py: 8 }}>
-        <Grid container spacing={6}>
-          {/* Company Info */}
-          <Grid item xs={12} md={4}>
-            <Box sx={{ mb: 4 }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: '900',
-                  mb: 2,
-                  background: 'var(--primary-gradient)',
-                  backgroundClip: 'text',
-                  textFillColor: 'transparent',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                TitouBarz
-              </Typography>
-              <Typography variant="body1" sx={{ opacity: 0.8, mb: 3, lineHeight: 1.7 }}>
-                Your trusted partner in calisthenics equipment. We provide premium quality training gear 
-                for athletes and fitness enthusiasts who demand excellence.
-              </Typography>
-              
-              {/* Contact Info */}
-              <Box sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <LocationOn sx={{ mr: 2, color: 'var(--accent-color)' }} />
-                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                    Algiers, Bab Ezzouar Douzi
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Phone sx={{ mr: 2, color: 'var(--accent-color)' }} />
-                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                    +213782442033
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Email sx={{ mr: 2, color: 'var(--accent-color)' }} />
-                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                    titoubarz@gmail.com
-                  </Typography>
-                </Box>
-              </Box>
-
-              {/* Social Links */}
-              <Box sx={{ display: 'flex', gap: 1 }}>
+              <div className="flex gap-4">
                 {socialLinks.map((social, index) => (
-                  <IconButton
+                  <a
                     key={index}
                     href={social.href}
-                    sx={{
-                      color: 'white',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      transition: 'var(--transition)',
-                      '&:hover': {
-                        background: 'rgba(255, 255, 255, 0.2)',
-                        transform: 'translateY(-2px)',
-                      },
-                    }}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-secondary hover:text-black transition-all duration-300"
                   >
                     {social.icon}
-                  </IconButton>
+                  </a>
                 ))}
-              </Box>
-            </Box>
+              </div>
+            </div>
           </Grid>
 
-          {/* Footer Links */}
-          <Grid item xs={12} md={8}>
-            <Grid container spacing={4}>
-              <Grid item xs={6} sm={3}>
-                <Typography variant="h6" sx={{ mb: 3, fontWeight: '700' }}>
-                  Products
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {footerLinks.products.map((link, index) => (
-                    <Link
-                      key={index}
-                      href={link.href}
-                      sx={{
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        textDecoration: 'none',
-                        transition: 'var(--transition)',
-                        '&:hover': {
-                          color: 'var(--accent-color)',
-                          transform: 'translateX(5px)',
-                        },
-                      }}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </Box>
-              </Grid>
+          {/* Links */}
+          <Grid size={{ xs: 6, md: 4 }}>
+            <Typography variant="h6" className="font-bold mb-6 text-white uppercase tracking-wider text-sm">
+              Products
+            </Typography>
+            <ul className="space-y-4">
+              {footerLinks.products.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="text-gray-400 hover:text-secondary transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </Grid>
 
-              <Grid item xs={6} sm={3}>
-                <Typography variant="h6" sx={{ mb: 3, fontWeight: '700' }}>
-                  Training
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {footerLinks.training.map((link, index) => (
-                    <Link
-                      key={index}
-                      href={link.href}
-                      sx={{
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        textDecoration: 'none',
-                        transition: 'var(--transition)',
-                        '&:hover': {
-                          color: 'var(--accent-color)',
-                          transform: 'translateX(5px)',
-                        },
-                      }}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </Box>
-              </Grid>
-
-              <Grid item xs={6} sm={3}>
-                <Typography variant="h6" sx={{ mb: 3, fontWeight: '700' }}>
-                  Support
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {footerLinks.support.map((link, index) => (
-                    <Link
-                      key={index}
-                      href={link.href}
-                      sx={{
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        textDecoration: 'none',
-                        transition: 'var(--transition)',
-                        '&:hover': {
-                          color: 'var(--accent-color)',
-                          transform: 'translateX(5px)',
-                        },
-                      }}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </Box>
-              </Grid>
-
-              <Grid item xs={6} sm={3}>
-                <Typography variant="h6" sx={{ mb: 3, fontWeight: '700' }}>
-                  Company
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {footerLinks.company.map((link, index) => (
-                    <Link
-                      key={index}
-                      href={link.href}
-                      sx={{
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        textDecoration: 'none',
-                        transition: 'var(--transition)',
-                        '&:hover': {
-                          color: 'var(--accent-color)',
-                          transform: 'translateX(5px)',
-                        },
-                      }}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </Box>
-              </Grid>
-            </Grid>
+          <Grid size={{ xs: 6, md: 4 }}>
+            <Typography variant="h6" className="font-bold mb-6 text-white uppercase tracking-wider text-sm">
+              Support
+            </Typography>
+            <ul className="space-y-4">
+              {footerLinks.support.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="text-gray-400 hover:text-secondary transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </Grid>
         </Grid>
+
+        {/* Contact Strip */}
+        <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-center">
+            <div className="flex items-center gap-2">
+              <LocationOn className="text-secondary text-lg" />
+              <span>Algiers, Bab Ezzouar Douzi</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Phone className="text-secondary text-lg" />
+              <span>+213 782 442 033</span>
+            </div>
+          </div>
+          <div>
+            &copy; {new Date().getFullYear()} REPS-DZ. All rights reserved.
+          </div>
+        </div>
       </Container>
-
-      {/* Features Section */}
-      <Box sx={{ background: 'rgba(255, 255, 255, 0.05)', py: 4 }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={3}>
-            {features.map((feature, index) => (
-              <Grid item xs={6} md={3} key={index}>
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    p: 2,
-                    borderRadius: 'var(--border-radius)',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    transition: 'var(--transition)',
-                    '&:hover': {
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      transform: 'translateY(-2px)',
-                    },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      background: 'var(--accent-gradient)',
-                      color: 'white',
-                    }}
-                  >
-                    {feature.icon}
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: '600', mb: 0.5 }}>
-                      {feature.title}
-                    </Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                      {feature.description}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* Bottom Bar */}
-      <Box
-        sx={{
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-          py: 3,
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 2,
-            }}
-          >
-            <Typography variant="body2" sx={{ opacity: 0.7 }}>
-              © 2024 Shoppy-Barz. All rights reserved.
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 3 }}>
-              <Link
-                href="/privacy"
-                sx={{
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  textDecoration: 'none',
-                  fontSize: '0.875rem',
-                  transition: 'var(--transition)',
-                  '&:hover': {
-                    color: 'var(--accent-color)',
-                  },
-                }}
-              >
-                Privacy Policy
-              </Link>
-              <Link
-                href="/terms"
-                sx={{
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  textDecoration: 'none',
-                  fontSize: '0.875rem',
-                  transition: 'var(--transition)',
-                  '&:hover': {
-                    color: 'var(--accent-color)',
-                  },
-                }}
-              >
-                Terms of Service
-              </Link>
-              <Link
-                href="/cookies"
-                sx={{
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  textDecoration: 'none',
-                  fontSize: '0.875rem',
-                  transition: 'var(--transition)',
-                  '&:hover': {
-                    color: 'var(--accent-color)',
-                  },
-                }}
-              >
-                Cookie Policy
-              </Link>
-            </Box>
-          </Box>
-        </Container>
-      </Box>
-    </Box>
+    </footer>
   );
 }

@@ -1,52 +1,69 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { cartAPI } from '../services/api';
 
 // Cart reducer for state management
 const cartReducer = (state, action) => {
   switch (action.type) {
     case 'ADD_ITEM':
-      const existingItem = state.items.find(item => item.id === action.payload.id);
-      if (existingItem) {
-        return {
-          ...state,
-          items: state.items.map(item =>
-            item.id === action.payload.id
-              ? { ...item, quantity: item.quantity + 1 }
-              : item
-          ),
+      // Primarily for Guest User usage (Auth uses LOAD_CART)
+      const newItem = action.payload;
+      // Generate a unique ID if not present (fallback)
+      const uniqueId = newItem.uniqueId || newItem._id || newItem.id;
+
+      const existingItemIndex = state.items.findIndex(item =>
+        (item.uniqueId === uniqueId) ||
+        (item._id && item._id === uniqueId) || // If checking against DB ID
+        (!item.uniqueId && !item._id && item.id === newItem.id) // Legacy/Simple fallback
+      );
+
+      if (existingItemIndex > -1) {
+        const updatedItems = [...state.items];
+        updatedItems[existingItemIndex] = {
+          ...updatedItems[existingItemIndex],
+          quantity: updatedItems[existingItemIndex].quantity + newItem.quantity
         };
+        return { ...state, items: updatedItems };
       } else {
         return {
           ...state,
-          items: [...state.items, { ...action.payload, quantity: 1 }],
+          items: [...state.items, { ...newItem, uniqueId }] // Ensure uniqueId is saved
         };
       }
 
     case 'REMOVE_ITEM':
       return {
         ...state,
-        items: state.items.filter(item => item.id !== action.payload),
+        items: state.items.filter(item =>
+          item.uniqueId !== action.payload &&
+          item._id !== action.payload &&
+          item.id !== action.payload // Fallback
+        ),
       };
 
     case 'UPDATE_QUANTITY':
       return {
         ...state,
-        items: state.items.map(item =>
-          item.id === action.payload.id
+        items: state.items.map(item => {
+          const isMatch = (item.id === action.payload.id) ||
+            (item._id === action.payload.id) ||
+            (item.uniqueId === action.payload.id);
+          return isMatch
             ? { ...item, quantity: Math.max(0, action.payload.quantity) }
-            : item
-        ).filter(item => item.quantity > 0),
+            : item;
+        }).filter(item => item.quantity > 0),
       };
 
     case 'CLEAR_CART':
-      return {
-        ...state,
-        items: [],
-      };
+      return { ...state, items: [] };
 
     case 'LOAD_CART':
+      return { ...state, items: action.payload || [] };
+
+    case 'UPDATE_TOTALS':
       return {
         ...state,
-        items: action.payload || [],
+        totalItems: action.payload.totalItems,
+        totalPrice: action.payload.totalPrice,
       };
 
     default:
@@ -67,13 +84,13 @@ const CartContext = createContext();
 // Cart provider component
 export const CartProvider = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+  const isAuthenticated = !!localStorage.getItem('token');
 
   // Calculate totals whenever items change
   useEffect(() => {
     const totalItems = state.items.reduce((sum, item) => sum + item.quantity, 0);
     const totalPrice = state.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
-    // Update state with calculated totals
+
     if (totalItems !== state.totalItems || totalPrice !== state.totalPrice) {
       dispatch({
         type: 'UPDATE_TOTALS',
@@ -82,65 +99,159 @@ export const CartProvider = ({ children }) => {
     }
   }, [state.items]);
 
-  // Load cart from localStorage on mount
+  // Initial Data Load
   useEffect(() => {
-    const savedCart = localStorage.getItem('titoubarz-cart');
-    if (savedCart) {
-      try {
-        const parsedCart = JSON.parse(savedCart);
-        dispatch({ type: 'LOAD_CART', payload: parsedCart });
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
-      }
-    }
-  }, []);
+    const initializeCart = async () => {
+      if (isAuthenticated) {
+        try {
+          // 1. Sync any guest items if they exist
+          const savedCart = localStorage.getItem('titoubarz-cart');
+          if (savedCart) {
+            const guestItems = JSON.parse(savedCart);
+            if (guestItems.length > 0) {
+              await cartAPI.sync(guestItems.map(item => ({
+                productId: item.id || item._id,
+                quantity: item.quantity,
+                size: item.size,
+                color: item.color
+              })));
+              // Clear local storage after sync
+              localStorage.removeItem('titoubarz-cart');
+            }
+          }
 
-  // Save cart to localStorage whenever it changes
+          // 2. Fetch server cart
+          const response = await cartAPI.get();
+          dispatch({ type: 'LOAD_CART', payload: response.data || response });
+        } catch (error) {
+          console.error('Failed to load server cart:', error);
+        }
+      } else {
+        // Load from LocalStorage for guest
+        const savedCart = localStorage.getItem('titoubarz-cart');
+        if (savedCart) {
+          try {
+            dispatch({ type: 'LOAD_CART', payload: JSON.parse(savedCart) });
+          } catch (e) { console.error(e); }
+        }
+      }
+    };
+
+    initializeCart();
+  }, [isAuthenticated]);
+
+  // Persist to LocalStorage if Guest
   useEffect(() => {
-    localStorage.setItem('titoubarz-cart', JSON.stringify(state.items));
-  }, [state.items]);
+    if (!isAuthenticated) {
+      localStorage.setItem('titoubarz-cart', JSON.stringify(state.items));
+    }
+  }, [state.items, isAuthenticated]);
 
   // Cart actions
-  const addToCart = (product) => {
-    dispatch({ type: 'ADD_ITEM', payload: product });
+  const addToCart = async (product, quantity = 1, size = null, color = null) => {
+    // Optimistic UI Update or Wait for Server?
+    // Let's go with Optimistic for Guest, Server-First for Auth to ensure stock/consistency?
+    // Actually, hybrid is smoother if we update state immediately. 
+    // But simplified approach:
+
+    if (isAuthenticated) {
+      try {
+        // Normalize ID
+        const productId = product.id || product._id;
+        const res = await cartAPI.add({ productId, quantity, size, color });
+        // Server returns full cart usually
+        dispatch({ type: 'LOAD_CART', payload: res.data || res });
+      } catch (error) {
+        console.error('Failed to add to cart:', error);
+        alert('Could not add to cart. Please try again.');
+      }
+    } else {
+      // Guest logic
+      const normalizedProduct = {
+        ...product,
+        id: product.id || product._id,
+        _id: product._id || product.id,
+        price: parseFloat(product.price) || 0,
+        image: product.images?.[0]?.url || product.image || product.images?.[0] || '',
+        selectedSize: size,
+        selectedColor: color
+      };
+      // Note: The reducer needs to handle size/color differentiation for guests!
+      // We'll dispatch a custom payload or update reducer.
+      // Current reducer implementation might merge items by ID only, which is wrong for variants.
+      // We'll update the reducer logic separately, or patch it here.
+
+      // Creating a unique key for the item
+      const uniqueId = `${normalizedProduct.id}-${size}-${color}`;
+      dispatch({
+        type: 'ADD_ITEM',
+        payload: { ...normalizedProduct, uniqueId, quantity, size, color }
+      });
+    }
   };
 
-  const removeFromCart = (productId) => {
-    dispatch({ type: 'REMOVE_ITEM', payload: productId });
+  const removeFromCart = async (itemId) => {
+    if (isAuthenticated) {
+      try {
+        const res = await cartAPI.remove(itemId); // itemId is the cart item _id from DB
+        dispatch({ type: 'LOAD_CART', payload: res.data || res });
+      } catch (error) { console.error(error); }
+    } else {
+      dispatch({ type: 'REMOVE_ITEM', payload: itemId });
+    }
   };
 
-  const updateQuantity = (productId, quantity) => {
-    dispatch({ type: 'UPDATE_QUANTITY', payload: { id: productId, quantity } });
+  const updateQuantity = async (itemId, quantity) => {
+    if (isAuthenticated) {
+      try {
+        const res = await cartAPI.update(itemId, quantity);
+        dispatch({ type: 'LOAD_CART', payload: res.data || res });
+      } catch (error) { console.error(error); }
+    } else {
+      dispatch({ type: 'UPDATE_QUANTITY', payload: { id: itemId, quantity } });
+    }
   };
 
-  const clearCart = () => {
-    dispatch({ type: 'CLEAR_CART' });
+  const clearCart = async () => {
+    if (isAuthenticated) {
+      try {
+        await cartAPI.clear();
+        dispatch({ type: 'CLEAR_CART' });
+      } catch (error) { console.error(error); }
+    } else {
+      dispatch({ type: 'CLEAR_CART' });
+      localStorage.removeItem('titoubarz-cart');
+    }
   };
 
-  // Get cart totals
-  const getTotalItems = () => {
-    return state.items.reduce((sum, item) => sum + item.quantity, 0);
+  const getItemQuantity = (productId, size, color) => {
+    // This logic is tricky with mixed types. 
+    // For now simple check
+    if (isAuthenticated) {
+      // Server items have product._id usually
+      return state.items.find(item =>
+        (item.productId === productId || item.product?._id === productId) &&
+        item.size === size &&
+        item.color === color
+      )?.quantity || 0;
+    } else {
+      return state.items.find(item =>
+        (item.id === productId || item._id === productId) &&
+        item.size === size &&
+        item.color === color
+      )?.quantity || 0;
+    }
   };
 
-  const getTotalPrice = () => {
-    return state.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  };
-
-  // Check if item is in cart
   const isInCart = (productId) => {
-    return state.items.some(item => item.id === productId);
-  };
-
-  // Get item quantity
-  const getItemQuantity = (productId) => {
-    const item = state.items.find(item => item.id === productId);
-    return item ? item.quantity : 0;
+    // General check if product exists in any variant
+    return state.items.some(item => item.id === productId || item._id === productId || item.productId === productId || item.product?._id === productId);
   };
 
   const value = {
     items: state.items,
-    totalItems: getTotalItems(),
-    totalPrice: getTotalPrice(),
+    totalItems: state.totalItems,
+    totalPrice: state.totalPrice,
     addToCart,
     removeFromCart,
     updateQuantity,

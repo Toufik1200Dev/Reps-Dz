@@ -15,7 +15,7 @@ export const AdminAuthProvider = ({ children }) => {
   const [adminPassword, setAdminPassword] = useState('');
 
   const login = (password) => {
-    if (password === 'toUfik99T@') {
+    if (password === 'admin123') {
       setIsAdminAuthenticated(true);
       setAdminPassword(password);
       localStorage.setItem('adminPassword', password);
@@ -32,7 +32,7 @@ export const AdminAuthProvider = ({ children }) => {
 
   const checkAuth = () => {
     const storedPassword = localStorage.getItem('adminPassword');
-    if (storedPassword === 'toUfik99T@') {
+    if (storedPassword === 'admin123') {
       setIsAdminAuthenticated(true);
       setAdminPassword(storedPassword);
       return true;

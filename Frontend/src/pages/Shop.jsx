@@ -1,698 +1,468 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
-  Typography,
-  Grid,
-  Card,
-  CardContent,
-  CardMedia,
-  Button,
-  Box,
-  Chip,
-  Rating,
+  Slider,
+  Pagination,
+  Drawer,
+  IconButton,
+  TextField,
+  MenuItem,
+  Select,
   FormControl,
   InputLabel,
-  Select,
-  MenuItem,
-  TextField,
-  Slider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Pagination,
-  useTheme,
-  useMediaQuery,
-  IconButton,
-  Drawer,
-  Paper,
+  Rating,
+  Chip,
+  CircularProgress
 } from '@mui/material';
 import {
-  ShoppingCart,
-  Favorite,
-  Visibility,
   FilterList,
-  ExpandMore,
   Search,
-  Clear,
-  FitnessCenter,
+  ShoppingCart,
+  Close,
+  FitnessCenter
 } from '@mui/icons-material';
-import { featuredProducts } from '../data/products';
 import { productsAPI } from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useCart } from '../contexts/CartContext';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// Mock data fallback if API fails
+import { featuredProducts } from '../data/products';
 
 export default function Shop() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  
-  // State for filtering and sorting
-  const [products, setProducts] = useState(featuredProducts);
-  const [filteredProducts, setFilteredProducts] = useState(featuredProducts);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [priceRange, setPriceRange] = useState([0, 20000]);
-  const [sortBy, setSortBy] = useState('name');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [productsPerPage] = useState(12);
-  const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const { addToCart, isInCart } = useCart();
 
-  // Categories will be dynamically loaded from products
+  // State
+  const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [categories, setCategories] = useState([]);
 
-  const normalizeProduct = (p) => {
-    if (!p) return null;
-    const images = Array.isArray(p.images) ? p.images : (p.image ? [p.image] : []);
-    const image = images[0] || p.image || '/placeholder.svg?height=300&width=300';
-    return {
-      id: p._id || p.id,
-      name: p.name || '',
-      price: String(p.price ?? ''),
-      originalPrice: p.originalPrice ? String(p.originalPrice) : undefined,
-      image,
-      description: p.description || '',
-      rating: p.rating ?? 4.8,
-      reviews: p.reviews ?? '0+',
-      inStock: p.inStock ?? (p.stockQuantity > 0),
-      category: p.category || '',
-      badge: p.isFeatured ? 'Featured' : p.badge,
-    };
-  };
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
+  const [priceRange, setPriceRange] = useState([0, 50000]);
+  const [sortBy, setSortBy] = useState('name');
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 12;
 
-  // Load products from API
+  // Data Loading
   useEffect(() => {
-    let mounted = true;
-    (async () => {
+    const fetchProducts = async () => {
       setLoading(true);
       try {
+
+
         const res = await productsAPI.getAllProducts();
-        const list = res?.data?.products || res?.data || [];
-        const normalized = list.map(normalizeProduct).filter(Boolean);
-        if (mounted) {
-          setProducts(normalized);
-          // Extract unique categories from products
-          const uniqueCategories = [...new Set(normalized.map(p => p.category).filter(Boolean))];
-          setCategories(uniqueCategories);
-          setFilteredProducts(normalized);
-        }
+        const list = res?.products || res?.data?.products || res?.data || [];
+
+        const normalized = list.map(p => ({
+          id: p._id || p.id,
+          name: p.name || '',
+          price: p.price,
+          originalPrice: p.originalPrice,
+          image: p.images?.main || (Array.isArray(p.images) && p.images.length > 0 ? p.images[0].url || p.images[0] : (p.image || '/placeholder.jpg')),
+          description: p.description || '',
+          rating: p.rating || { average: 4.8, count: 0 },
+          inStock: p.stockQuantity > 0,
+          category: p.category || '',
+          isFeatured: p.isFeatured
+        })).filter(Boolean);
+
+        setProducts(normalized);
+        const uniqueCats = [...new Set(normalized.map(p => p.category).filter(Boolean))];
+        setCategories(uniqueCats);
+        setFilteredProducts(normalized);
       } catch (e) {
-        // Fallback to existing featuredProducts already in state
-        console.warn('Using fallback products. API load failed.');
+        console.warn('Using fallback products');
+        setProducts(featuredProducts);
+        setCategories([...new Set(featuredProducts.map(p => p.category))]);
+        setFilteredProducts(featuredProducts);
       } finally {
         setLoading(false);
       }
-    })();
-    return () => { mounted = false; };
+    };
+    fetchProducts();
   }, []);
 
-  // Filter and sort products
+  // Filtering Logic
   useEffect(() => {
-    let filtered = [...products];
+    let result = [...products];
 
-    // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase())
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.category.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Category filter
     if (selectedCategory) {
-      filtered = filtered.filter(product =>
-        product.category === selectedCategory
-      );
+      result = result.filter(p => p.category.toLowerCase() === selectedCategory.toLowerCase());
     }
 
-    // Price range filter
-    filtered = filtered.filter(product => {
-      const price = parseFloat(product.price);
+    result = result.filter(p => {
+      const price = parseFloat(p.price);
       return price >= priceRange[0] && price <= priceRange[1];
     });
 
-    // Sort products
-    filtered.sort((a, b) => {
+    result.sort((a, b) => {
       switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'price-low':
-          return parseFloat(a.price) - parseFloat(b.price);
-        case 'price-high':
-          return parseFloat(b.price) - parseFloat(a.price);
-        case 'rating':
-          return (b.rating ?? 0) - (a.rating ?? 0);
-        default:
-          return 0;
+        case 'price-low': return parseFloat(a.price) - parseFloat(b.price);
+        case 'price-high': return parseFloat(b.price) - parseFloat(a.price);
+        case 'rating': return (b.rating.average || 0) - (a.rating.average || 0);
+        default: return a.name.localeCompare(b.name);
       }
     });
 
-    setFilteredProducts(filtered);
+    setFilteredProducts(result);
     setCurrentPage(1);
   }, [products, searchTerm, selectedCategory, priceRange, sortBy]);
 
-  // Pagination
+  // Pagination Logic
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
   const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
 
-  const handleAddToCart = (product) => {
-    console.log('Add to cart:', product);
-    // TODO: Implement cart functionality
-  };
-
-  const handleAddToWishlist = (product) => {
-    console.log('Add to wishlist:', product);
-    // TODO: Implement wishlist functionality
-  };
-
-  const handleViewProduct = (product) => {
-    console.log('View product:', product);
-    navigate(`/product/${product.id}`);
+  const handleAddToCart = (product, e) => {
+    e.stopPropagation();
+    addToCart(product);
   };
 
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedCategory('');
-    setPriceRange([0, 20000]);
+    setPriceRange([0, 50000]);
     setSortBy('name');
   };
 
-  const FilterSidebar = () => (
-    <Paper
-      elevation={0}
-      sx={{
-        p: 2,
-        borderRadius: 'var(--border-radius)',
-        background: 'white',
-        border: '1px solid rgba(0,0,0,0.05)',
-        height: 'fit-content',
-        position: 'sticky',
-        top: 20,
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-        <FitnessCenter sx={{ color: 'primary.main' }} />
-        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-          Filters
-        </Typography>
-      </Box>
-      
+  // Shared Filter Content (Sidebar Style)
+  const FilterContent = ({ mobile = false }) => (
+    <div className="flex flex-col gap-8">
       {/* Search */}
-      <Box sx={{ mb: 3 }}>
+      <div className="space-y-3">
+        <h3 className="font-display font-bold text-lg uppercase tracking-wider border-b border-gray-100 pb-2">Search</h3>
         <TextField
           fullWidth
-          label="Search products"
+          placeholder="Search gear..."
+          variant="outlined"
+          size="small"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            endAdornment: searchTerm && (
-              <IconButton onClick={() => setSearchTerm('')}>
-                <Clear />
-              </IconButton>
-            ),
-          }}
           sx={{
             '& .MuiOutlinedInput-root': {
-              borderRadius: 'var(--border-radius)',
-            },
-          }}
-        />
-      </Box>
-
-      {/* Category Filter */}
-      <Box sx={{ mb: 3 }}>
-        <FormControl fullWidth>
-          <InputLabel>Category</InputLabel>
-          <Select
-            value={selectedCategory}
-            label="Category"
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            sx={{
-              borderRadius: 'var(--border-radius)',
-            }}
-          >
-            <MenuItem value="">All Categories</MenuItem>
-            {categories.map((category) => (
-              <MenuItem key={category} value={category}>
-                {category}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
-
-      {/* Price Range */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 2, color: 'var(--primary-color)' }}>
-          Price Range: {priceRange[0].toLocaleString()} - {priceRange[1].toLocaleString()} DA
-        </Typography>
-        <Slider
-          value={priceRange}
-          onChange={(e, newValue) => setPriceRange(newValue)}
-          valueLabelDisplay="auto"
-          min={0}
-          max={20000}
-          sx={{
-            '& .MuiSlider-thumb': {
-              background: 'var(--primary-gradient)',
-              width: 20,
-              height: 20,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-            },
-            '& .MuiSlider-track': {
-              background: 'var(--primary-gradient)',
-              height: 6,
-              borderRadius: 3
-            },
-            '& .MuiSlider-rail': {
-              background: 'rgba(0,0,0,0.1)',
-              height: 6,
-              borderRadius: 3
-            },
-            '& .MuiSlider-valueLabel': {
-              background: 'var(--primary-gradient)',
-              color: 'white',
-              fontWeight: 'bold'
+              borderRadius: '12px',
+              backgroundColor: '#f9fafb', // gray-50
+              '& fieldset': { borderColor: '#e5e7eb' },
+              '&:hover fieldset': { borderColor: '#d1d5db' },
+              '&.Mui-focused fieldset': { borderColor: '#FFD700' }
             }
           }}
+          InputProps={{
+            startAdornment: <Search className="text-gray-400 mr-2" fontSize="small" />,
+          }}
         />
-      </Box>
+      </div>
 
-      {/* Sort */}
-      <Box sx={{ mb: 3 }}>
-        <FormControl fullWidth>
-          <InputLabel>Sort By</InputLabel>
+      {/* Sort By */}
+      <div className="space-y-3">
+        <h3 className="font-display font-bold text-lg uppercase tracking-wider border-b border-gray-100 pb-2">Sort By</h3>
+        <FormControl fullWidth size="small">
           <Select
             value={sortBy}
-            label="Sort By"
             onChange={(e) => setSortBy(e.target.value)}
+            displayEmpty
             sx={{
-              borderRadius: 'var(--border-radius)',
+              borderRadius: '12px',
+              backgroundColor: '#f9fafb',
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e5e7eb' },
+              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db' },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#FFD700' }
             }}
           >
-            <MenuItem value="name">Name A-Z</MenuItem>
-            <MenuItem value="price-low">Price: Low to High</MenuItem>
-            <MenuItem value="price-high">Price: High to Low</MenuItem>
-            <MenuItem value="rating">Rating</MenuItem>
+            <MenuItem value="name">Name (A-Z)</MenuItem>
+            <MenuItem value="price-low">Price (Low to High)</MenuItem>
+            <MenuItem value="price-high">Price (High to Low)</MenuItem>
+            <MenuItem value="rating">Top Rated</MenuItem>
           </Select>
         </FormControl>
-      </Box>
+      </div>
 
-      {/* Clear Filters */}
-      <Box sx={{ mb: 3 }}>
-        <Button
-          variant="outlined"
-          fullWidth
-          onClick={clearFilters}
-          sx={{ 
-            borderRadius: '50px',
-            textTransform: 'none',
-            fontWeight: 'bold',
-            py: 1.5,
-          }}
-        >
-          Clear Filters
-        </Button>
-      </Box>
+      {/* Categories */}
+      <div className="space-y-3">
+        <h3 className="font-display font-bold text-lg uppercase tracking-wider border-b border-gray-100 pb-2">Categories</h3>
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => setSelectedCategory('')}
+            className={`text-left px-4 py-3 rounded-xl transition-all font-medium text-sm flex items-center justify-between group ${selectedCategory === ''
+              ? 'bg-black text-secondary shadow-lg shadow-black/20'
+              : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-black'
+              }`}
+          >
+            All Categories
+            {selectedCategory === '' && <span className="w-2 h-2 rounded-full bg-secondary" />}
+          </button>
 
-      {/* Results Count */}
-      <Box
-        sx={{
-          p: 2,
-          borderRadius: 'var(--border-radius)',
-          background: 'var(--light-color)',
-          textAlign: 'center',
-        }}
-      >
-        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: '500' }}>
-          {filteredProducts.length} products found
-        </Typography>
-      </Box>
-    </Paper>
-  );
-
-  // Horizontal filter bar (desktop)
-  const FilterBar = () => (
-    <Paper
-      elevation={0}
-      sx={{
-        p: 2,
-        mb: 3,
-        borderRadius: 'var(--border-radius)',
-        background: 'white',
-        border: '1px solid rgba(0,0,0,0.05)'
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-        <Box sx={{ width: 260, flex: '0 0 auto' }}>
-          <TextField
-            fullWidth
-            label="Search products"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              endAdornment: searchTerm && (
-                <IconButton onClick={() => setSearchTerm('')}>
-                  <Clear />
-                </IconButton>
-              ),
-            }}
-            size="small"
-          />
-        </Box>
-
-        <Box sx={{ width: 200, flex: '0 0 auto' }}>
-          <FormControl fullWidth size="small">
-            <InputLabel>Category</InputLabel>
-            <Select
-              value={selectedCategory}
-              label="Category"
-              onChange={(e) => setSelectedCategory(e.target.value)}
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`text-left px-4 py-3 rounded-xl transition-all font-medium text-sm flex items-center justify-between group ${selectedCategory === cat
+                ? 'bg-black text-secondary shadow-lg shadow-black/20'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-black'
+                }`}
             >
-              <MenuItem value="">All Categories</MenuItem>
-              {categories.map((category) => (
-                <MenuItem key={category} value={category}>
-                  {category}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
+              {cat}
+              {selectedCategory === cat && <span className="w-2 h-2 rounded-full bg-secondary" />}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <Box sx={{ width: 260, flex: '0 0 auto' }}>
-          <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: 'var(--primary-color)', fontWeight: 'bold' }}>
-            Price: {priceRange[0]} - {priceRange[1]} DA
-          </Typography>
+      {/* Price Range */}
+      <div className="space-y-4">
+        <h3 className="font-display font-bold text-lg uppercase tracking-wider border-b border-gray-100 pb-2">Price Range</h3>
+        <div className="px-2">
           <Slider
             value={priceRange}
             onChange={(e, v) => setPriceRange(v)}
-            valueLabelDisplay="auto"
             min={0}
-            max={5000}
-            size="small"
+            max={50000}
+            step={100}
             sx={{
-              '& .MuiSlider-thumb': { 
-                background: 'var(--primary-gradient)',
-                width: 16,
-                height: 16
+              color: '#FFD700',
+              height: 4,
+              '& .MuiSlider-thumb': {
+                width: 20,
+                height: 20,
+                backgroundColor: '#000',
+                border: '2px solid #FFD700',
+                '&:hover': { boxShadow: '0 0 0 8px rgba(255, 215, 0, 0.16)' },
+                '&.Mui-focusVisible': { boxShadow: '0 0 0 8px rgba(255, 215, 0, 0.16)' },
               },
-              '& .MuiSlider-track': { 
-                background: 'var(--primary-gradient)',
-                height: 4
-              },
-              '& .MuiSlider-rail': { 
-                background: 'rgba(0,0,0,0.1)',
-                height: 4
-              }
+              '& .MuiSlider-track': { border: 'none' },
+              '& .MuiSlider-rail': { opacity: 0.3, backgroundColor: '#000' }
             }}
           />
-        </Box>
+        </div>
+        <div className="flex items-center justify-between text-sm font-bold bg-gray-50 p-3 rounded-xl border border-gray-100">
+          <span>{priceRange[0].toLocaleString()} DA</span>
+          <span className="text-gray-400">-</span>
+          <span>{priceRange[1].toLocaleString()} DA</span>
+        </div>
+      </div>
 
-        <Box sx={{ width: 200, flex: '0 0 auto' }}>
-          <FormControl fullWidth size="small">
-            <InputLabel>Sort By</InputLabel>
-            <Select
-              value={sortBy}
-              label="Sort By"
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <MenuItem value="name">Name A-Z</MenuItem>
-              <MenuItem value="price-low">Price: Low to High</MenuItem>
-              <MenuItem value="price-high">Price: High to Low</MenuItem>
-              <MenuItem value="rating">Rating</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-
-        <Box sx={{ flex: '0 0 auto' }}>
-          <Button variant="outlined" onClick={clearFilters} size="small">
-            Clear Filters
-          </Button>
-        </Box>
-      </Box>
-    </Paper>
+      <button
+        onClick={clearFilters}
+        className="text-sm font-bold text-red-500 hover:text-red-600 transition-colors py-2 border border-red-100 rounded-xl hover:bg-red-50"
+      >
+        Reset Filters
+      </button>
+    </div>
   );
 
   return (
-    <Box sx={{ py: 4, background: 'var(--light-color)', minHeight: '100vh' }}>
-      <Container maxWidth="lg">
-        {/* Header */}
-        <Box sx={{ textAlign: 'center', mb: 6 }}>
-          <Chip
-            label="Shop"
-            size="small"
-            sx={{
-              mb: 2,
-              background: 'var(--primary-gradient)',
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '0.75rem',
-            }}
-          />
-          <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 'bold' }}>
-            Premium <span className="gradient-text">Calisthenics</span> Equipment
-          </Typography>
-          <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-            Discover our collection of high-quality training gear for serious athletes
-          </Typography>
-        </Box>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="bg-gradient-dark text-white py-16 md:py-24 text-center px-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1600')] bg-cover bg-center opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80" />
 
-        {/* Filters */}
-        {isMobile ? (
-          <Button
-            variant="outlined"
-            startIcon={<FilterList />}
-            onClick={() => setDrawerOpen(true)}
-            sx={{ 
-              mb: 3,
-              borderRadius: '50px',
-              textTransform: 'none',
-              fontWeight: 'bold',
-              px: 3,
-            }}
-          >
-            Filters
-          </Button>
-        ) : (
-          <FilterBar />
-        )}
+        <div className="relative z-10 max-w-4xl mx-auto">
+          <h1 className="font-display font-black text-4xl md:text-6xl mb-4 uppercase tracking-tight">
+            Professional <span className="text-secondary">Equipment</span>
+          </h1>
+          <p className="text-gray-300 max-w-2xl mx-auto text-lg md:text-xl font-light">
+            Engineered for performance. Built to last.
+          </p>
+        </div>
+      </div>
 
-        <Grid container spacing={4}>
-          {/* Products Grid */}
-          <Grid item xs={12} md={12}>
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="flex flex-col lg:flex-row gap-8 xl:gap-12">
+
+          {/* Mobile Filter Toggle */}
+          <div className="lg:hidden mb-6 flex items-center justify-between">
+            <span className="font-display font-bold text-xl">{filteredProducts.length} Products</span>
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="flex items-center gap-2 bg-black text-secondary px-6 py-3 rounded-full font-bold shadow-lg shadow-black/10 active:scale-95 transition-transform"
+            >
+              <FilterList fontSize="small" /> Filters
+            </button>
+          </div>
+
+          {/* Desktop Sidebar */}
+          <aside className="hidden lg:block w-72 shrink-0 space-y-8 sticky top-24 h-fit max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 custom-scrollbar">
+            <FilterContent />
+          </aside>
+
+          {/* Product Grid */}
+          <main className="flex-1">
             {loading ? (
-              <Box sx={{ textAlign: 'center', py: 8 }}>
-                <FitnessCenter sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-                  Loading products...
-                </Typography>
-              </Box>
-            ) : currentProducts.length === 0 ? (
-              <Box sx={{ textAlign: 'center', py: 8 }}>
-                <FitnessCenter sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-                  {products.length === 0 ? 'No products available yet' : 'No products found matching your criteria'}
-                </Typography>
-                {products.length > 0 && (
-                  <Button
-                    variant="contained"
-                    onClick={clearFilters}
-                    sx={{ 
-                      borderRadius: '50px',
-                      textTransform: 'none',
-                      fontWeight: 'bold',
-                      px: 4,
-                    }}
-                  >
-                    Clear Filters
-                  </Button>
-                )}
-              </Box>
+              <div className="flex justify-center py-40">
+                <CircularProgress sx={{ color: '#FFD700' }} size={60} thickness={4} />
+              </div>
             ) : (
               <>
-                <Grid container spacing={3}>
-                  {currentProducts.map((product) => (
-                    <Grid item xs={12} sm={6} md={6} lg={6} key={product.id}>
-                      <Card
-                        className="hover-lift"
-                        sx={{
-                          height: '100%',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          borderRadius: 'var(--border-radius)',
-                          overflow: 'hidden',
-                          border: '1px solid rgba(0,0,0,0.05)',
-                          background: 'white',
-                        }}
+                <div className="mb-6 hidden lg:flex items-center justify-between">
+                  <h2 className="font-display font-bold text-2xl uppercase">Result: <span className="text-gray-500">{filteredProducts.length} Items</span></h2>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 md:gap-8">
+                  <AnimatePresence mode='popLayout'>
+                    {currentProducts.map((product) => (
+                      <motion.div
+                        layout
+                        key={product.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.3 }}
+                        className="group flex flex-col bg-white rounded-2xl border border-gray-100 hover:border-gray-200 shadow-sm hover:shadow-xl hover:shadow-black/5 transition-all duration-300 cursor-pointer overflow-hidden"
+                        onClick={() => navigate(`/product/${product.id}`)}
                       >
-                        <Box sx={{ position: 'relative' }}>
-                          <CardMedia
-                            component="img"
-                            height="250"
-                            image={product.image}
+                        {/* Image Container */}
+                        <div className="relative pt-[100%] bg-gray-50 overflow-hidden">
+                          <img
+                            src={product.image}
                             alt={product.name}
-                            sx={{ objectFit: 'cover' }}
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                           />
-                          {product.badge && (
-                            <Chip
-                              label={product.badge}
-                              color="primary"
-                              size="small"
-                              sx={{
-                                position: 'absolute',
-                                top: 12,
-                                left: 12,
-                                fontWeight: 'bold',
-                                background: 'var(--accent-gradient)',
-                              }}
-                            />
-                          )}
-                          <Box
-                            sx={{
-                              position: 'absolute',
-                              top: 12,
-                              right: 12,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 1,
-                            }}
-                          >
-                            <IconButton
-                              size="small"
-                              className="glass"
-                              onClick={() => handleAddToWishlist(product)}
-                            >
-                              <Favorite fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              className="glass"
-                              onClick={() => handleViewProduct(product)}
-                            >
-                              <Visibility fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </Box>
-                        <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 3 }}>
-                          <Typography variant="h6" component="h3" gutterBottom sx={{ fontWeight: 'bold' }}>
-                            {product.name}
-                          </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                            <Rating value={product.rating} precision={0.1} size="small" readOnly />
-                            <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                              ({product.reviews})
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                            <Typography variant="h5" color="primary" sx={{ fontWeight: 'bold' }}>
-                              {parseFloat(product.price).toLocaleString()} DA
-                            </Typography>
-                            {product.originalPrice && (
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                sx={{ textDecoration: 'line-through', ml: 1 }}
-                              >
-                                {parseFloat(product.originalPrice).toLocaleString()} DA
-                              </Typography>
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+
+                          {/* Badges */}
+                          <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+                            {product.originalPrice && product.price < product.originalPrice && (
+                              <span className="bg-red-600 text-white text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-sm shadow-sm">
+                                Sale
+                              </span>
                             )}
-                          </Box>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, flexGrow: 1, lineHeight: 1.6 }}>
-                            {product.description}
-                          </Typography>
-                          <Box sx={{ display: 'flex', gap: 2 }}>
-                            <Button
-                              variant="contained"
-                              startIcon={<ShoppingCart />}
+                            {product.isFeatured && (
+                              <span className="bg-secondary text-black text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-sm shadow-sm">
+                                Featured
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-5 flex flex-col flex-1">
+                          <div className="mb-1">
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{product.category}</p>
+                            <h3 className="font-bold text-lg leading-tight group-hover:text-secondary transition-colors line-clamp-2 min-h-[1.5em]">{product.name}</h3>
+                          </div>
+
+                          <div className="flex items-center gap-1 mb-4">
+                            <Rating value={product.rating.average || 5} size="small" readOnly sx={{ color: '#FFD700' }} />
+                            <span className="text-xs font-medium text-gray-400">({product.rating.count})</span>
+                          </div>
+
+                          <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-50">
+                            <div className="flex flex-col">
+                              {product.originalPrice && (
+                                <span className="text-xs text-gray-400 line-through font-medium">{Number(product.originalPrice).toLocaleString()} DA</span>
+                              )}
+                              <span className="font-display font-black text-xl text-black">{Number(product.price).toLocaleString()} DA</span>
+                            </div>
+
+                            <button
+                              onClick={(e) => handleAddToCart(product, e)}
                               disabled={!product.inStock}
-                              onClick={() => handleAddToCart(product)}
-                              sx={{
-                                py: 1.5,
-                                borderRadius: '50px',
-                                textTransform: 'none',
-                                fontWeight: 'bold',
-                                background: 'var(--primary-gradient)',
-                                '&:hover': {
-                                  background: 'var(--secondary-gradient)',
-                                },
-                                flex: 1
-                              }}
+                              className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 ${!product.inStock
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : isInCart(product.id)
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-black text-white hover:bg-secondary hover:text-black hover:scale-110 shadow-md'
+                                }`}
+                              title={!product.inStock ? 'Out of Stock' : 'Add to Cart'}
                             >
-                              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
-                            </Button>
-                            <Button
-                              variant="outlined"
-                              onClick={() => handleViewProduct(product)}
-                              sx={{
-                                py: 1.5,
-                                borderRadius: '50px',
-                                textTransform: 'none',
-                                fontWeight: 'bold',
-                                borderColor: 'var(--primary-color)',
-                                color: 'var(--primary-color)',
-                                '&:hover': {
-                                  borderColor: 'var(--secondary-color)',
-                                  color: 'var(--secondary-color)',
-                                  background: 'rgba(0,0,0,0.02)'
-                                },
-                                minWidth: 'auto',
-                                px: 2
-                              }}
-                            >
-                              Details
-                            </Button>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
+                              <ShoppingCart fontSize="small" />
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+
+                {/* Empty State */}
+                {currentProducts.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-20 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                    <FitnessCenter className="text-6xl text-gray-300 mb-4" />
+                    <h3 className="font-display font-bold text-2xl text-gray-900 mb-2">No gear found</h3>
+                    <p className="text-gray-500 mb-8 max-w-sm mx-auto">We couldn't find any products matching your filters.</p>
+                    <button
+                      onClick={clearFilters}
+                      className="bg-black text-white px-8 py-3 rounded-full font-bold hover:bg-secondary hover:text-black transition-all shadow-lg hover:shadow-xl"
+                    >
+                      Clear All Filters
+                    </button>
+                  </div>
+                )}
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
+                  <div className="mt-16 flex justify-center">
                     <Pagination
                       count={totalPages}
                       page={currentPage}
-                      onChange={(e, page) => setCurrentPage(page)}
-                      color="primary"
+                      onChange={(e, p) => setCurrentPage(p)}
+                      size="large"
                       sx={{
                         '& .MuiPaginationItem-root': {
-                          borderRadius: '50%',
-                          fontWeight: 'bold',
-                        },
-                        '& .Mui-selected': {
-                          background: 'var(--primary-gradient)',
-                          color: 'white',
-                        },
+                          fontFamily: 'Inter',
+                          fontWeight: '700',
+                          fontSize: '1rem',
+                          color: '#000',
+                          '&.Mui-selected': {
+                            backgroundColor: '#FFD700',
+                            color: '#000',
+                            '&:hover': { backgroundColor: '#FFED4E' }
+                          },
+                          '&:hover': { backgroundColor: '#f3f4f6' }
+                        }
                       }}
                     />
-                  </Box>
+                  </div>
                 )}
               </>
             )}
-          </Grid>
+          </main>
+        </div>
+      </div>
 
-          {/* No desktop sidebar; filters shown above in a horizontal bar */}
-        </Grid>
-      </Container>
-
-      {/* Mobile Filter Drawer */}
+      {/* Mobile Drawer */}
       <Drawer
         anchor="left"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        sx={{
-          '& .MuiDrawer-paper': {
-            width: 280,
-            p: 3,
-            background: 'white',
-          },
-        }}
+        PaperProps={{ sx: { width: '85%', maxWidth: 360 } }}
       >
-        <FilterSidebar />
+        <div className="p-6 h-full flex flex-col bg-white">
+          <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
+            <h2 className="font-display font-black text-2xl uppercase tracking-tight">Filters</h2>
+            <IconButton onClick={() => setDrawerOpen(false)} size="small" sx={{ color: 'black' }}>
+              <Close />
+            </IconButton>
+          </div>
+
+          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            <FilterContent mobile />
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <button
+              onClick={() => setDrawerOpen(false)}
+              className="w-full bg-black text-secondary font-bold text-lg py-4 rounded-xl shadow-lg hover:bg-gray-900 transition-colors"
+            >
+              Show {filteredProducts.length} Results
+            </button>
+          </div>
+        </div>
       </Drawer>
-    </Box>
+    </div>
   );
 }

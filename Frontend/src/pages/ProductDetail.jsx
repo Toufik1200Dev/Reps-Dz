@@ -1,691 +1,408 @@
-import React, { useState } from 'react';
-import {
-  Container,
-  Typography,
-  Grid,
-  Card,
-  CardContent,
-  CardMedia,
-  Button,
-  Box,
-  Chip,
-  Rating,
-  TextField,
-  Tabs,
-  Tab,
-  Divider,
-  Avatar,
-  IconButton,
-  Breadcrumbs,
-  Link,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from '@mui/material';
-import {
-  ShoppingCart,
-  Favorite,
-  Share,
-  Star,
-  Add,
-  Remove,
-  LocalShipping,
-  Security,
-  Support,
-  ArrowBack,
-} from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
-import { featuredProducts } from '../data/products';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { productsAPI } from '../services/api';
 
-function TabPanel({ children, value, index, ...other }) {
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`product-tabpanel-${index}`}
-      aria-labelledby={`product-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
-    </div>
-  );
-}
+// Color name to hex mapping
+const getColorValue = (colorName) => {
+  const colorMap = {
+    'red': '#EF4444',
+    'blue': '#3B82F6',
+    'green': '#10B981',
+    'yellow': '#FBBF24',
+    'orange': '#F97316',
+    'purple': '#A855F7',
+    'pink': '#EC4899',
+    'black': '#000000',
+    'white': '#FFFFFF',
+    'gray': '#6B7280',
+    'grey': '#6B7280',
+    'brown': '#92400E',
+    'navy': '#1E3A8A',
+    'teal': '#14B8A6',
+    'cyan': '#06B6D4',
+    'lime': '#84CC16',
+    'indigo': '#6366F1',
+    'violet': '#8B5CF6',
+    'fuchsia': '#D946EF',
+    'rose': '#F43F5E',
+    'amber': '#F59E0B',
+    'emerald': '#10B981',
+    'sky': '#0EA5E9',
+    'slate': '#64748B',
+  };
+  
+  const normalizedColor = colorName?.toLowerCase().trim();
+  return colorMap[normalizedColor] || '#6B7280'; // Default to gray if not found
+};
 
-export default function ProductDetail() {
+const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
-  // Mock product data - in real app, fetch from API
-  const product = featuredProducts.find(p => p.id === parseInt(id)) || featuredProducts[0];
-  
-  const [quantity, setQuantity] = useState(1);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [tabValue, setTabValue] = useState(0);
-  const [isInWishlist, setIsInWishlist] = useState(false);
-  
-  // Order form state
-  const [orderForm, setOrderForm] = useState({
-    fullName: '',
-    phoneNumber: '',
-    wilaya: null,
-    deliveryType: 'home',
-    address: ''
-  });
-  
-  // Calculate shipping and total
-  const shippingCost = orderForm.wilaya && orderForm.deliveryType 
-    ? (orderForm.deliveryType === 'home' ? orderForm.wilaya.homePrice : orderForm.wilaya.stopDeskPrice)
-    : 0;
-  
-  const totalPrice = product ? (product.price + shippingCost) : 0;
+  const [quantity, setQuantity] = useState(1);
+  const [activeTab, setActiveTab] = useState('description');
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [selectedSize, setSelectedSize] = useState(null);
+  const [selectedColor, setSelectedColor] = useState(null);
 
-  // Mock product images
-  const productImages = [
-    product.image,
-    product.image,
-    product.image,
-    product.image,
-  ];
 
-  // Mock reviews
-  const reviews = [
-    {
-      id: 1,
-      user: 'John D.',
-      rating: 5,
-      date: '2024-01-15',
-      comment: 'Excellent quality! This pull-up bar is exactly what I needed for my home gym.',
-      avatar: 'JD',
-    },
-    {
-      id: 2,
-      user: 'Sarah M.',
-      rating: 4,
-      date: '2024-01-10',
-      comment: 'Great product, easy to install. Would definitely recommend to others.',
-      avatar: 'SM',
-    },
-    {
-      id: 3,
-      user: 'Mike R.',
-      rating: 5,
-      date: '2024-01-05',
-      comment: 'Perfect for calisthenics training. Sturdy construction and good grip.',
-      avatar: 'MR',
-    },
-  ];
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        const response = await productsAPI.getProductById(id);
+        const data = response.data || response;
 
-  const handleQuantityChange = (increment) => {
-    const newQuantity = quantity + increment;
-    if (newQuantity >= 1 && newQuantity <= 10) {
-      setQuantity(newQuantity);
-    }
-  };
+        // Normalize data structure
+        const normalizedProduct = {
+          ...data,
+          category: data.category || 'Equipment',
+          imagesList: [
+            data.images?.main || data.image,
+            ...(data.images?.gallery || [])
+          ].filter(Boolean)
+        };
 
-  const handleAddToCart = () => {
-    console.log('Add to cart:', { product, quantity });
-    // TODO: Implement cart functionality
-  };
+        setProduct(normalizedProduct);
+        setSelectedImage(0);
 
-  const handleAddToWishlist = () => {
-    setIsInWishlist(!isInWishlist);
-    console.log('Toggle wishlist:', product);
-    // TODO: Implement wishlist functionality
-  };
+        // Track product view/click for analytics
+        try {
+          const analytics = JSON.parse(localStorage.getItem('productClicks') || '[]');
+          const clickEntry = {
+            productId: normalizedProduct._id || normalizedProduct.id,
+            productName: normalizedProduct.name,
+            timestamp: new Date().toISOString(),
+            date: new Date().toISOString().split('T')[0]
+          };
+          analytics.push(clickEntry);
+          // Keep only last 1000 entries to prevent localStorage overflow
+          if (analytics.length > 1000) {
+            analytics.splice(0, analytics.length - 1000);
+          }
+          localStorage.setItem('productClicks', JSON.stringify(analytics));
+        } catch (err) {
+          console.error('Error tracking product click:', err);
+        }
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: product.name,
-        text: product.description,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      // TODO: Show success message
-    }
-  };
+        // Fetch Related Products
+        try {
+          const allRes = await productsAPI.getAllProducts();
+          const allProducts = allRes.products || allRes.data?.products || allRes.data || [];
+          const related = allProducts
+            .filter(p => p.category === normalizedProduct.category && (p._id || p.id) !== (normalizedProduct._id || normalizedProduct.id))
+            .slice(0, 4)
+            .map(p => ({
+              ...p,
+              id: p._id || p.id,
+              image: p.images?.main || (Array.isArray(p.images) && p.images.length > 0 ? p.images[0].url || p.images[0] : (p.image || '/placeholder.jpg'))
+            }));
+          setRelatedProducts(related);
+        } catch (err) {
+          console.error("Error fetching related products:", err);
+        }
 
-  const handleOrderFormChange = (field, value) => {
-    setOrderForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+      } catch (error) {
+        console.error('Error fetching product:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handlePlaceOrder = () => {
-    console.log('Place order:', { ...orderForm, product, totalPrice });
-    // TODO: Implement order submission
-  };
+    if (id) fetchProduct();
+    window.scrollTo(0, 0);
+  }, [id, navigate]);
 
-  const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-gray-200 border-t-yellow-500 rounded-full animate-spin"></div>
+    </div>
+  );
+
+  if (!product) return null;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Breadcrumbs */}
-      <Breadcrumbs sx={{ mb: 3 }}>
-        <Link
-          component="button"
-          variant="body1"
-          onClick={() => navigate('/')}
-          sx={{ cursor: 'pointer' }}
-        >
-          Home
-        </Link>
-        <Link
-          component="button"
-          variant="body1"
-          onClick={() => navigate('/shop')}
-          sx={{ cursor: 'pointer' }}
-        >
-          Shop
-        </Link>
-        <Typography color="text.primary">{product.name}</Typography>
-      </Breadcrumbs>
+    <div className="min-h-screen bg-gray-50 pt-20 md:pt-24 pb-8 md:pb-12">
+      <div className="container mx-auto px-4 md:px-6 max-w-7xl">
+        {/* Breadcrumbs */}
+        <nav className="flex text-xs md:text-sm text-gray-500 mb-4 md:mb-8 overflow-x-auto whitespace-nowrap">
+          <Link to="/" className="hover:text-yellow-500 transition-colors">Home</Link>
+          <span className="mx-2">/</span>
+          <Link to="/shop" className="hover:text-yellow-500 transition-colors">Shop</Link>
+          <span className="mx-2">/</span>
+          <span className="text-gray-900 font-medium truncate">{product.name}</span>
+        </nav>
 
-      <Grid container spacing={4}>
-        {/* Product Images */}
-        <Grid item xs={12} md={6}>
-          <Box sx={{ position: 'relative' }}>
-            <CardMedia
-              component="img"
-              height={400}
-              image={productImages[selectedImage]}
-              alt={product.name}
-              sx={{ borderRadius: 2, mb: 2 }}
-            />
-            {product.badge && (
-              <Chip
-                label={product.badge}
-                color="primary"
-                sx={{
-                  position: 'absolute',
-                  top: 16,
-                  left: 16,
-                }}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-12 mb-12 md:mb-16">
+          {/* Image Gallery */}
+          <div className="space-y-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="aspect-square bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative group"
+            >
+              <img
+                src={product.imagesList[selectedImage] || 'https://via.placeholder.com/600'}
+                alt={product.name}
+                className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
               />
-            )}
-          </Box>
-          
-          {/* Thumbnail Images */}
-          <Grid container spacing={1}>
-            {productImages.map((image, index) => (
-              <Grid item key={index}>
-                <CardMedia
-                  component="img"
-                  height={80}
-                  width={80}
-                  image={image}
-                  alt={`${product.name} ${index + 1}`}
-                  sx={{
-                    borderRadius: 1,
-                    cursor: 'pointer',
-                    border: selectedImage === index ? '2px solid' : '2px solid transparent',
-                    borderColor: 'primary.main',
-                  }}
-                  onClick={() => setSelectedImage(index)}
-                />
-              </Grid>
-            ))}
-          </Grid>
-        </Grid>
+            </motion.div>
 
-        {/* Product Info */}
-        <Grid item xs={12} md={6}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            {product.name}
-          </Typography>
-          
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Rating value={averageRating} precision={0.1} readOnly />
-            <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-              ({reviews.length} reviews)
-            </Typography>
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold', mr: 2 }}>
-              {product.price} DA
-            </Typography>
-            {product.originalPrice && (
-              <Typography
-                variant="h6"
-                color="text.secondary"
-                sx={{ textDecoration: 'line-through' }}
-              >
-                {product.originalPrice} DA
-              </Typography>
-            )}
-          </Box>
-
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            {product.description}
-          </Typography>
-
-          {/* Quantity Selector */}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <Typography variant="subtitle1" sx={{ mr: 2 }}>
-              Quantity:
-            </Typography>
-            <IconButton onClick={() => handleQuantityChange(-1)}>
-              <Remove />
-            </IconButton>
-            <TextField
-              value={quantity}
-              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-              sx={{ width: 80, mx: 1 }}
-              inputProps={{ min: 1, max: 10 }}
-            />
-            <IconButton onClick={() => handleQuantityChange(1)}>
-              <Add />
-            </IconButton>
-          </Box>
-
-          {/* Action Buttons */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<ShoppingCart />}
-              disabled={!product.inStock}
-              onClick={handleAddToCart}
-              sx={{ flex: 1 }}
-            >
-              {product.inStock ? 'Add to Cart' : 'Out of Stock'}
-            </Button>
-            <IconButton
-              onClick={handleAddToWishlist}
-              sx={{
-                border: '1px solid',
-                borderColor: isInWishlist ? 'primary.main' : 'divider',
-                color: isInWishlist ? 'primary.main' : 'text.primary',
-              }}
-            >
-              <Favorite />
-            </IconButton>
-            <IconButton
-              onClick={handleShare}
-              sx={{ border: '1px solid', borderColor: 'divider' }}
-            >
-              <Share />
-            </IconButton>
-          </Box>
-
-          {/* Order Form */}
-          <Box sx={{ mb: 4, p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2, background: 'rgba(0,0,0,0.02)' }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: 'var(--primary-color)', mb: 3 }}>
-              Order Information / معلومات الطلب
-            </Typography>
-            
-            {/* Product Info Section */}
-            <Box sx={{ mb: 3, p: 2, background: 'rgba(0,0,0,0.03)', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-                Product Details / تفاصيل المنتج
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <img 
-                  src={product.image} 
-                  alt={product.name} 
-                  style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8 }}
-                />
-                <Box>
-                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{product.name}</Typography>
-                  <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold' }}>
-                    {product.price} DA
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {/* Customer Information */}
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2, color: 'var(--primary-color)' }}>
-                  Customer Information / معلومات العميل
-                </Typography>
-              </Box>
-              
-              {/* Full Name */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <TextField
-                  label="Full Name / الاسم الكامل"
-                  variant="outlined"
-                  size="small"
-                  required
-                  value={orderForm.fullName}
-                  onChange={(e) => handleOrderFormChange('fullName', e.target.value)}
-                  sx={{ 
-                    width: '70%',
-                    '& .MuiOutlinedInput-root': { borderRadius: 'var(--border-radius)' }
-                  }}
-                />
-              </Box>
-              
-              {/* Phone Number */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <TextField
-                  label="Phone Number / رقم الهاتف"
-                  variant="outlined"
-                  size="small"
-                  required
-                  value={orderForm.phoneNumber}
-                  onChange={(e) => handleOrderFormChange('phoneNumber', e.target.value)}
-                  sx={{ 
-                    width: '70%',
-                    '& .MuiOutlinedInput-root': { borderRadius: 'var(--border-radius)' }
-                  }}
-                />
-              </Box>
-              
-              {/* Wilaya */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <FormControl size="small" sx={{ width: '70%' }}>
-                  <InputLabel>Wilaya / الولاية</InputLabel>
-                  <Select
-                    label="Wilaya / الولاية"
-                    value={orderForm.wilaya}
-                    onChange={(e) => handleOrderFormChange('wilaya', e.target.value)}
-                    sx={{ 
-                      borderRadius: 'var(--border-radius)',
-                      '& .MuiSelect-select': {
-                        fontSize: '14px',
-                        padding: '12px 14px'
-                      }
-                    }}
+            {product.imagesList.length > 1 && (
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                {product.imagesList.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedImage(idx)}
+                    className={`flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === idx ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-transparent hover:border-gray-200'
+                      }`}
                   >
-                    {[
-                      { code: 1, name: 'Adrar', arabic: 'أدرار', homePrice: 1150, stopDeskPrice: 600 },
-                      { code: 2, name: 'Chlef', arabic: 'الشلف', homePrice: 700, stopDeskPrice: 450 },
-                      { code: 3, name: 'Laghouat', arabic: 'الأغواط', homePrice: 900, stopDeskPrice: 550 },
-                      { code: 4, name: 'Oum El Bouaghi', arabic: 'أم البواقي', homePrice: 700, stopDeskPrice: 450 },
-                      { code: 5, name: 'Batna', arabic: 'باتنة', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 6, name: 'Béjaïa', arabic: 'بجاية', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 7, name: 'Biskra', arabic: 'بسكرة', homePrice: 870, stopDeskPrice: 550 },
-                      { code: 8, name: 'Béchar', arabic: 'بشار', homePrice: 1110, stopDeskPrice: 550 },
-                      { code: 9, name: 'Blida', arabic: 'البليدة', homePrice: 450, stopDeskPrice: 350 },
-                      { code: 10, name: 'Bouira', arabic: 'البويرة', homePrice: 670, stopDeskPrice: 450 },
-                      { code: 11, name: 'Tamanrasset', arabic: 'تمنراست', homePrice: 1550, stopDeskPrice: 900 },
-                      { code: 12, name: 'Tébessa', arabic: 'تبسة', homePrice: 770, stopDeskPrice: 450 },
-                      { code: 13, name: 'Tlemcen', arabic: 'تلمسان', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 14, name: 'Tiaret', arabic: 'تيارت', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 15, name: 'Tizi Ouzou', arabic: 'تيزي وزو', homePrice: 670, stopDeskPrice: 450 },
-                      { code: 16, name: 'Alger', arabic: 'الجزائر', homePrice: 400, stopDeskPrice: 250 },
-                      { code: 17, name: 'Djelfa', arabic: 'الجلفة', homePrice: 900, stopDeskPrice: 550 },
-                      { code: 18, name: 'Jijel', arabic: 'جيجل', homePrice: 730, stopDeskPrice: 450 },
-                      { code: 19, name: 'Sétif', arabic: 'سطيف', homePrice: 700, stopDeskPrice: 450 },
-                      { code: 20, name: 'Saïda', arabic: 'سعيدة', homePrice: 770, stopDeskPrice: 450 },
-                      { code: 21, name: 'Skikda', arabic: 'سكيكدة', homePrice: 700, stopDeskPrice: 450 },
-                      { code: 22, name: 'Sidi Bel Abbès', arabic: 'سيدي بلعباس', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 23, name: 'Annaba', arabic: 'عنابة', homePrice: 730, stopDeskPrice: 450 },
-                      { code: 24, name: 'Guelma', arabic: 'قالمة', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 25, name: 'Constantine', arabic: 'قسنطينة', homePrice: 700, stopDeskPrice: 450 },
-                      { code: 26, name: 'Médéa', arabic: 'المدية', homePrice: 550, stopDeskPrice: 450 },
-                      { code: 27, name: 'Mostaganem', arabic: 'مستغانم', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 28, name: 'M\'Sila', arabic: 'المسيلة', homePrice: 730, stopDeskPrice: 450 },
-                      { code: 29, name: 'Mascara', arabic: 'معسكر', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 30, name: 'Ouargla', arabic: 'ورقلة', homePrice: 980, stopDeskPrice: 550 },
-                      { code: 31, name: 'Oran', arabic: 'وهران', homePrice: 700, stopDeskPrice: 450 },
-                      { code: 32, name: 'El Bayadh', arabic: 'البيض', homePrice: 1050, stopDeskPrice: 550 },
-                      { code: 33, name: 'Illizi', arabic: 'إليزي', homePrice: 1550, stopDeskPrice: 850 },
-                      { code: 34, name: 'Bordj Bou Arreridj', arabic: 'برج بوعريريج', homePrice: 700, stopDeskPrice: 450 },
-                      { code: 35, name: 'Boumerdès', arabic: 'بومرداس', homePrice: 450, stopDeskPrice: 350 },
-                      { code: 36, name: 'El Tarf', arabic: 'الطارف', homePrice: 770, stopDeskPrice: 450 },
-                      { code: 37, name: 'Tindouf', arabic: 'تندوف', homePrice: 1350, stopDeskPrice: 600 },
-                      { code: 38, name: 'Tissemsilt', arabic: 'تيسمسيلت', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 39, name: 'El Oued', arabic: 'الوادي', homePrice: 980, stopDeskPrice: 550 },
-                      { code: 40, name: 'Khenchela', arabic: 'خنشلة', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 41, name: 'Souk Ahras', arabic: 'سوق أهراس', homePrice: 770, stopDeskPrice: 450 },
-                      { code: 42, name: 'Tipaza', arabic: 'تيبازة', homePrice: 450, stopDeskPrice: 350 },
-                      { code: 43, name: 'Mila', arabic: 'ميلة', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 44, name: 'Aïn Defla', arabic: 'عين الدفلى', homePrice: 700, stopDeskPrice: 450 },
-                      { code: 45, name: 'Naâma', arabic: 'النعامة', homePrice: 980, stopDeskPrice: 550 },
-                      { code: 46, name: 'Aïn Témouchent', arabic: 'عين تموشنت', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 47, name: 'Ghardaïa', arabic: 'غرداية', homePrice: 900, stopDeskPrice: 550 },
-                      { code: 48, name: 'Relizane', arabic: 'غليزان', homePrice: 750, stopDeskPrice: 450 },
-                      { code: 49, name: 'Timimoun', arabic: 'تيميمون', homePrice: 1150, stopDeskPrice: 600 },
-                      { code: 51, name: 'Ouled Djellal', arabic: 'أولاد جلال', homePrice: 900, stopDeskPrice: 550 },
-                      { code: 52, name: 'Beni Abbes', arabic: 'بني عباس', homePrice: 1100, stopDeskPrice: 550 },
-                      { code: 53, name: 'In Salah', arabic: 'عين صالح', homePrice: 1450, stopDeskPrice: 850 },
-                      { code: 55, name: 'Touggourt', arabic: 'تقرت', homePrice: 980, stopDeskPrice: 550 },
-                      { code: 57, name: 'El M\'Ghair', arabic: 'المغير', homePrice: 980, stopDeskPrice: 800 },
-                      { code: 58, name: 'El Meniaa', arabic: 'المنيعة', homePrice: 900, stopDeskPrice: 550 }
-                    ].map((wilaya) => (
-                      <MenuItem key={wilaya.code} value={wilaya}>
-                        {wilaya.code} - {wilaya.name} / {wilaya.arabic}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-              
-              {/* Delivery Type */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <FormControl size="small" sx={{ width: '70%' }}>
-                  <InputLabel>Delivery Type / نوع التوصيل</InputLabel>
-                  <Select
-                    label="Delivery Type / نوع التوصيل"
-                    value={orderForm.deliveryType}
-                    onChange={(e) => handleOrderFormChange('deliveryType', e.target.value)}
-                    sx={{ borderRadius: 'var(--border-radius)' }}
-                  >
-                    <MenuItem value="home">À domicile / توصيل منزلي</MenuItem>
-                    <MenuItem value="stopDesk">Stop Desk / مكتب التوصيل</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-              
-              {/* Address */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <TextField
-                  label="Address / العنوان"
-                  variant="outlined"
-                  size="small"
-                  required
-                  multiline
-                  rows={2}
-                  value={orderForm.address}
-                  onChange={(e) => handleOrderFormChange('address', e.target.value)}
-                  sx={{ 
-                    width: '70%',
-                    '& .MuiOutlinedInput-root': { borderRadius: 'var(--border-radius)' }
-                  }}
-                />
-              </Box>
-            </Box>
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-            {/* Price Summary */}
-            <Box sx={{ mt: 3, p: 2, background: 'rgba(0,0,0,0.03)', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2, color: 'var(--primary-color)' }}>
-                Price Summary / ملخص السعر
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography>Product Price / سعر المنتج:</Typography>
-                    <Typography sx={{ fontWeight: 'bold' }}>{product.price} DA</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography>Shipping Cost / تكلفة الشحن:</Typography>
-                    <Typography sx={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
-                      {shippingCost > 0 ? `${shippingCost} DA` : '-- DA'}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Total / المجموع:</Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>
-                      {totalPrice > 0 ? `${totalPrice} DA` : '-- DA'}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                    * Shipping cost will be calculated based on selected Wilaya and delivery type
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    * سيتم حساب تكلفة الشحن بناءً على الولاية المختارة ونوع التوصيل
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
+          {/* Product Info */}
+          <div className="flex flex-col">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 md:mb-4 tracking-tight font-outfit">
+              {product.name}
+            </h1>
 
-            <Box sx={{ mt: 3 }}>
-              <Button
-                variant="contained"
-                fullWidth
-                size="large"
-                onClick={handlePlaceOrder}
-                sx={{
-                  background: 'var(--primary-gradient)',
-                  '&:hover': { background: 'var(--secondary-gradient)' },
-                  borderRadius: '50px',
-                  textTransform: 'none',
-                  fontWeight: 'bold',
-                  py: 1.5
-                }}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex text-yellow-500">
+                {[...Array(5)].map((_, i) => (
+                  <svg key={i} className={`w-5 h-5 ${i < Math.floor(product.rating?.average || 5) ? 'fill-current' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+              <span className="text-gray-500 text-sm">({product.rating?.count || 0} reviews)</span>
+              {product.stockQuantity > 0 ? (
+                <span className="text-green-600 text-sm font-medium bg-green-50 px-2 py-1 rounded-full">In Stock</span>
+              ) : (
+                <span className="text-red-500 text-sm font-medium bg-red-50 px-2 py-1 rounded-full">Out of Stock</span>
+              )}
+            </div>
+
+            <div className="flex items-baseline gap-3 md:gap-4 mb-6 md:mb-8">
+              <span className="text-3xl md:text-4xl font-bold text-gray-900">{parseFloat(product.price).toLocaleString()} DA</span>
+              {product.originalPrice && (
+                <span className="text-lg md:text-xl text-gray-400 line-through">{parseFloat(product.originalPrice).toLocaleString()} DA</span>
+              )}
+            </div>
+
+            <p className="text-gray-600 leading-relaxed mb-6 md:mb-8 text-base md:text-lg">
+              {product.description}
+            </p>
+
+            {/* Size Selection */}
+            {product.variants?.sizes && product.variants.sizes.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-bold text-gray-900 mb-3">Size</h3>
+                <div className="flex flex-wrap gap-3">
+                  {product.variants.sizes.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`px-4 py-2 rounded-lg border-2 font-medium transition-all ${
+                        selectedSize === size
+                          ? 'border-yellow-500 bg-yellow-50 text-yellow-900'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Color Selection */}
+            {product.variants?.colors && product.variants.colors.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-bold text-gray-900 mb-3">Color</h3>
+                <div className="flex flex-wrap gap-3">
+                  {product.variants.colors.map((color) => {
+                    const colorValue = getColorValue(color);
+                    const isSelected = selectedColor === color;
+                    const isLightColor = color.toLowerCase() === 'white' || color.toLowerCase() === 'yellow';
+                    
+                    return (
+                      <button
+                        key={color}
+                        onClick={() => setSelectedColor(color)}
+                        style={{
+                          backgroundColor: isSelected ? colorValue : colorValue,
+                          borderColor: colorValue,
+                          borderWidth: '2px',
+                          borderStyle: 'solid',
+                          color: isLightColor ? '#000000' : '#FFFFFF',
+                          boxShadow: isSelected ? `0 0 0 3px rgba(251, 191, 36, 0.3)` : 'none'
+                        }}
+                        className="px-4 py-2 rounded-lg font-medium transition-all hover:opacity-80"
+                      >
+                        {color}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Quick Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-8 md:mb-10 pb-8 md:pb-10 border-b border-gray-100">
+              <div className="flex items-center border border-gray-300 rounded-xl bg-white w-full sm:w-max justify-center sm:justify-start">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="px-4 py-3 hover:bg-gray-50 text-gray-600 transition-colors"
+                >
+                  −
+                </button>
+                <span className="w-12 text-center font-medium text-gray-900">{quantity}</span>
+                <button
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="px-4 py-3 hover:bg-gray-50 text-gray-600 transition-colors"
+                >
+                  +
+                </button>
+              </div>
+
+              <button className="flex-1 bg-yellow-500 text-black font-bold py-3 px-6 md:px-8 rounded-xl hover:bg-yellow-400 transition-all transform active:scale-95 shadow-lg shadow-yellow-500/20 text-base md:text-lg">
+                Add to Cart
+              </button>
+
+              <button
+                onClick={() => navigate('/order', { 
+                  state: { 
+                    product, 
+                    quantity, 
+                    size: selectedSize, 
+                    color: selectedColor 
+                  } 
+                })}
+                className="flex-1 bg-black text-white font-bold py-3 px-6 md:px-8 rounded-xl hover:bg-gray-800 transition-all transform active:scale-95 shadow-lg shadow-black/20 text-base md:text-lg"
               >
-                Place Order / تأكيد الطلب
-              </Button>
-            </Box>
-          </Box>
+                Buy Now
+              </button>
+            </div>
 
-          {/* Features */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Features
-            </Typography>
-            <Grid container spacing={2}>
-              {[
-                { icon: <LocalShipping />, text: 'Free Shipping' },
-                { icon: <Security />, text: 'Secure Payment' },
-                { icon: <Support />, text: '24/7 Support' },
-              ].map((feature, index) => (
-                <Grid item xs={4} key={index}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Box sx={{ color: 'primary.main', mb: 1 }}>{feature.icon}</Box>
-                    <Typography variant="body2">{feature.text}</Typography>
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        </Grid>
-      </Grid>
+            {/* Fast Features */}
+            {product.features && (
+              <div className="grid grid-cols-2 gap-4">
+                {product.features.slice(0, 4).map((feature, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-sm text-gray-600">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
-      {/* Product Details Tabs */}
-      <Box sx={{ mt: 6 }}>
-        <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-          <Tab label="Description" />
-          <Tab label="Specifications" />
-          <Tab label={`Reviews (${reviews.length})`} />
-        </Tabs>
-
-        <TabPanel value={tabValue} index={0}>
-          <Typography variant="body1" paragraph>
-            {product.description}
-          </Typography>
-          <Typography variant="body1" paragraph>
-            This premium calisthenics equipment is designed for serious athletes who demand the best. 
-            Made with high-quality materials and engineered for durability, it provides the perfect 
-            foundation for your strength training journey.
-          </Typography>
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={1}>
-          <Grid container spacing={2}>
-            {[
-              { label: 'Material', value: 'High-grade steel' },
-              { label: 'Weight Capacity', value: '300 lbs' },
-              { label: 'Dimensions', value: '48" x 24" x 6"' },
-              { label: 'Installation', value: 'Wall-mounted' },
-              { label: 'Warranty', value: '2 years' },
-            ].map((spec, index) => (
-              <Grid item xs={12} sm={6} key={index}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', py: 1 }}>
-                  <Typography variant="body1" color="text.secondary">
-                    {spec.label}:
-                  </Typography>
-                  <Typography variant="body1" fontWeight="medium">
-                    {spec.value}
-                  </Typography>
-                </Box>
-              </Grid>
+        {/* Tabs Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-16">
+          <div className="flex border-b border-gray-100 overflow-x-auto">
+            {['description', 'specifications', 'usage'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-8 py-4 font-medium text-sm sm:text-base capitalize whitespace-nowrap transition-colors relative ${activeTab === tab ? 'text-yellow-600' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+              >
+                {tab}
+                {activeTab === tab && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500"
+                  />
+                )}
+              </button>
             ))}
-          </Grid>
-        </TabPanel>
+          </div>
 
-        <TabPanel value={tabValue} index={2}>
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Customer Reviews
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Rating value={averageRating} precision={0.1} readOnly />
-              <Typography variant="body1" sx={{ ml: 1 }}>
-                {averageRating.toFixed(1)} out of 5
-              </Typography>
-            </Box>
-          </Box>
+          <div className="p-8 md:p-12">
+            {activeTab === 'description' && (
+              <div className="prose max-w-none text-gray-600">
+                <p className="text-lg leading-relaxed">{product.description}</p>
+                {/* Additional descriptive content could go here */}
+              </div>
+            )}
 
-          {reviews.map((review) => (
-            <Box key={review.id} sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Avatar sx={{ mr: 2 }}>{review.avatar}</Avatar>
-                <Box>
-                  <Typography variant="subtitle1">{review.user}</Typography>
-                  <Rating value={review.rating} size="small" readOnly />
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
-                  {new Date(review.date).toLocaleDateString()}
-                </Typography>
-              </Box>
-              <Typography variant="body1" sx={{ ml: 7 }}>
-                {review.comment}
-              </Typography>
-              <Divider sx={{ mt: 2 }} />
-            </Box>
-          ))}
-        </TabPanel>
-      </Box>
+            {activeTab === 'specifications' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
+                {product.specifications?.map((spec, i) => (
+                  <div key={i} className="flex justify-between py-3 border-b border-gray-100 last:border-0">
+                    <span className="font-medium text-gray-900">{spec.key}</span>
+                    <span className="text-gray-600">{spec.value}</span>
+                  </div>
+                )) || <p className="text-gray-500 italic">No specifications available.</p>}
+              </div>
+            )}
+
+            {activeTab === 'usage' && (
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="bg-yellow-100 p-3 rounded-lg text-yellow-600">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Training Tips</h3>
+                    <p className="text-gray-600">Perfect for progressively overloading your calisthenics skills. Start with basic movements and work your way up.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="bg-blue-100 p-3 rounded-lg text-blue-600">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Safety First</h3>
+                    <p className="text-gray-600">Always check equipment before use. Ensure all bolts are tightened and the setup is stable.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Related Products */}
-      <Box sx={{ mt: 6 }}>
-        <Typography variant="h5" gutterBottom>
-          Related Products
-        </Typography>
-        <Grid container spacing={3}>
-          {featuredProducts.slice(0, 4).map((relatedProduct) => (
-            <Grid item xs={12} sm={6} md={3} key={relatedProduct.id}>
-              <Card
-                sx={{
-                  height: '100%',
-                  cursor: 'pointer',
-                  transition: 'transform 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-5px)',
-                  },
-                }}
-                onClick={() => navigate(`/product/${relatedProduct.id}`)}
+      {relatedProducts.length > 0 && (
+        <div className="container mx-auto px-4 max-w-7xl mt-24">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8 font-outfit">You May Also Like</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {relatedProducts.map((related) => (
+              <Link
+                to={`/product/${related.id}`}
+                key={related.id}
+                className="group bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all"
               >
-                <CardMedia
-                  component="img"
-                  height="200"
-                  image={relatedProduct.image}
-                  alt={relatedProduct.name}
-                />
-                <CardContent>
-                  <Typography variant="h6" component="h3" gutterBottom>
-                    {relatedProduct.name}
-                  </Typography>
-                  <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold' }}>
-                    {relatedProduct.price} DA
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
-    </Container>
+                <div className="aspect-square bg-gray-50 overflow-hidden relative">
+                  <img
+                    src={related.image}
+                    alt={related.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <div className="p-4">
+                  <h3 className="font-bold text-gray-900 mb-2 truncate">{related.name}</h3>
+                  <p className="text-yellow-600 font-bold">${related.price}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+    </div>
   );
-}
+};
+
+export default ProductDetail;

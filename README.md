@@ -86,12 +86,6 @@ sudo systemctl start mongod
 - Get your connection string
 - Update `.env` file
 
-#### Seed the Database
-```bash
-cd Backend
-node scripts/seedProducts.js
-```
-
 #### Start Backend Server
 ```bash
 npm start

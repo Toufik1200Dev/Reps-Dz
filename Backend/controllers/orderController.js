@@ -14,10 +14,49 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+    // Check stock availability
+    const productUpdates = [];
+    for (const item of products) {
+        // item.product or item.productId based on payload. 
+        // Schema uses 'product' in User but 'product' in Order.
+        // Payload usually sends 'product' or 'productId'. Let's standardise on input.
+        const pId = item.product || item.productId;
+        
+        const product = await Product.findById(pId);
+        if (!product) {
+            return res.status(404).json({ success: false, message: `Product not found: ${item.name}` });
+        }
+        
+        if (product.stock < item.quantity) {
+             return res.status(400).json({ success: false, message: `Insufficient stock for product: ${product.name}` });
+        }
+        
+        // Prepare bulk update
+        productUpdates.push({
+            updateOne: {
+                filter: { _id: pId },
+                update: { $inc: { stock: -item.quantity } }
+            }
+        });
+    }
+    
+    // Execute stock updates
+    if (productUpdates.length > 0) {
+        await Product.bulkWrite(productUpdates);
+    }
+
     // Create the order
     const order = new Order({
       customer,
-      products,
+      products: products.map(p => ({
+          product: p.product || p.productId,
+          name: p.name,
+          price: p.price,
+          quantity: p.quantity,
+          size: p.size,
+          color: p.color,
+          image: p.image
+      })),
       orderTotal,
       shippingCost: shippingCost || 0,
       tax: tax || 0,

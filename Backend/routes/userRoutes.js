@@ -12,6 +12,7 @@ const {
   verifyEmail,
   resendVerification
 } = require('../controllers/userController');
+const auth = require('../middleware/auth');
 
 // Public routes
 router.post('/register', register);
@@ -23,8 +24,8 @@ router.post('/verify-email', verifyEmail);
 router.post('/resend-verification', resendVerification);
 
 // Protected routes
-router.get('/profile', getProfile);
-router.put('/profile', updateProfile);
-router.put('/change-password', changePassword);
+router.get('/profile', auth, getProfile);
+router.put('/profile', auth, updateProfile);
+router.put('/change-password', auth, changePassword);
 
 module.exports = router; 

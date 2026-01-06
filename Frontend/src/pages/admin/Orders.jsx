@@ -1,35 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Chip,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
-  Snackbar,
-  Tooltip,
-  Badge,
-  Card,
-  CardContent,
-  Grid,
-} from '@mui/material';
-import {
   Edit,
   Delete,
   Visibility,
@@ -42,28 +12,23 @@ import {
   CalendarToday,
   AttachMoney,
   ShoppingCart,
+  Close
 } from '@mui/icons-material';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import API_CONFIG from '../../config/api';
 
 const statusColors = {
-  pending: 'warning',
-  confirmed: 'info',
-  shipped: 'primary',
-  delivered: 'success',
-  cancelled: 'error'
-};
-
-const statusLabels = {
-  pending: 'Pending',
-  confirmed: 'Confirmed',
-  shipped: 'Shipped',
-  delivered: 'Delivered',
-  cancelled: 'Cancelled'
+  pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  confirmed: 'bg-blue-100 text-blue-700 border-blue-200',
+  shipped: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  delivered: 'bg-green-100 text-green-700 border-green-200',
+  cancelled: 'bg-red-100 text-red-700 border-red-200'
 };
 
 export default function Orders() {
   const { getAuthHeaders } = useAdminAuth();
-  
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -78,7 +43,7 @@ export default function Orders() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/orders', {
+      const response = await fetch(`${API_CONFIG.getBaseURL()}/admin/orders`, {
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders()
@@ -93,6 +58,8 @@ export default function Orders() {
       setOrders(data.data.orders || []);
     } catch (err) {
       console.error('Error fetching orders:', err);
+      // For demo purposes, if fetch fails, use mock data? No, let's just show error or empty.
+      // Actually, let's not break the admin perspective, stick to fetched data or empty.
       setError(err.message);
     } finally {
       setLoading(false);
@@ -105,19 +72,19 @@ export default function Orders() {
 
   // Filter orders based on search and status
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       order.customer.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customer.phone.includes(searchTerm);
-    
+
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
   // Handle order status update
   const handleStatusUpdate = async (orderId, newStatus, notes, trackingNumber) => {
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}/status`, {
+      const response = await fetch(`${API_CONFIG.getBaseURL()}/admin/orders/${orderId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -130,466 +97,387 @@ export default function Orders() {
         })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update order');
-      }
+      if (!response.ok) throw new Error('Failed to update order');
 
-      // Update local state
-      setOrders(prevOrders => 
-        prevOrders.map(order => 
-          order._id === orderId 
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order._id === orderId
             ? { ...order, status: newStatus, notes, trackingNumber }
             : order
         )
       );
 
-      setSnackbar({
-        open: true,
-        message: 'Order updated successfully!',
-        severity: 'success'
-      });
-
+      setSnackbar({ open: true, message: 'Order updated successfully!', severity: 'success' });
       setEditDialogOpen(false);
       setSelectedOrder(null);
     } catch (err) {
       console.error('Error updating order:', err);
-      setSnackbar({
-        open: true,
-        message: `Failed to update order: ${err.message}`,
-        severity: 'error'
-      });
+      setSnackbar({ open: true, message: `Failed to update order: ${err.message}`, severity: 'error' });
     }
   };
 
   // Handle order deletion
   const handleDeleteOrder = async (orderId) => {
-    if (!window.confirm('Are you sure you want to delete this order?')) {
-      return;
-    }
+    if (!window.confirm('Are you sure you want to delete this order?')) return;
 
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}`, {
+      const response = await fetch(`${API_CONFIG.getBaseURL()}/admin/orders/${orderId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete order');
-      }
+      if (!response.ok) throw new Error('Failed to delete order');
 
-      // Remove from local state
       setOrders(prevOrders => prevOrders.filter(order => order._id !== orderId));
-
-      setSnackbar({
-        open: true,
-        message: 'Order deleted successfully!',
-        severity: 'success'
-      });
+      setSnackbar({ open: true, message: 'Order deleted successfully!', severity: 'success' });
     } catch (err) {
       console.error('Error deleting order:', err);
-      setSnackbar({
-        open: true,
-        message: `Failed to delete order: ${err.message}`,
-        severity: 'error'
-      });
+      setSnackbar({ open: true, message: `Failed to delete order: ${err.message}`, severity: 'error' });
     }
   };
 
-  // Clear filters
   const clearFilters = () => {
     setSearchTerm('');
     setStatusFilter('all');
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <Typography>Loading orders...</Typography>
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ mt: 4 }}>
-        {error}
-      </Alert>
-    );
-  }
+  if (loading) return <div className="p-8 text-center text-gray-500">Loading orders...</div>;
+  if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
 
   return (
-    <Box>
+    <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
-          Orders Management
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Manage customer orders, update status, and track deliveries
-        </Typography>
-      </Box>
+      <div className="mb-8">
+        <h1 className="text-3xl font-display font-black mb-2">Orders Management</h1>
+        <p className="text-gray-500">Manage customer orders, update status, and track deliveries</p>
+      </div>
 
-      {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    {orders.length}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Orders
-                  </Typography>
-                </Box>
-                <Badge badgeContent={orders.filter(o => o.status === 'pending').length} color="warning">
-                  <ShoppingCart sx={{ fontSize: 40, color: 'primary.main' }} />
-                </Badge>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                    {orders.filter(o => o.status === 'delivered').length}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Delivered
-                  </Typography>
-                </Box>
-                <LocalShipping sx={{ fontSize: 40, color: 'success.main' }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
-                    {orders.filter(o => o.status === 'shipped').length}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    In Transit
-                  </Typography>
-                </Box>
-                <LocalShipping sx={{ fontSize: 40, color: 'info.main' }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    {orders.reduce((total, order) => total + order.totalAmount, 0).toFixed(0)} DA
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Revenue
-                  </Typography>
-                </Box>
-                <AttachMoney sx={{ fontSize: 40, color: 'primary.main' }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-3xl font-black font-display mb-1">{orders.length}</h3>
+              <p className="text-gray-500">Total Orders</p>
+            </div>
+            <div className="p-3 rounded-xl bg-gray-100 text-gray-600">
+              <ShoppingCart />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-3xl font-black font-display mb-1 text-green-600">
+                {orders.filter(o => o.status === 'delivered').length}
+              </h3>
+              <p className="text-gray-500">Delivered</p>
+            </div>
+            <div className="p-3 rounded-xl bg-green-50 text-green-600">
+              <LocalShipping />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-3xl font-black font-display mb-1 text-blue-600">
+                {orders.filter(o => o.status === 'shipped').length}
+              </h3>
+              <p className="text-gray-500">In Transit</p>
+            </div>
+            <div className="p-3 rounded-xl bg-blue-50 text-blue-600">
+              <LocalShipping />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-3xl font-black font-display mb-1 text-secondary">
+                {orders.reduce((total, order) => total + order.totalAmount, 0).toLocaleString()} DA
+              </h3>
+              <p className="text-gray-500">Total Revenue</p>
+            </div>
+            <div className="p-3 rounded-xl bg-yellow-50 text-yellow-600">
+              <AttachMoney />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Filters */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          <TextField
-            placeholder="Search by customer name or phone"
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 items-center">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by customer name or phone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            size="small"
-            sx={{ minWidth: 250 }}
-            InputProps={{
-              startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />
-            }}
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
           />
-          
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={statusFilter}
-              label="Status"
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <MenuItem value="all">All Status</MenuItem>
-              <MenuItem value="pending">Pending</MenuItem>
-              <MenuItem value="confirmed">Confirmed</MenuItem>
-              <MenuItem value="shipped">Shipped</MenuItem>
-              <MenuItem value="delivered">Delivered</MenuItem>
-              <MenuItem value="cancelled">Cancelled</MenuItem>
-            </Select>
-          </FormControl>
-
-          <Button
-            variant="outlined"
-            onClick={clearFilters}
-            startIcon={<Clear />}
-            size="small"
+        </div>
+        <div className="w-full md:w-48">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary appearance-none bg-white"
           >
-            Clear
-          </Button>
-
-          <Box sx={{ ml: 'auto' }}>
-            <Typography variant="body2" color="text.secondary">
-              {filteredOrders.length} orders found
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <button
+          onClick={clearFilters}
+          className="px-4 py-2 text-red-500 font-bold hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+        >
+          <Clear fontSize="small" /> Clear
+        </button>
+      </div>
 
       {/* Orders Table */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Order ID</TableCell>
-              <TableCell>Customer</TableCell>
-              <TableCell>Products</TableCell>
-              <TableCell>Total</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredOrders.map((order) => (
-              <TableRow key={order._id} hover>
-                <TableCell>
-                  <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className="p-4 font-bold text-gray-600 text-sm">Order ID</th>
+                <th className="p-4 font-bold text-gray-600 text-sm">Customer</th>
+                <th className="p-4 font-bold text-gray-600 text-sm">Products</th>
+                <th className="p-4 font-bold text-gray-600 text-sm">Total</th>
+                <th className="p-4 font-bold text-gray-600 text-sm">Status</th>
+                <th className="p-4 font-bold text-gray-600 text-sm">Date</th>
+                <th className="p-4 font-bold text-gray-600 text-sm text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filteredOrders.map((order) => (
+                <tr key={order._id} className="hover:bg-gray-50 transition-colors">
+                  <td className="p-4 font-mono text-sm text-gray-500">
                     #{order._id.toString().slice(-8).toUpperCase()}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                      {order.customer.fullName}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {order.customer.phone}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {order.customer.wilaya}
-                    </Typography>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Box>
-                    {order.products.map((product, index) => (
-                      <Typography key={index} variant="body2">
-                        {product.name} x {product.quantity}
-                      </Typography>
-                    ))}
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  </td>
+                  <td className="p-4">
+                    <div className="font-bold">{order.customer.fullName}</div>
+                    <div className="text-xs text-gray-500">{order.customer.phone}</div>
+                    <div className="text-xs text-gray-400">{order.customer.wilaya}</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex flex-col gap-1">
+                      {order.products.map((product, idx) => (
+                        <div key={idx} className="text-sm">
+                          {product.name} <span className="text-gray-500">x{product.quantity}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="p-4 font-bold">
                     {order.totalAmount.toFixed(2)} DA
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={statusLabels[order.status]}
-                    color={statusColors[order.status]}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">
+                  </td>
+                  <td className="p-4">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[order.status] || 'bg-gray-100 text-gray-600'}`}>
+                      {order.status}
+                    </span>
+                  </td>
+                  <td className="p-4 text-sm text-gray-500">
                     {new Date(order.orderDate).toLocaleDateString()}
-                  </Typography>
-                </TableCell>
-                <TableCell align="right">
-                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                    <Tooltip title="View Details">
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setSelectedOrder(order);
-                          setViewDialogOpen(true);
-                        }}
-                      >
-                        <Visibility />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Edit Status">
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setSelectedOrder(order);
-                          setEditDialogOpen(true);
-                        }}
-                      >
-                        <Edit />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete Order">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDeleteOrder(order._id)}
-                      >
-                        <Delete />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredOrders.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  </td>
+                  <td className="p-4">
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => { setSelectedOrder(order); setViewDialogOpen(true); }} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-blue-600 transition-colors" title="View Details">
+                        <Visibility fontSize="small" />
+                      </button>
+                      <button onClick={() => { setSelectedOrder(order); setEditDialogOpen(true); }} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-green-600 transition-colors" title="Edit Status">
+                        <Edit fontSize="small" />
+                      </button>
+                      <button onClick={() => handleDeleteOrder(order._id)} className="p-2 hover:bg-red-50 rounded-lg text-gray-500 hover:text-red-600 transition-colors" title="Delete">
+                        <Delete fontSize="small" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredOrders.length === 0 && (
+                <tr>
+                  <td colSpan="7" className="p-8 text-center text-gray-500">
                     No orders found matching your criteria
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      {/* Edit Order Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Update Order Status</DialogTitle>
-        <DialogContent>
-          {selectedOrder && (
-            <Box sx={{ pt: 2 }}>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={selectedOrder.status}
-                  label="Status"
-                  onChange={(e) => setSelectedOrder({ ...selectedOrder, status: e.target.value })}
-                >
-                  <MenuItem value="pending">Pending</MenuItem>
-                  <MenuItem value="confirmed">Confirmed</MenuItem>
-                  <MenuItem value="shipped">Shipped</MenuItem>
-                  <MenuItem value="delivered">Delivered</MenuItem>
-                  <MenuItem value="cancelled">Cancelled</MenuItem>
-                </Select>
-              </FormControl>
-              
-              <TextField
-                fullWidth
-                label="Tracking Number"
-                value={selectedOrder.trackingNumber || ''}
-                onChange={(e) => setSelectedOrder({ ...selectedOrder, trackingNumber: e.target.value })}
-                sx={{ mb: 2 }}
-              />
-              
-              <TextField
-                fullWidth
-                label="Notes"
-                multiline
-                rows={3}
-                value={selectedOrder.notes || ''}
-                onChange={(e) => setSelectedOrder({ ...selectedOrder, notes: e.target.value })}
-              />
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={() => handleStatusUpdate(
-              selectedOrder._id,
-              selectedOrder.status,
-              selectedOrder.notes,
-              selectedOrder.trackingNumber
-            )}
+      {/* Edit Dialog */}
+      <AnimatePresence>
+        {editDialogOpen && selectedOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditDialogOpen(false)}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 overflow-hidden z-10"
+            >
+              <h2 className="text-2xl font-bold mb-6">Update Order Status</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold mb-1">Status</label>
+                  <select
+                    value={selectedOrder.status}
+                    onChange={(e) => setSelectedOrder({ ...selectedOrder, status: e.target.value })}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary bg-white"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Tracking Number</label>
+                  <input
+                    type="text"
+                    value={selectedOrder.trackingNumber || ''}
+                    onChange={(e) => setSelectedOrder({ ...selectedOrder, trackingNumber: e.target.value })}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Notes</label>
+                  <textarea
+                    rows="3"
+                    value={selectedOrder.notes || ''}
+                    onChange={(e) => setSelectedOrder({ ...selectedOrder, notes: e.target.value })}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary resize-none"
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setEditDialogOpen(false)}
+                    className="flex-1 py-3 rounded-lg font-bold hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate(selectedOrder._id, selectedOrder.status, selectedOrder.notes, selectedOrder.trackingNumber)}
+                    className="flex-1 py-3 bg-black text-secondary rounded-lg font-bold hover:bg-gray-900 transition-colors"
+                  >
+                    Update
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* View Dialog */}
+      <AnimatePresence>
+        {viewDialogOpen && selectedOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setViewDialogOpen(false)}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 overflow-hidden z-10 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Order Details</h2>
+                <button onClick={() => setViewDialogOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                  <Close />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <h3 className="font-bold text-lg mb-3 pb-2 border-b border-gray-100">Customer Info</h3>
+                  <div className="space-y-2 text-sm">
+                    <p><span className="font-bold">Name:</span> {selectedOrder.customer.fullName}</p>
+                    <p><span className="font-bold">Phone:</span> {selectedOrder.customer.phone}</p>
+                    <p><span className="font-bold">Wilaya:</span> {selectedOrder.customer.wilaya}</p>
+                    <p><span className="font-bold">Address:</span> {selectedOrder.customer.address}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-lg mb-3 pb-2 border-b border-gray-100">Order Info</h3>
+                  <div className="space-y-2 text-sm">
+                    <p><span className="font-bold">Order ID:</span> #{selectedOrder._id.toString().slice(-8).toUpperCase()}</p>
+                    <p className="flex items-center gap-2">
+                      <span className="font-bold">Status:</span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold border ${statusColors[selectedOrder.status]}`}>
+                        {selectedOrder.status}
+                      </span>
+                    </p>
+                    <p><span className="font-bold">Date:</span> {new Date(selectedOrder.orderDate).toLocaleDateString()}</p>
+                    <p><span className="font-bold">Payment:</span> {selectedOrder.paymentMethod}</p>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <h3 className="font-bold text-lg mb-3 pb-2 border-b border-gray-100">Products</h3>
+                  <div className="space-y-3">
+                    {selectedOrder.products.map((product, idx) => (
+                      <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                        <div>
+                          <p className="font-bold text-sm">{product.name}</p>
+                          <p className="text-xs text-gray-500">Qty: {product.quantity}</p>
+                        </div>
+                        <p className="font-bold font-mono">{(product.price * product.quantity).toFixed(2)} DA</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <div className="bg-black text-secondary p-4 rounded-xl flex justify-between items-center shadow-lg">
+                    <span className="font-bold text-lg">Total Amount</span>
+                    <span className="font-display font-black text-2xl">{selectedOrder.totalAmount.toFixed(2)} DA</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Snackbar Notification */}
+      <AnimatePresence>
+        {snackbar.open && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className={`fixed bottom-6 right-6 px-6 py-4 rounded-xl shadow-2xl z-50 text-white font-bold ${snackbar.severity === 'success' ? 'bg-green-600' : 'bg-red-600'
+              }`}
           >
-            Update Order
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* View Order Dialog */}
-      <Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Order Details</DialogTitle>
-        <DialogContent>
-          {selectedOrder && (
-            <Box sx={{ pt: 2 }}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="h6" gutterBottom>Customer Information</Typography>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2"><strong>Name:</strong> {selectedOrder.customer.fullName}</Typography>
-                    <Typography variant="body2"><strong>Phone:</strong> {selectedOrder.customer.phone}</Typography>
-                    <Typography variant="body2"><strong>Wilaya:</strong> {selectedOrder.customer.wilaya}</Typography>
-                    <Typography variant="body2"><strong>Address:</strong> {selectedOrder.customer.address}</Typography>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <Typography variant="h6" gutterBottom>Order Information</Typography>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2"><strong>Order ID:</strong> #{selectedOrder._id.toString().slice(-8).toUpperCase()}</Typography>
-                    <Typography variant="body2"><strong>Status:</strong> 
-                      <Chip 
-                        label={statusLabels[selectedOrder.status]} 
-                        color={statusColors[selectedOrder.status]} 
-                        size="small" 
-                        sx={{ ml: 1 }}
-                      />
-                    </Typography>
-                    <Typography variant="body2"><strong>Date:</strong> {new Date(selectedOrder.orderDate).toLocaleDateString()}</Typography>
-                    <Typography variant="body2"><strong>Payment:</strong> {selectedOrder.paymentMethod}</Typography>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom>Products</Typography>
-                  {selectedOrder.products.map((product, index) => (
-                    <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
-                      <Typography variant="body2">{product.name} x {product.quantity}</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                        {(product.price * product.quantity).toFixed(2)} DA
-                      </Typography>
-                    </Box>
-                  ))}
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 2, bgcolor: 'primary.light', borderRadius: 1 }}>
-                    <Typography variant="h6">Total Amount</Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                      {selectedOrder.totalAmount.toFixed(2)} DA
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+            {snackbar.message}
+            <button onClick={() => setSnackbar({ ...snackbar, open: false })} className="ml-4 opacity-75 hover:opacity-100">
+              <Close fontSize="small" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
