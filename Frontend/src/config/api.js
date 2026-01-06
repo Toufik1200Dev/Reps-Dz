@@ -1,8 +1,8 @@
 // API Configuration
 // IMPORTANT: Update PRODUCTION_URL after deploying backend on Render
 export const API_CONFIG = {
-  // Production backend URL (Render) - Update this with your Render URL after deployment
-  PRODUCTION_URL: 'https://YOUR-SERVICE-NAME.onrender.com/api',
+  // Production backend URL (Render)
+  PRODUCTION_URL: 'https://reps-dz.onrender.com/api',
   
   // Firebase frontend URL
   FRONTEND_URL: 'https://reps-dz.web.app',

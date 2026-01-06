@@ -348,7 +348,7 @@ export default function Order() {
                     {/* Delivery Type */}
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-3">
-                        Type de Livraison (Delivery Type) <span className="text-red-500">*</span>
+                        Delivery Type <span className="text-red-500">*</span>
                       </label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                         <label className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all ${
@@ -437,7 +437,7 @@ export default function Order() {
                     {/* Exact Address (Optional) */}
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Address Exacte (Exact Address)
+                        Exact Address
                         <span className="text-gray-500 text-xs font-normal ml-2">(Optional)</span>
                       </label>
                       <textarea

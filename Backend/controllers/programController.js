@@ -402,6 +402,9 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings) => {
   const legRaisesMax = maxReps.legRaises;
   
   const levelMult = { beginner: 0.85, intermediate: 1.0, advanced: 1.15 }[level];
+  // Squats are easier - use higher multipliers
+  const squatsVolumeMult = settings.volume * levelMult * 1.25; // Higher reps for squats
+  const squatsIntensityMult = settings.intensity * levelMult * 1.2;
   const volumeMult = settings.volume * levelMult;
   const intensityMult = settings.intensity * levelMult;
 

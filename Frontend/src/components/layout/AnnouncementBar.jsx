@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 const announcements = [
     "Free shipping for +3 items",
-    "Garantie Apres Vente",
+    "After-Sales Guarantee",
     "Fast Shipping"
 ];
 
