@@ -166,8 +166,8 @@ export default function Programs() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-12">
-      <div className="max-w-6xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50 pt-20 md:pt-24 pb-8 md:pb-12">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6">
         {/* Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -179,10 +179,10 @@ export default function Programs() {
               <FitnessCenter sx={{ fontSize: 40, color: '#F59E0B' }} className="text-yellow-600" />
             </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 md:mb-4 px-2">
             Generate Your <span className="text-yellow-500">4-Week</span> Calisthenics Endurance Program
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-2">
             Enter your max reps for each exercise and get a personalized 4-week endurance program designed to push your limits.
           </p>
         </motion.div>
@@ -192,7 +192,7 @@ export default function Programs() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 mb-8"
+          className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8 mb-6 md:mb-8"
         >
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Current Max Reps</h2>
 
@@ -201,12 +201,12 @@ export default function Programs() {
             <label className="block text-sm font-bold text-gray-700 mb-3">
               Experience Level <span className="text-red-500">*</span>
             </label>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
               {['beginner', 'intermediate', 'advanced'].map((lvl) => (
                 <button
                   key={lvl}
                   onClick={() => setLevel(lvl)}
-                  className={`px-6 py-3 rounded-xl border-2 font-medium transition-all ${
+                  className={`px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-lg md:rounded-xl border-2 font-medium transition-all text-sm sm:text-base ${
                     level === lvl
                       ? 'border-yellow-500 bg-yellow-50 text-yellow-900'
                       : 'border-gray-200 hover:border-gray-300 text-gray-700'
@@ -219,7 +219,7 @@ export default function Programs() {
           </div>
 
           {/* Exercise Inputs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 md:gap-6 mb-6 md:mb-8">
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">
                 Muscle Ups
@@ -232,7 +232,7 @@ export default function Programs() {
                   const val = e.target.value.replace(/[^0-9]/g, '');
                   handleRepChange('muscleUp', val === '' ? 0 : parseInt(val) || 0);
                 }}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="0"
               />
               <p className="text-xs text-gray-500 mt-1">Enter 0 if you can't do muscle-ups yet</p>
@@ -250,7 +250,7 @@ export default function Programs() {
                   const val = e.target.value.replace(/[^0-9]/g, '');
                   handleRepChange('pullUps', val === '' ? 0 : parseInt(val) || 0);
                 }}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="10"
                 required
               />
@@ -268,7 +268,7 @@ export default function Programs() {
                   const val = e.target.value.replace(/[^0-9]/g, '');
                   handleRepChange('dips', val === '' ? 0 : parseInt(val) || 0);
                 }}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="15"
                 required
               />
@@ -286,7 +286,7 @@ export default function Programs() {
                   const val = e.target.value.replace(/[^0-9]/g, '');
                   handleRepChange('pushUps', val === '' ? 0 : parseInt(val) || 0);
                 }}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="25"
                 required
               />
@@ -304,7 +304,7 @@ export default function Programs() {
                   const val = e.target.value.replace(/[^0-9]/g, '');
                   handleRepChange('squats', val === '' ? 0 : parseInt(val) || 0);
                 }}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="40"
                 required
               />
@@ -322,7 +322,7 @@ export default function Programs() {
                   const val = e.target.value.replace(/[^0-9]/g, '');
                   handleRepChange('legRaises', val === '' ? 0 : parseInt(val) || 0);
                 }}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="15"
                 required
               />
@@ -341,7 +341,7 @@ export default function Programs() {
           <button
             onClick={handleGenerate}
             disabled={loading}
-            className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-4 px-8 rounded-xl transition-all transform active:scale-95 shadow-lg shadow-yellow-500/20 disabled:opacity-50 disabled:cursor-not-allowed text-lg flex items-center justify-center gap-3"
+            className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-lg md:rounded-xl transition-all transform active:scale-95 shadow-lg shadow-yellow-500/20 disabled:opacity-50 disabled:cursor-not-allowed text-base sm:text-lg flex items-center justify-center gap-2 sm:gap-3"
           >
             {loading ? (
               <>
@@ -361,13 +361,14 @@ export default function Programs() {
         {program && (
           <div id="program-display" className="space-y-8">
             {/* Download Button */}
-            <div className="flex justify-end">
+            <div className="flex justify-center sm:justify-end mb-4 sm:mb-6">
               <button
                 onClick={handleDownloadPDF}
-                className="flex items-center gap-2 bg-black text-white font-bold py-3 px-6 rounded-xl hover:bg-gray-800 transition-all shadow-lg"
+                className="flex items-center gap-2 bg-black text-white font-bold py-2.5 sm:py-3 px-5 sm:px-6 rounded-lg md:rounded-xl hover:bg-gray-800 transition-all shadow-lg text-sm sm:text-base"
               >
-                <Download />
-                Download PDF
+                <Download sx={{ fontSize: { xs: 18, sm: 20 } }} />
+                <span className="hidden xs:inline">Download PDF</span>
+                <span className="xs:hidden">PDF</span>
               </button>
             </div>
 
@@ -378,12 +379,12 @@ export default function Programs() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: weekIndex * 0.1 }}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+                className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6 md:mb-8"
               >
                 {/* Week Header */}
-                <div className="bg-gradient-to-r from-yellow-500 to-yellow-400 p-6">
-                  <h3 className="text-3xl font-black text-black">Week {week.week}</h3>
-                  <p className="text-black/80 mt-1">
+                <div className="bg-gradient-to-r from-yellow-500 to-yellow-400 p-4 sm:p-5 md:p-6">
+                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-black">Week {week.week}</h3>
+                  <p className="text-black/80 mt-1 text-sm sm:text-base">
                     {week.week === 1 && '60% of max'}
                     {week.week === 2 && '70% of max'}
                     {week.week === 3 && '80% of max'}
@@ -392,27 +393,27 @@ export default function Programs() {
                 </div>
 
                 {/* Days */}
-                <div className="p-6 space-y-6">
+                <div className="p-4 sm:p-5 md:p-6 space-y-4 sm:space-y-5 md:space-y-6">
                   {week.days.map((day, dayIndex) => (
-                    <div key={dayIndex} className="border-l-4 border-yellow-500 pl-6">
-                      <h4 className="text-xl font-bold text-gray-900 mb-4">
+                    <div key={dayIndex} className="border-l-4 border-yellow-500 pl-3 sm:pl-4 md:pl-6">
+                      <h4 className="text-lg sm:text-xl md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 break-words">
                         Day {day.day}: {day.focus}
                       </h4>
 
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         {day.exercises.map((exercise, exIndex) => (
-                          <div key={exIndex} className="bg-gray-50 rounded-xl p-4">
-                            <div className="flex items-start gap-3">
-                              <CheckCircle sx={{ color: '#F59E0B', marginTop: '4px', flexShrink: 0, fontSize: 20 }} />
-                              <div className="flex-1">
-                                <h5 className="font-bold text-gray-900 mb-2">{exercise.name}</h5>
+                          <div key={exIndex} className="bg-gray-50 rounded-lg md:rounded-xl p-3 sm:p-4">
+                            <div className="flex items-start gap-2 sm:gap-3">
+                              <CheckCircle sx={{ color: '#F59E0B', marginTop: '2px', flexShrink: 0, fontSize: { xs: 18, sm: 20 } }} />
+                              <div className="flex-1 min-w-0">
+                                <h5 className="font-bold text-gray-900 mb-1.5 sm:mb-2 text-sm sm:text-base break-words">{exercise.name}</h5>
                                 {exercise.sets && (
-                                  <p className="text-gray-700 mb-1">
+                                  <p className="text-gray-700 mb-1 text-sm sm:text-base whitespace-pre-line break-words">
                                     <span className="font-semibold">Sets:</span> {exercise.sets}
                                   </p>
                                 )}
                                 {exercise.rest && (
-                                  <p className="text-sm text-gray-500">
+                                  <p className="text-xs sm:text-sm text-gray-500 break-words">
                                     <span className="font-semibold">Rest:</span> {exercise.rest}
                                   </p>
                                 )}
