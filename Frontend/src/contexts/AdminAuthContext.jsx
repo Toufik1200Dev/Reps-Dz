@@ -32,14 +32,30 @@ export const AdminAuthProvider = ({ children }) => {
     localStorage.removeItem('adminPassword');
   };
 
-  const checkAuth = () => {
+  const checkAuth = async () => {
     const storedPassword = localStorage.getItem('adminPassword');
     if (storedPassword) {
-      // If password exists in localStorage, assume authenticated
-      // The backend will verify it on each request
-      setIsAdminAuthenticated(true);
-      setAdminPassword(storedPassword);
-      return true;
+      // Verify with backend that the stored password is still valid
+      try {
+        const result = await adminAPI.login(storedPassword);
+        if (result.success) {
+          setIsAdminAuthenticated(true);
+          setAdminPassword(storedPassword);
+          return true;
+        } else {
+          // Password is invalid, clear it
+          localStorage.removeItem('adminPassword');
+          setIsAdminAuthenticated(false);
+          setAdminPassword('');
+          return false;
+        }
+      } catch (error) {
+        // On error, clear stored password for security
+        localStorage.removeItem('adminPassword');
+        setIsAdminAuthenticated(false);
+        setAdminPassword('');
+        return false;
+      }
     }
     return false;
   };

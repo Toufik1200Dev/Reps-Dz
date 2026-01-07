@@ -27,12 +27,18 @@ const verifyAdminPassword = async (req, res) => {
       });
     }
 
+    // Debug logging (remove in production if needed)
+    console.log('🔐 Admin login attempt - Password length:', password?.length, 'Expected length:', expectedPassword?.length);
+    
     if (password !== expectedPassword) {
+      console.log('❌ Admin password mismatch');
       return res.status(403).json({
         success: false,
         message: 'Invalid admin password'
       });
     }
+
+    console.log('✅ Admin password verified successfully');
 
     // Password is correct
     res.status(200).json({
@@ -50,6 +56,34 @@ const verifyAdminPassword = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Check admin password status (for debugging)
+ * @route   GET /api/admin/status
+ * @access  Public
+ */
+const getAdminStatus = async (req, res) => {
+  try {
+    const hasPassword = !!process.env.ADMIN_PASSWORD;
+    const passwordLength = process.env.ADMIN_PASSWORD ? process.env.ADMIN_PASSWORD.length : 0;
+    
+    res.status(200).json({
+      success: true,
+      hasPassword,
+      passwordLength,
+      message: hasPassword 
+        ? 'ADMIN_PASSWORD is configured' 
+        : 'ADMIN_PASSWORD is NOT set in environment variables'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error checking admin status',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
-  verifyAdminPassword
+  verifyAdminPassword,
+  getAdminStatus
 };

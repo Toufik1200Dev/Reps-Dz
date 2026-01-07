@@ -209,15 +209,21 @@ export const adminAPI = {
   // Admin Authentication - Verify password with backend
   login: async (password) => {
     try {
+      console.log('🔐 Attempting admin login...');
       const response = await api.post('/admin/login', { password });
-      if (response.data.success) {
+      console.log('📡 Admin login response:', response.data);
+      
+      if (response.data && response.data.success) {
         // Store admin password in localStorage for future requests
         localStorage.setItem('adminPassword', password);
+        console.log('✅ Admin login successful');
         return { success: true, message: 'Admin logged in successfully' };
       }
-      return { success: false, message: response.data.message || 'Invalid password' };
+      console.log('❌ Admin login failed:', response.data?.message);
+      return { success: false, message: response.data?.message || 'Invalid password' };
     } catch (error) {
-      const message = error.response?.data?.message || 'Error verifying admin password';
+      console.error('❌ Admin login error:', error);
+      const message = error.response?.data?.message || error.message || 'Error verifying admin password';
       return { success: false, message };
     }
   },

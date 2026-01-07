@@ -28,10 +28,14 @@ export default function AdminLogin() {
 
   useEffect(() => {
     // Check if already authenticated
-    if (checkAuth()) {
-      const from = location.state?.from?.pathname || '/admin';
-      navigate(from, { replace: true });
-    }
+    const verifyAuth = async () => {
+      const isAuth = await checkAuth();
+      if (isAuth) {
+        const from = location.state?.from?.pathname || '/admin';
+        navigate(from, { replace: true });
+      }
+    };
+    verifyAuth();
   }, [checkAuth, navigate, location]);
 
   const handleSubmit = async (e) => {
