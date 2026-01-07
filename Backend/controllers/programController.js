@@ -159,7 +159,6 @@ const generate4WeekProgram = (level, maxReps, seed = Date.now()) => {
     const days = generateWeekDays(week, level, maxReps, settings, seed, usedMethods);
     weeks.push({
       week,
-      volume: `${Math.round(settings.volume * 100)}% of max`,
       days
     });
   }
@@ -219,10 +218,10 @@ const generateDay1_Pull = (week, level, maxReps, settings, seed, usedMethods) =>
     if (methodLower.includes('emom')) return 'emom';
     if (methodLower.includes('pyramid')) return 'pyramid';
     if (methodLower.includes('degressive')) return 'degressive';
-    if (methodLower.includes('separated')) return 'percentage_of_max';
+    if (methodLower.includes('separated')) return 'volume_sets';
     if (methodLower.includes('superset')) return 'superset';
     if (methodLower.includes('timer')) return 'timed_challenge';
-    return 'percentage_of_max';
+    return 'volume_sets';
   });
 
   return {
@@ -335,7 +334,7 @@ const method1_DegressivePullMU = (muMax, pullMax, pullPercentage) => {
     duration: `${Math.min(3, rounds)} rounds`,
     sets: setsDesc.trim(),
     rest: "2-3 min between rounds",
-    note: `Start with ${Math.round(pullPercentage * 100)}% max pull-ups, decrease by 2 each round. Add 1 MU per round if applicable.`,
+    note: "Start with pull-ups, decrease by 2 each round. Add 1 MU per round if applicable.",
     exercise: "pull-up, muscle-up"
   };
 };
@@ -375,21 +374,21 @@ const method3_SeparatedVolume = (muMax, pullMax, pullPercentage) => {
     const mu80 = Math.max(1, Math.round(muMax * 0.80));
     const mu60 = Math.max(1, Math.round(muMax * 0.60));
     const mu50 = Math.max(1, Math.round(muMax * 0.50));
-    setsDesc += `Muscle-ups:\n4 sets × ${mu80} reps (80% max)\n5 sets × ${mu60} reps (60% max)\n6 sets × ${mu50} reps (50% max)\n\n`;
+    setsDesc += `Muscle-ups:\n4 sets × ${mu80} reps\n5 sets × ${mu60} reps\n6 sets × ${mu50} reps\n\n`;
   }
   
   const pull80 = Math.max(1, Math.round(pullMax * 0.80 * pullPercentage));
   const pull60 = Math.max(1, Math.round(pullMax * 0.60 * pullPercentage));
   const pull50 = Math.max(1, Math.round(pullMax * 0.50 * pullPercentage));
-  setsDesc += `Pull-ups:\n4 sets × ${pull80} reps (80% max)\n5 sets × ${pull60} reps (60% max)\n6 sets × ${pull50} reps (50% max)`;
+  setsDesc += `Pull-ups:\n4 sets × ${pull80} reps\n5 sets × ${pull60} reps\n6 sets × ${pull50} reps`;
   
   return {
     name: "Method 3: Separated Volume",
-    format: "% of max",
+    format: "Volume Sets",
     duration: "15 sets total",
     sets: setsDesc,
     rest: "90s-2 min between sets",
-    note: "Complete all sets at each percentage before moving to next.",
+    note: "Complete all sets before moving to next.",
     exercise: "pull-up" + (muMax > 0 ? ", muscle-up" : "")
   };
 };
@@ -541,9 +540,9 @@ const generateDay2_Push = (week, level, maxReps, settings, seed, usedMethods) =>
     if (methodLower.includes('emom')) return 'emom';
     if (methodLower.includes('pyramid')) return 'pyramid';
     if (methodLower.includes('density')) return 'density';
-    if (methodLower.includes('separated') || methodLower.includes('volume')) return 'percentage_of_max';
+    if (methodLower.includes('separated') || methodLower.includes('volume')) return 'volume_sets';
     if (methodLower.includes('no-stop')) return 'no-stop';
-    return 'percentage_of_max';
+    return 'volume_sets';
   });
 
   return {
@@ -678,9 +677,9 @@ const methodPush4_SeparatedVolumePush = (dipsMax, pushUpsMax) => {
   
   return {
     name: "Method 4: Separated Volume",
-    format: "% of max",
+    format: "Volume Sets",
     duration: "15 sets total",
-    sets: `5 sets × ${dips80} dips (80% max)\n5 sets × ${push80} push-ups (80% max)\n5 sets × ${barDips80} bar dips (75% max)`,
+    sets: `5 sets × ${dips80} dips\n5 sets × ${push80} push-ups\n5 sets × ${barDips80} bar dips`,
     rest: "90s between sets",
     note: "Complete all sets for each exercise before moving to next.",
     exercise: "dip, push-up, bar-dip"
@@ -725,7 +724,7 @@ const getDay2Finisher = (week, level, dipsMax, pushUpsMax, settings, levelMult) 
   
   return {
     name: "Finisher: Isometric Push Hold",
-    sets: `EMOM 10 min:\n10s 90° push-up hold\n${pushReps} push-ups (10% max)`,
+    sets: `EMOM 10 min:\n10s 90° push-up hold\n${pushReps} push-ups`,
     rest: "Rest for the remainder of each minute",
     note: "Hold at 90° for 10 seconds, then complete push-ups. Repeat every minute for 10 minutes.",
     exercise: "isometric-hold, push-up"
@@ -976,9 +975,9 @@ const generateDay4_Activation = (week, level, muMax, pullMax, pullPercentage, di
     
     return {
       name: "🧩 PART 1: Activation - Submaximal Sets",
-      format: "% of max",
+      format: "Volume Sets",
       duration: `${duration} min`,
-      sets: `${pullReps} pull-ups (${Math.round(activationPercentage * 100)}% max)\n${dipReps} dips (${Math.round(activationPercentage * 100)}% max)\n${pushReps} push-ups (${Math.round(activationPercentage * 100)}% max)\n× 2 sets`,
+      sets: `${pullReps} pull-ups\n${dipReps} dips\n${pushReps} push-ups\n× 2 sets`,
       rest: "90s between sets",
       note: "Submaximal activation - stop well before failure.",
       exercise: "pull-up, dip, push-up",
