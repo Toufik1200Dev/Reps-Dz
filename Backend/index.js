@@ -17,6 +17,7 @@ const cartRoutes = require('./routes/cartRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const programRoutes = require('./routes/programRoutes');
+const calorieRoutes = require('./routes/calorieRoutes');
 
 // Import middleware
 const adminAuth = require('./middleware/adminAuth');
@@ -112,6 +113,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/programs', programRoutes);
+app.use('/api/calories', calorieRoutes);
 
 // Admin routes with password protection
 app.use('/api/admin/orders', adminAuth, orderRoutes);

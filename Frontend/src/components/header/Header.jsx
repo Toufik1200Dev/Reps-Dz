@@ -24,6 +24,7 @@ const navigationItems = [
   { label: "Home", href: "/" },
   { label: "Shop", href: "/shop" },
   { label: "Programs", href: "/programs" },
+  { label: "Calories", href: "/calorie-calculator" },
   { label: "Contact", href: "/contact" },
 ];
 

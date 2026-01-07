@@ -10,6 +10,7 @@ import Checkout from './pages/Checkout';
 import Order from './pages/Order';
 import ContactUs from './pages/ContactUs';
 import Programs from './pages/Programs';
+import CalorieCalculator from './pages/CalorieCalculator';
 import AdminLayout from './components/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
 import Orders from './pages/admin/Orders';
@@ -103,6 +104,15 @@ function App() {
                   <Header />
                   <main>
                     <Programs />
+                  </main>
+                  <Footer />
+                </>
+              } />
+              <Route path="/calorie-calculator" element={
+                <>
+                  <Header />
+                  <main>
+                    <CalorieCalculator />
                   </main>
                   <Footer />
                 </>
