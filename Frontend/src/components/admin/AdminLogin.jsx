@@ -40,14 +40,15 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     try {
-      if (login(password)) {
+      const success = await login(password);
+      if (success) {
         const from = location.state?.from?.pathname || '/admin';
         navigate(from, { replace: true });
       } else {
         setError('Invalid admin password');
       }
     } catch (err) {
-      setError('An error occurred during login');
+      setError(err.message || 'An error occurred during login');
     } finally {
       setIsLoading(false);
     }

@@ -206,11 +206,20 @@ export const productsAPI = {
 
 // Admin API (comprehensive admin functions)
 export const adminAPI = {
-  // Admin Authentication
-  login: (password) => {
-    // Store admin password in localStorage for future requests
-    localStorage.setItem('adminPassword', password);
-    return Promise.resolve({ success: true, message: 'Admin logged in successfully' });
+  // Admin Authentication - Verify password with backend
+  login: async (password) => {
+    try {
+      const response = await api.post('/admin/login', { password });
+      if (response.data.success) {
+        // Store admin password in localStorage for future requests
+        localStorage.setItem('adminPassword', password);
+        return { success: true, message: 'Admin logged in successfully' };
+      }
+      return { success: false, message: response.data.message || 'Invalid password' };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Error verifying admin password';
+      return { success: false, message };
+    }
   },
   
   logout: () => {

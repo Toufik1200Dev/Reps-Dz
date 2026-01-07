@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import { adminAPI } from '../services/api';
 
 const AdminAuthContext = createContext();
 
@@ -14,17 +15,18 @@ export const AdminAuthProvider = ({ children }) => {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
 
-  const login = (password) => {
-    if (password === 'admin123') {
+  const login = async (password) => {
+    const result = await adminAPI.login(password);
+    if (result.success) {
       setIsAdminAuthenticated(true);
       setAdminPassword(password);
-      localStorage.setItem('adminPassword', password);
       return true;
     }
     return false;
   };
 
   const logout = () => {
+    adminAPI.logout();
     setIsAdminAuthenticated(false);
     setAdminPassword('');
     localStorage.removeItem('adminPassword');
@@ -32,7 +34,9 @@ export const AdminAuthProvider = ({ children }) => {
 
   const checkAuth = () => {
     const storedPassword = localStorage.getItem('adminPassword');
-    if (storedPassword === 'admin123') {
+    if (storedPassword) {
+      // If password exists in localStorage, assume authenticated
+      // The backend will verify it on each request
       setIsAdminAuthenticated(true);
       setAdminPassword(storedPassword);
       return true;
