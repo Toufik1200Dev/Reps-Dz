@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Scale,
-  Activity,
-  Apple,
+  DirectionsRun,
+  Restaurant,
   TrendingUp,
-  Droplet,
-  Moon,
-  Dumbbell,
-  Leaf,
-  Calculator,
+  LocalDrink,
+  Bedtime,
+  FitnessCenter,
+  Spa,
+  Calculate,
   Info
 } from '@mui/icons-material';
 import API_CONFIG from '../config/api';
@@ -33,17 +33,17 @@ export default function CalorieCalculator() {
     {
       title: "Protein Timing",
       tip: "Aim to consume 20-30g of protein within 30 minutes after your workout for optimal muscle recovery and growth.",
-      icon: <Dumbbell className="text-3xl text-blue-500" />
+      icon: <FitnessCenter className="text-3xl text-blue-500" />
     },
     {
       title: "Stay Hydrated",
       tip: "Drink at least 2-3 liters of water daily. Your muscles need proper hydration to perform and recover effectively.",
-      icon: <Droplet className="text-3xl text-blue-400" />
+      icon: <LocalDrink sx={{ fontSize: '3rem', color: '#60A5FA' }} />
     },
     {
       title: "Recovery & Sleep",
       tip: "Prioritize 7-9 hours of quality sleep. Growth hormone production peaks during deep sleep, essential for muscle recovery.",
-      icon: <Moon className="text-3xl text-indigo-500" />
+      icon: <Bedtime sx={{ fontSize: '3rem', color: '#6366F1' }} />
     },
     {
       title: "Strength Nutrition",
@@ -53,12 +53,12 @@ export default function CalorieCalculator() {
     {
       title: "Fiber Benefits",
       tip: "Adequate fiber intake supports digestion, keeps you full longer, and helps maintain steady energy levels throughout the day.",
-      icon: <Leaf className="text-3xl text-emerald-500" />
+      icon: <Spa sx={{ fontSize: '3rem', color: '#10B981' }} />
     },
     {
       title: "Meal Timing",
       tip: "Space your protein intake evenly throughout the day (every 3-4 hours) to maximize muscle protein synthesis.",
-      icon: <Activity className="text-3xl text-orange-500" />
+      icon: <DirectionsRun sx={{ fontSize: '3rem', color: '#F97316' }} />
     }
   ];
 
@@ -206,7 +206,7 @@ export default function CalorieCalculator() {
       label: 'Calories',
       value: results?.calories,
       unit: 'kcal',
-      icon: <Activity className="text-4xl" />,
+      icon: <DirectionsRun sx={{ fontSize: '2.5rem' }} />,
       color: 'from-orange-400 to-orange-600',
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-200'
@@ -215,7 +215,7 @@ export default function CalorieCalculator() {
       label: 'Protein',
       value: results?.protein,
       unit: 'g',
-      icon: <Dumbbell className="text-4xl" />,
+      icon: <FitnessCenter sx={{ fontSize: '2.5rem' }} />,
       color: 'from-blue-400 to-blue-600',
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200'
@@ -224,7 +224,7 @@ export default function CalorieCalculator() {
       label: 'Carbs',
       value: results?.carbs,
       unit: 'g',
-      icon: <Apple className="text-4xl" />,
+      icon: <Restaurant sx={{ fontSize: '2.5rem' }} />,
       color: 'from-green-400 to-green-600',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200'
@@ -233,7 +233,7 @@ export default function CalorieCalculator() {
       label: 'Fat',
       value: results?.fat,
       unit: 'g',
-      icon: <Scale className="text-4xl" />,
+      icon: <Scale sx={{ fontSize: '2.5rem' }} />,
       color: 'from-purple-400 to-purple-600',
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200'
@@ -242,7 +242,7 @@ export default function CalorieCalculator() {
       label: 'Fiber',
       value: results?.fiber,
       unit: 'g',
-      icon: <Leaf className="text-4xl" />,
+      icon: <Spa sx={{ fontSize: '2.5rem' }} />,
       color: 'from-emerald-400 to-emerald-600',
       bgColor: 'bg-emerald-50',
       borderColor: 'border-emerald-200'
@@ -260,7 +260,7 @@ export default function CalorieCalculator() {
         >
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <Calculator className="text-white text-3xl" />
+              <Calculate sx={{ fontSize: '2rem', color: 'white' }} />
             </div>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-3">
@@ -410,7 +410,7 @@ export default function CalorieCalculator() {
                     </>
                   ) : (
                     <>
-                      <Calculator className="text-xl" />
+                      <Calculate sx={{ fontSize: '1.5rem' }} />
                       Calculate
                     </>
                   )}
