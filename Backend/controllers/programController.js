@@ -1,10 +1,10 @@
 // Calisthenics Endurance Program Generator
-// Competition-style training based on FIBO Cup, endurance battles, and elite athlete protocols
-// Designed by: Senior Calisthenics Coach + MERN Engineer
+// Competition-style training based on real endurance methods
+// Professional Calisthenics Coach + MERN Engineer
 
 /**
  * MAIN CONTROLLER
- * Generates realistic, competition-style 4-week calisthenics endurance programs
+ * Generates realistic 4-week calisthenics endurance programs using predefined methods
  */
 const generateProgram = async (req, res) => {
   try {
@@ -36,7 +36,7 @@ const generateProgram = async (req, res) => {
       }
     }
 
-    // Realistic safety limits (competition-level athletes can exceed normal limits)
+    // Safety limits
     const safetyLimits = {
       muscleUp: 25,
       pullUps: 60,
@@ -50,12 +50,12 @@ const generateProgram = async (req, res) => {
       if (maxReps[exercise] > limit) {
         return res.status(400).json({
           success: false,
-          message: `${exercise} max reps (${maxReps[exercise]}) exceeds realistic competition limit of ${limit}`
+          message: `${exercise} max reps (${maxReps[exercise]}) exceeds realistic limit of ${limit}`
         });
       }
     }
 
-    // Generate 4-week competition-style program
+    // Generate 4-week program
     const program = generate4WeekProgram(level, maxReps);
 
     res.status(200).json({
@@ -79,18 +79,18 @@ const generateProgram = async (req, res) => {
 
 /**
  * PROGRESSION MODEL
- * Week 1: Volume base (60-65%) - Build endurance foundation
- * Week 2: Density increase (shorter rest / EMOM focus)
- * Week 3: Unbroken & complex dominance (80-85%)
- * Week 4: Competition simulation (90-95% + high fatigue scenarios)
+ * Week 1: Volume base (60-65%)
+ * Week 2: Density increase (70-75%)
+ * Week 3: Unbroken work (80-85%)
+ * Week 4: Competition simulation (90-95%)
  */
 const generate4WeekProgram = (level, maxReps) => {
   const weeks = [];
   const weekSettings = [
-    { volume: 0.62, intensity: 0.60, rest: 'moderate', style: 'volume' },
-    { volume: 0.70, intensity: 0.72, rest: 'reduced', style: 'density' },
-    { volume: 0.82, intensity: 0.85, rest: 'minimal', style: 'unbroken' },
-    { volume: 0.95, intensity: 0.93, rest: 'competition', style: 'battle' }
+    { volume: 0.62, intensity: 0.60, style: 'volume' },
+    { volume: 0.72, intensity: 0.70, style: 'density' },
+    { volume: 0.82, intensity: 0.80, style: 'unbroken' },
+    { volume: 0.93, intensity: 0.90, style: 'competition' }
   ];
 
   for (let week = 1; week <= 4; week++) {
@@ -98,8 +98,7 @@ const generate4WeekProgram = (level, maxReps) => {
     const days = generateWeekDays(week, level, maxReps, settings);
     weeks.push({
       week,
-      volume: settings.volume,
-      intensity: settings.intensity,
+      volume: `${Math.round(settings.volume * 100)}% of max`,
       days
     });
   }
@@ -109,163 +108,258 @@ const generate4WeekProgram = (level, maxReps) => {
 
 /**
  * WEEK STRUCTURE (FIXED)
- * Day 1: Pull + Muscle-Up Endurance
+ * Day 1: Pull / Muscle-Up Endurance
  * Day 2: Push Endurance
  * Day 3: Legs + Cardio + Core
- * Day 4: Bar Complex / Competition Sets
+ * Day 4: Endurance Sets (level-based)
  */
 const generateWeekDays = (week, level, maxReps, settings) => {
   const days = [];
   days.push(generateDay1_PullMuscleUp(week, level, maxReps, settings));
   days.push(generateDay2_Push(week, level, maxReps, settings));
   days.push(generateDay3_LegsCardioCore(week, level, maxReps, settings));
-  days.push(generateDay4_BarComplex(week, level, maxReps, settings));
+  days.push(generateDay4_EnduranceSets(week, level, maxReps, settings));
   return days;
 };
 
 // ============================================================================
-// DAY 1: PULL + MUSCLE-UP ENDURANCE
+// DAY 1: PULL / MUSCLE-UP ENDURANCE
+// Uses 2 methods + 1 finisher
 // ============================================================================
-/**
- * Competition-style pull and muscle-up endurance
- * Focus: Unbroken ladders, pyramids, isometric holds, muscle-up clusters
- */
 const generateDay1_PullMuscleUp = (week, level, maxReps, settings) => {
   const exercises = [];
   const muMax = maxReps.muscleUp;
   const pullMax = maxReps.pullUps;
-  
-  // Level adjustments
   const levelMult = { beginner: 0.85, intermediate: 1.0, advanced: 1.15 }[level];
-  // Pulling exercises are harder - use lower multipliers
-  const pullVolumeMult = settings.volume * levelMult * (level === 'advanced' ? 0.75 : 0.65); // Lower reps for pull-ups
-  const muVolumeMult = settings.volume * levelMult * (level === 'advanced' ? 0.70 : 0.60); // Lower reps for muscle-ups
-  const volumeMult = settings.volume * levelMult;
-
-  // WARM-UP GUIDANCE
+  
+  // WARM-UP
   exercises.push({
     name: "💡 Warm-up (5-7 min)",
-    sets: "Tempo pull-ups x10-15\nArm circles, shoulder mobility\nHang holds: 3x15s\nMuscle-up practice (if you can do them)",
+    sets: "Tempo pull-ups x10-15\nArm circles, shoulder mobility\nHang holds: 3x15s\nMuscle-up practice (if applicable)",
     rest: "No rest needed",
     type: "warmup"
   });
 
-  // MUSCLE-UP WORK (if applicable) - Lower reps (harder exercise)
-  if (muMax > 0) {
-    if (muMax <= 3) {
-      // Beginner MU: Clusters and singles
-      exercises.push({
-        name: "Muscle-Up Singles",
-        sets: `3-5 reps × 4 rounds`,
-        rest: "2-3 min between rounds",
-        note: "Focus on good form. Take full rest between rounds."
-      });
-    } else if (muMax <= 8) {
-      // Intermediate MU: Low-rep clusters
-      const reps = Math.max(2, Math.round(muMax * muVolumeMult));
-      exercises.push({
-        name: "Muscle-Up Ladder",
-        sets: `1 muscle-up + 2 pull-ups\n2 muscle-ups + 3 pull-ups\n${Math.min(reps, 3)} muscle-ups + 4 pull-ups\n× 3 rounds`,
-        rest: "2-3 min between rounds",
-        note: "Do each ladder without stopping. Rest between rounds."
-      });
-    } else {
-      // Advanced MU: Complex integration
-      const muReps = Math.max(2, Math.round(muMax * muVolumeMult));
-      const pullReps1 = Math.round(pullMax * pullVolumeMult);
-      const pullReps2 = Math.round(pullMax * pullVolumeMult * 0.6);
-      exercises.push({
-        name: "Muscle-Up Complex",
-        sets: `${muReps} muscle-ups → ${pullReps1 + pullReps2} pull-ups → ${Math.round(maxReps.dips * volumeMult * 0.6)} dips\n× 4 rounds`,
-        rest: "2-3 min between rounds",
-        note: "Good form. Do each round without stopping."
-      });
-    }
-  } else {
-    // MU alternatives for non-MU athletes
-    exercises.push({
-      name: "Jump Muscle-Ups or Band Assisted",
-      sets: "Jump muscle-ups: 5-8 reps × 4 sets\nOR\nBand muscle-ups: 3-5 reps × 4 sets",
-      rest: "90s-2 min",
-      note: "Practice the movement. Focus on pulling hard."
-    });
-    exercises.push({
-      name: "Pull + Dip Combo",
-      sets: `${Math.round(pullMax * pullVolumeMult)} pull-ups → ${Math.round(maxReps.dips * volumeMult * 0.6)} dips\n× 4 rounds`,
-      rest: "90s between rounds",
-      note: "Simulates muscle-up movement pattern"
-    });
-  }
+  // Select 2 methods based on week and level
+  const methods = selectDay1Methods(week, level, muMax, pullMax, settings, levelMult);
+  exercises.push(...methods);
 
-  // PULL-UP PYRAMID - Lower reps
-  const pyramidTop = Math.max(1, Math.round(pullMax * pullVolumeMult));
-  exercises.push({
-    name: "Pull-Up Pyramid",
-    sets: `${pyramidTop} → 1 (go down by 1 each set)\nRest: 30s between sets`,
-    rest: "30s between sets",
-    note: "No swinging. Full range of motion. Try to finish the whole pyramid."
-  });
-
-  // UNBROKEN LADDERS (Week 2+) - Lower reps for pulling
-  if (week >= 2) {
-    const ladderRounds = week === 2 ? 6 : week === 3 ? 8 : 10;
-    exercises.push({
-      name: "Ladder (No Stopping)",
-      sets: `1 pull-up + ${muMax > 0 ? '1 muscle-up' : '1 pull-up'} × ${ladderRounds} rounds`,
-      rest: week === 4 ? "No rest - keep going!" : "15s between rounds",
-      note: week === 4 ? "Competition mode: Do all rounds without stopping" : "Only rest if your form breaks"
-    });
-  }
-
-  // ISOMETRIC COMPLEX
-  exercises.push({
-    name: "Hold + Pull Combo",
-    sets: "Hold at top 10s → Hold in middle 10s → Hang 10s → Max pull-ups\n× 3 rounds",
-    rest: "2-3 min between rounds",
-    note: "Build grip strength and control"
-  });
-
-  // VOLUME SET (Week 3-4) - Lower reps for pull-ups
-  if (week >= 3) {
-    const volumeReps = Math.max(1, Math.round(pullMax * pullVolumeMult));
-    exercises.push({
-      name: "Pull-Up Volume",
-      sets: `${volumeReps} reps × 3 sets`,
-      rest: "90s between sets",
-      note: "Stay consistent. Keep good form."
-    });
-  }
+  // Always add 1 finisher
+  const finisher = getDay1Finisher(week, level, muMax, pullMax, settings, levelMult);
+  exercises.push(finisher);
 
   return {
     day: 1,
-    focus: "Pull + Muscle-Up Endurance",
+    focus: "Pull / Muscle-Up Endurance",
     exercises,
-    totalVolume: `~${Math.round(pullMax * volumeMult * 4 + (muMax * volumeMult * 2))} total reps`,
     coachingNote: week === 4 ? "Competition mode: Push through tiredness, keep good form" : "Focus on good technique. Rest fully between exercises."
   };
 };
 
+// Select 2 methods for Day 1
+const selectDay1Methods = (week, level, muMax, pullMax, settings, levelMult) => {
+  const methods = [];
+  const pullVolume = pullMax * settings.volume * levelMult * (level === 'advanced' ? 0.75 : 0.65);
+  const muVolume = muMax > 0 ? muMax * settings.volume * levelMult * (level === 'advanced' ? 0.70 : 0.60) : 0;
+
+  // Method selection based on week
+  if (week === 1) {
+    // Week 1: Degressive Pull + EMOM
+    methods.push(method1_DegressivePullMU(muMax, pullMax, pullVolume));
+    methods.push(method2_EMOMBlock(week, level, pullMax, muMax, settings, levelMult, 'pull'));
+  } else if (week === 2) {
+    // Week 2: Separated Volume + Pyramids
+    methods.push(method3_SeparatedVolume(muMax, pullMax, pullVolume, muVolume));
+    methods.push(method6_Pyramids(pullMax, muMax, pullVolume, muVolume));
+  } else if (week === 3) {
+    // Week 3: EMOM Block + Superset
+    methods.push(method2_EMOMBlock(week, level, pullMax, muMax, settings, levelMult, 'pull'));
+    const superset = muMax > 0 && pullMax >= 10 ? method7_SupersetA(muMax, pullMax) : method8_SupersetB(pullMax, muMax);
+    methods.push(superset);
+  } else {
+    // Week 4: Timer Challenge + Degressive
+    if (muMax > 0) {
+      methods.push(method9_TimerChallenge(pullMax, muMax));
+    }
+    methods.push(method1_DegressivePullMU(muMax, pullMax, pullVolume));
+  }
+
+  return methods;
+};
+
+// METHOD 1: Degressive Pull + Muscle-Up
+const method1_DegressivePullMU = (muMax, pullMax, pullVolume) => {
+  const startReps = Math.max(1, Math.round(pullMax * 0.60));
+  const rounds = Math.min(8, Math.ceil(startReps / 2));
+  
+  let setsDesc = '';
+  for (let i = 0; i < rounds; i++) {
+    const reps = Math.max(0, startReps - (i * 2));
+    if (reps > 0) {
+      setsDesc += `${reps} pull-ups${muMax > 0 && i < 3 ? ' + 1 muscle-up' : ''}\n`;
+    }
+  }
+  
+  return {
+    name: "Method 1: Degressive Pull + Muscle-Up",
+    sets: setsDesc.trim() + `\n× ${Math.min(3, rounds)} rounds`,
+    rest: "2-3 min between rounds",
+    note: "Start with 60% max pull-ups, decrease by 2 each round until 0. Add 1 MU per round if applicable."
+  };
+};
+
+// METHOD 2: EMOM Block
+const method2_EMOMBlock = (week, level, pullMax, muMax, settings, levelMult, type) => {
+  const pullVolume = pullMax * settings.volume * levelMult * (level === 'advanced' ? 0.75 : 0.65);
+  const muVolume = muMax > 0 ? muMax * settings.volume * levelMult * (level === 'advanced' ? 0.70 : 0.60) : 0;
+  
+  const durations = week === 1 ? [5, 6] : week === 2 ? [6, 8] : week === 3 ? [8, 10] : [10, 12];
+  const percentages = [0.40, 0.35];
+  
+  let setsDesc = '';
+  durations.forEach((duration, idx) => {
+    const pullReps = Math.max(1, Math.round(pullMax * percentages[idx]));
+    setsDesc += `EMOM ${duration} min: ${pullReps} pull-ups`;
+    if (muMax > 0 && idx === 0) {
+      const muReps = Math.max(1, Math.round(muMax * 0.30));
+      setsDesc += ` + ${muReps} muscle-ups`;
+    }
+    setsDesc += '\n';
+  });
+  
+  return {
+    name: "Method 2: EMOM Block",
+    sets: setsDesc.trim(),
+    rest: "Rest for the remainder of each minute",
+    note: "Complete reps at start of each minute, rest for remaining time."
+  };
+};
+
+// METHOD 3: Separated Volume
+const method3_SeparatedVolume = (muMax, pullMax, pullVolume, muVolume) => {
+  let setsDesc = '';
+  
+  if (muMax > 0) {
+    const mu80 = Math.max(1, Math.round(muMax * 0.80));
+    const mu60 = Math.max(1, Math.round(muMax * 0.60));
+    const mu50 = Math.max(1, Math.round(muMax * 0.50));
+    setsDesc += `Muscle-ups:\n4 sets × ${mu80} reps (80% max)\n5 sets × ${mu60} reps (60% max)\n6 sets × ${mu50} reps (50% max)\n\n`;
+  }
+  
+  const pull80 = Math.max(1, Math.round(pullMax * 0.80));
+  const pull60 = Math.max(1, Math.round(pullMax * 0.60));
+  const pull50 = Math.max(1, Math.round(pullMax * 0.50));
+  setsDesc += `Pull-ups:\n4 sets × ${pull80} reps (80% max)\n5 sets × ${pull60} reps (60% max)\n6 sets × ${pull50} reps (50% max)`;
+  
+  return {
+    name: "Method 3: Separated Volume",
+    sets: setsDesc,
+    rest: "90s-2 min between sets",
+    note: "Complete all sets at each percentage before moving to next."
+  };
+};
+
+// METHOD 6: Pyramids
+const method6_Pyramids = (pullMax, muMax, pullVolume, muVolume) => {
+  const topPull = Math.max(1, Math.round(pullMax * 0.70));
+  let setsDesc = `Pull-ups: 1 → ${topPull} → 1\nIncrease by 2-3 reps per step\n`;
+  
+  if (muMax > 0) {
+    const topMU = Math.max(1, Math.round(muMax * 0.60));
+    setsDesc += `\nMuscle-ups: 1 → ${topMU} → 1\nIncrease by 1 rep per step`;
+  }
+  
+  return {
+    name: "Method 6: Pyramids",
+    sets: setsDesc,
+    rest: "30s between sets",
+    note: "Start at 1, work up to top, come back down to 1."
+  };
+};
+
+// METHOD 7: Superset A
+const method7_SupersetA = (muMax, pullMax) => {
+  const muReps = Math.min(5, Math.max(2, Math.round(muMax * 0.5)));
+  const chinUps = Math.max(8, Math.round(pullMax * 0.6));
+  const ausPull = Math.max(15, Math.round(pullMax * 1.2));
+  const pullReps = Math.max(8, Math.round(pullMax * 0.5));
+  
+  return {
+    name: "Method 7: Superset A",
+    sets: `${muReps} muscle-ups\n${chinUps} chin-ups\n${ausPull} australian pull-ups\n${pullReps} pull-ups\n× 4 rounds`,
+    rest: "2-3 min between rounds",
+    note: "Complete all exercises in order without stopping. Rest fully between rounds."
+  };
+};
+
+// METHOD 8: Superset B (Auto-scaled)
+const method8_SupersetB = (pullMax, muMax) => {
+  let x;
+  if (pullMax < 10) x = 5;
+  else if (pullMax < 20) x = 8;
+  else x = 10;
+  
+  const muReps = muMax > 0 ? Math.min(x, Math.max(2, Math.round(muMax * 0.4))) : 0;
+  const dipReps = Math.round(x * 1.2);
+  
+  let setsDesc = `${x} pull-ups`;
+  if (muMax > 0) setsDesc += `\n${muReps} muscle-ups`;
+  setsDesc += `\n${dipReps} bar dips`;
+  setsDesc += `\n× 4 rounds`;
+  
+  return {
+    name: "Method 8: Superset B (Auto-scaled)",
+    sets: setsDesc,
+    rest: "2 min between rounds",
+    note: `Auto-scaled based on your max pull-ups (x=${x}). Complete each round without stopping.`
+  };
+};
+
+// METHOD 9: Timer Challenge
+const method9_TimerChallenge = (pullMax, muMax) => {
+  const targetPull = Math.min(100, Math.round(pullMax * 1.5));
+  const targetMU = muMax > 0 ? Math.min(50, Math.round(muMax * 1.2)) : 0;
+  
+  return {
+    name: "Method 9: Timer Challenge",
+    sets: `${targetPull} pull-ups\n${targetMU > 0 ? targetMU + ' muscle-ups\n' : ''}As fast as possible`,
+    rest: "Record your time. Rest fully after completion.",
+    note: "Challenge yourself to complete all reps as quickly as possible with good form."
+  };
+};
+
+// DAY 1 FINISHER
+const getDay1Finisher = (week, level, muMax, pullMax, settings, levelMult) => {
+  const finishers = [
+    // Finisher 4: Australian Pull-Up
+    {
+      name: "Finisher: Australian Pull-Up",
+      sets: `10 sets × ${Math.max(12, Math.min(25, Math.round(pullMax * 0.8)))} reps`,
+      rest: "30s between sets",
+      note: "Horizontal pull-ups. Keep body straight."
+    },
+    // Finisher 5: Isometric
+    {
+      name: "Finisher: Isometric Hold + Max Pull",
+      sets: "Hold at top 10s → Hold in middle 10s → Dead hang 10s → Max pull-ups\n× 3 rounds",
+      rest: "5 min between rounds",
+      note: "Do not let go of the bar until max pull-ups are complete."
+    }
+  ];
+  
+  return finishers[week % 2]; // Alternate between the two
+};
+
 // ============================================================================
 // DAY 2: PUSH ENDURANCE
+// Uses 2 methods + 1 finisher
 // ============================================================================
-/**
- * Competition-style push endurance
- * Focus: EMOM, degressive sets, pyramids, strict dips
- */
 const generateDay2_Push = (week, level, maxReps, settings) => {
   const exercises = [];
   const dipsMax = maxReps.dips;
   const pushUpsMax = maxReps.pushUps;
-  
   const levelMult = { beginner: 0.85, intermediate: 1.0, advanced: 1.15 }[level];
-  // Push exercises are easier - use higher multipliers
-  const dipsVolumeMult = settings.volume * levelMult * 1.15; // Higher reps for dips
-  const dipsIntensityMult = settings.intensity * levelMult * 1.1;
-  const pushUpsVolumeMult = settings.volume * levelMult * 1.2; // Higher reps for push-ups
-  const pushUpsIntensityMult = settings.intensity * levelMult * 1.15;
-  const volumeMult = settings.volume * levelMult;
-  const intensityMult = settings.intensity * levelMult;
-
+  
   // WARM-UP
   exercises.push({
     name: "💡 Warm-up (5-7 min)",
@@ -274,139 +368,146 @@ const generateDay2_Push = (week, level, maxReps, settings) => {
     type: "warmup"
   });
 
-  // DIPS WORK - Higher reps
-  if (dipsMax <= 20) {
-    // Low dip capacity: Volume focus
-    const reps = Math.max(1, Math.round(dipsMax * dipsVolumeMult));
-    exercises.push({
-      name: "Dips",
-      sets: `${reps} reps × 5 sets`,
-      rest: "90s-2 min between sets",
-      note: "Go all the way down. Control going up and down."
-    });
-  } else if (dipsMax <= 40) {
-    // Moderate: EMOM protocol
-    const emomReps = Math.max(1, Math.round(dipsMax * dipsIntensityMult * 0.35));
-    const duration = week <= 2 ? 10 : week === 3 ? 12 : 15;
-    exercises.push({
-      name: "Dips Every Minute",
-      sets: `${duration} minutes: ${emomReps} reps at start of each minute`,
-      rest: "Rest for the rest of the minute",
-      note: "Keep steady pace. Slow down if your form breaks."
-    });
-    exercises.push({
-      name: "Dips Degressive",
-      sets: `${Math.round(dipsMax * dipsVolumeMult)} / ${Math.round(dipsMax * dipsVolumeMult * 0.7)} / ${Math.round(dipsMax * dipsVolumeMult * 0.5)}`,
-      rest: "90s between sets",
-      note: "Push through fatigue"
-    });
-  } else {
-    // High capacity: Advanced protocols
-    const emomReps = Math.max(1, Math.round(dipsMax * dipsIntensityMult * 0.3));
-    const duration = week <= 2 ? 12 : week === 3 ? 15 : 18;
-    exercises.push({
-      name: "Dips Every Minute (Hard)",
-      sets: `${duration} minutes: ${emomReps} reps at start of each minute`,
-      rest: "Rest for the rest of the minute",
-      note: "Fast pace. Stay consistent."
-    });
-    exercises.push({
-      name: "Dips Pyramid",
-      sets: `1 → ${Math.round(dipsMax * dipsVolumeMult * 0.65)} → 1`,
-      rest: "30s between sets",
-      note: "Competition-style pyramid"
-    });
-  }
+  // Select 2 methods
+  const methods = selectDay2Methods(week, level, dipsMax, pushUpsMax, settings, levelMult);
+  exercises.push(...methods);
 
-  // PUSH-UPS - Higher reps
-  if (pushUpsMax <= 40) {
-    // Low capacity: Volume sets
-    const reps = Math.max(1, Math.round(pushUpsMax * pushUpsVolumeMult));
-    exercises.push({
-      name: "Push-Ups",
-      sets: `${reps} reps × 4 sets`,
-      rest: "60s between sets",
-      note: "Touch chest to ground. Lock arms at top."
-    });
-  } else if (pushUpsMax <= 70) {
-    // Moderate: Degressive + EMOM
-    exercises.push({
-      name: "Push-Ups Degressive",
-      sets: `${Math.round(pushUpsMax * pushUpsVolumeMult)} / ${Math.round(pushUpsMax * pushUpsVolumeMult * 0.75)} / ${Math.round(pushUpsMax * pushUpsVolumeMult * 0.5)} / ${Math.round(pushUpsMax * pushUpsVolumeMult * 0.35)}`,
-      rest: "60s between sets",
-      note: "Maintain pace. Fight fatigue."
-    });
-    if (week >= 2) {
-      exercises.push({
-        name: "Push-Ups Every Minute",
-        sets: `10 minutes: ${Math.round(pushUpsMax * pushUpsIntensityMult * 0.35)} reps at start of each minute`,
-        rest: "Rest for the rest of the minute",
-        note: "Build endurance"
-      });
-    }
-  } else {
-    // High capacity: Advanced protocols
-    exercises.push({
-      name: "Push-Ups Pyramid",
-      sets: `1 → ${Math.round(pushUpsMax * pushUpsVolumeMult * 0.7)} → 1`,
-      rest: "30s between sets",
-      note: "Large pyramid. Mental toughness."
-    });
-    exercises.push({
-      name: "Push-Ups Every Minute (Long)",
-      sets: `${week <= 2 ? 12 : week === 3 ? 15 : 18} minutes: ${Math.round(pushUpsMax * pushUpsIntensityMult * 0.32)} reps at start of each minute`,
-      rest: "Rest for the rest of the minute",
-      note: "Long session. Keep steady pace."
-    });
-  }
-
-  // HANDSTAND PUSH-UPS (Advanced only)
-  if (level === 'advanced') {
-    exercises.push({
-      name: "Handstand Push-Ups",
-      sets: week <= 2 ? "3-5 reps × 4 sets" : week === 3 ? "4-6 reps × 4 sets" : "5-8 reps × 4 sets",
-      rest: "2-3 min between sets",
-      note: "Upside down push-ups. Focus on form."
-    });
-  }
-
-  // FINISHER (Week 3-4)
-  if (week >= 3) {
-    exercises.push({
-      name: "Push Finisher",
-      sets: `${Math.round(dipsMax * volumeMult * 0.6)} dips → ${Math.round(pushUpsMax * volumeMult * 0.5)} push-ups\n× 2 rounds`,
-      rest: "90s between rounds",
-      note: "Hard finish. Push through tiredness."
-    });
-  }
+  // Always add 1 finisher
+  const finisher = getDay2Finisher(week, level, dipsMax, pushUpsMax, settings, levelMult);
+  exercises.push(finisher);
 
   return {
     day: 2,
     focus: "Push Endurance",
     exercises,
-    totalVolume: `~${Math.round((dipsMax * volumeMult * 3) + (pushUpsMax * volumeMult * 2.5))} total reps`,
-    coachingNote: "Keep good form. Push-ups: chest touches ground. Dips: go all the way down. Good form is more important than speed."
+    coachingNote: "Keep good form. Push-ups: chest touches ground. Dips: go all the way down."
+  };
+};
+
+// Select 2 methods for Day 2
+const selectDay2Methods = (week, level, dipsMax, pushUpsMax, settings, levelMult) => {
+  const methods = [];
+  
+  if (week === 1) {
+    methods.push(method1_DensityCircuit(dipsMax, pushUpsMax));
+    methods.push(method2_EMOMBlocks(dipsMax, pushUpsMax, settings, levelMult, week));
+  } else if (week === 2) {
+    methods.push(method2_EMOMBlocks(dipsMax, pushUpsMax, settings, levelMult, week));
+    methods.push(method4_SeparatedVolumePush(dipsMax, pushUpsMax));
+  } else if (week === 3) {
+    const muMax = 0; // Check if we have MU data
+    if (muMax > 0) {
+      methods.push(method3_EMOMMUCombo(muMax, dipsMax));
+    }
+    methods.push(method6_PyramidsPush(dipsMax, pushUpsMax));
+  } else {
+    methods.push(method2_EMOMBlocks(dipsMax, pushUpsMax, settings, levelMult, week));
+    methods.push(method6_PyramidsPush(dipsMax, pushUpsMax));
+  }
+
+  return methods;
+};
+
+// METHOD 1: Density Circuit
+const method1_DensityCircuit = (dipsMax, pushUpsMax) => {
+  const x = Math.max(1, Math.round(dipsMax * 0.35));
+  const pushReps = Math.max(1, Math.round(pushUpsMax * 0.35));
+  const barDips = Math.round(x * 0.8);
+  
+  return {
+    name: "Method 1: Density Circuit",
+    sets: `${x} dips\n${pushReps} push-ups\n${barDips} bar dips\n× 5 rounds`,
+    rest: "90s between rounds",
+    note: "Complete each round without stopping. Rest fully between rounds."
+  };
+};
+
+// METHOD 2: EMOM Blocks
+const method2_EMOMBlocks = (dipsMax, pushUpsMax, settings, levelMult, week) => {
+  const dipsVolumeMult = settings.volume * levelMult * 1.15;
+  const pushUpsVolumeMult = settings.volume * levelMult * 1.2;
+  
+  const durations = week <= 2 ? [8, 10] : [10, 12];
+  const dipPercentages = [0.35, 0.30];
+  const pushPercentages = [0.35, 0.30];
+  
+  let setsDesc = '';
+  durations.forEach((duration, idx) => {
+    const dipReps = Math.max(1, Math.round(dipsMax * dipPercentages[idx]));
+    const pushReps = Math.max(1, Math.round(pushUpsMax * pushPercentages[idx]));
+    setsDesc += `EMOM ${duration} min: ${dipReps} dips\nEMOM ${duration} min: ${pushReps} push-ups\n`;
+  });
+  
+  return {
+    name: "Method 2: EMOM Blocks",
+    sets: setsDesc.trim(),
+    rest: "Rest for the remainder of each minute",
+    note: "2 EMOMs for dips, 2 EMOMs for push-ups. Complete reps at start of each minute."
+  };
+};
+
+// METHOD 3: EMOM Muscle-Up Combo
+const method3_EMOMMUCombo = (muMax, dipsMax) => {
+  const barDips = Math.max(1, Math.round(dipsMax * 0.20));
+  
+  return {
+    name: "Method 3: EMOM Muscle-Up Combo",
+    sets: `EMOM 8 min:\n1 muscle-up\n${barDips} bar dips`,
+    rest: "Rest for the remainder of each minute",
+    note: "Complete 1 MU + bar dips at start of each minute for 8 minutes."
+  };
+};
+
+// METHOD 4: Separated Volume Push
+const method4_SeparatedVolumePush = (dipsMax, pushUpsMax) => {
+  const dips80 = Math.max(1, Math.round(dipsMax * 0.80));
+  const push80 = Math.max(1, Math.round(pushUpsMax * 0.80));
+  const barDips80 = Math.max(1, Math.round(dipsMax * 0.75));
+  
+  return {
+    name: "Method 4: Separated Volume",
+    sets: `5 sets × ${dips80} dips (80% max)\n5 sets × ${push80} push-ups (80% max)\n5 sets × ${barDips80} bar dips (75% max)`,
+    rest: "90s between sets",
+    note: "Complete all sets for each exercise before moving to next."
+  };
+};
+
+// METHOD 6: Pyramids Push
+const method6_PyramidsPush = (dipsMax, pushUpsMax) => {
+  const topDips = Math.max(1, Math.round(dipsMax * 0.70));
+  const topPush = Math.max(1, Math.round(pushUpsMax * 0.70));
+  
+  return {
+    name: "Method 6: Pyramids",
+    sets: `Dips: 1 → ${topDips} → 1 (increase by 3 per step)\nPush-ups: 1 → ${topPush} → 1 (increase by 3 per step)`,
+    rest: "30s between sets",
+    note: "Work up to top, come back down to 1. Increase by 3 reps per step."
+  };
+};
+
+// DAY 2 FINISHER
+const getDay2Finisher = (week, level, dipsMax, pushUpsMax, settings, levelMult) => {
+  const pushReps = Math.max(1, Math.round(pushUpsMax * 0.10));
+  
+  return {
+    name: "Finisher: Isometric Push Hold",
+    sets: `EMOM 10 min:\n10s 90° push-up hold\n${pushReps} push-ups (10% max)`,
+    rest: "Rest for the remainder of each minute",
+    note: "Hold at 90° for 10 seconds, then complete push-ups. Repeat every minute for 10 minutes."
   };
 };
 
 // ============================================================================
 // DAY 3: LEGS + CARDIO + CORE
 // ============================================================================
-/**
- * Legs, cardio, and core endurance
- * Focus: EMOM squats, running, burpees, core stability
- */
 const generateDay3_LegsCardioCore = (week, level, maxReps, settings) => {
   const exercises = [];
   const squatsMax = maxReps.squats;
   const legRaisesMax = maxReps.legRaises;
-  
   const levelMult = { beginner: 0.85, intermediate: 1.0, advanced: 1.15 }[level];
-  // Squats are easier - use higher multipliers
-  const squatsVolumeMult = settings.volume * levelMult * 1.25; // Higher reps for squats
+  const squatsVolumeMult = settings.volume * levelMult * 1.25;
   const squatsIntensityMult = settings.intensity * levelMult * 1.2;
-  const volumeMult = settings.volume * levelMult;
-  const intensityMult = settings.intensity * levelMult;
+  const legRaisesVolumeMult = settings.volume * levelMult * 1.1;
 
   // WARM-UP
   exercises.push({
@@ -416,9 +517,19 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings) => {
     type: "warmup"
   });
 
-  // SQUATS - Higher reps (easier endurance)
+  // CARDIO (Running or Jump Rope)
+  const cardioDuration = week === 1 ? 10 : week === 2 ? 15 : week === 3 ? 20 : 25;
+  exercises.push({
+    name: week % 2 === 0 ? "Cardio: Running" : "Cardio: Jump Rope",
+    sets: week % 2 === 0 
+      ? `Run ${cardioDuration} minutes at steady pace`
+      : `Jump rope for ${cardioDuration} minutes without stopping`,
+    rest: "2-3 min",
+    note: "Keep steady pace. Don't sprint."
+  });
+
+  // SQUATS
   if (squatsMax <= 60) {
-    // Low capacity: Volume sets
     const reps = Math.max(1, Math.round(squatsMax * squatsVolumeMult));
     exercises.push({
       name: "Squats",
@@ -426,9 +537,8 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings) => {
       rest: "60s between sets",
       note: "Go all the way down. Control speed."
     });
-  } else if (squatsMax <= 100) {
-    // Moderate: EMOM protocol
-    const emomReps = Math.max(1, Math.round(squatsMax * squatsIntensityMult * 0.3));
+  } else {
+    const emomReps = Math.max(1, Math.round(squatsMax * squatsIntensityMult * 0.30));
     const duration = week <= 2 ? 15 : week === 3 ? 18 : 20;
     exercises.push({
       name: "Squats Every Minute",
@@ -436,53 +546,27 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings) => {
       rest: "Rest for the rest of the minute",
       note: "Keep steady pace. Go all the way down each rep."
     });
-  } else {
-    // High capacity: Extended EMOM + Pyramid
-    const emomReps = Math.max(1, Math.round(squatsMax * squatsIntensityMult * 0.28));
-    exercises.push({
-      name: "Squats Every Minute (Long)",
-      sets: `${week <= 2 ? 18 : week === 3 ? 20 : 25} minutes: ${emomReps} reps at start of each minute`,
-      rest: "Rest for the rest of the minute",
-      note: "Long session. Stay consistent."
-    });
-    exercises.push({
-      name: "Squats Pyramid",
-      sets: `1 → ${Math.round(squatsMax * squatsVolumeMult * 0.55)} → 1`,
-      rest: "30s between sets",
-      note: "Large pyramid. Mental toughness."
-    });
   }
 
-  // CARDIO: BURPEES - Higher reps (cardio is easier)
+  // JUMP SQUATS
+  const jumpSquatReps = Math.max(10, Math.round(squatsMax * 0.4));
+  exercises.push({
+    name: "Jump Squats",
+    sets: `${jumpSquatReps} reps × ${week <= 2 ? 3 : 4} sets`,
+    rest: "60s between sets",
+    note: "Explosive jumps. Land softly."
+  });
+
+  // BURPEES
   const burpeeCount = week <= 2 ? 15 : week === 3 ? 18 : 22;
-    exercises.push({
-      name: "Burpees",
-      sets: `${burpeeCount} reps × ${week <= 2 ? 4 : week === 3 ? 5 : 6} sets`,
-      rest: "60-90s between sets",
-      note: "Full burpee: do a push-up then jump. Keep steady pace."
-    });
-
-  // CARDIO: RUNNING / JUMP ROPE
   exercises.push({
-    name: week % 2 === 0 ? "Running" : "Jump Rope",
-    sets: week === 1 ? "Run 1km at steady pace\nOR\nJump rope for 5 minutes without stopping" :
-          week === 2 ? "Run 1.5km\nOR\nJump rope for 7 minutes without stopping" :
-          week === 3 ? "Run 2km\nOR\nJump rope for 10 minutes without stopping" :
-          "Run 2.5km\nOR\nJump rope for 12 minutes without stopping",
-    rest: "2-3 min",
-    note: "Cardio work. Keep steady pace."
+    name: "Burpees",
+    sets: `${burpeeCount} reps × ${week <= 2 ? 4 : week === 3 ? 5 : 6} sets`,
+    rest: "60-90s between sets",
+    note: "Full burpee: push-up then jump. Keep steady pace."
   });
 
-  // MOUNTAIN CLIMBERS
-  exercises.push({
-    name: "Mountain Climbers",
-    sets: `${week <= 2 ? 30 : week === 3 ? 40 : 45}s × ${week <= 2 ? 4 : 5} sets`,
-    rest: "45s between sets",
-    note: "Fast pace. Core engaged."
-  });
-
-  // CORE: LEG RAISES - Higher reps
-  const legRaisesVolumeMult = settings.volume * levelMult * 1.1;
+  // LEG RAISES
   const legRaiseReps = Math.max(5, Math.round(legRaisesMax * legRaisesVolumeMult));
   exercises.push({
     name: "Leg Raises",
@@ -491,7 +575,7 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings) => {
     note: "Control going down. Don't swing."
   });
 
-  // CORE: PLANK HOLDS
+  // PLANK HOLD
   exercises.push({
     name: "Plank Hold",
     sets: `${week <= 2 ? 60 : week === 3 ? 75 : 90} seconds × ${week <= 2 ? 3 : 4} sets`,
@@ -499,36 +583,21 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings) => {
     note: "Keep body straight. Don't sag or lift hips."
   });
 
-  // CORE: L-SIT / HANGING LEG RAISES (Advanced)
-  if (level === 'advanced' && week >= 3) {
-    exercises.push({
-      name: "L-Sit Hold or Hanging Leg Raises",
-      sets: "L-Sit: Hold 20-30 seconds × 3 sets\nOR\nHanging leg raises: 12-15 reps × 3 sets",
-      rest: "90s between sets",
-      note: "Hard core work. Focus on good form."
-    });
-  }
-
   return {
     day: 3,
     focus: "Legs + Cardio + Core",
     exercises,
-    totalVolume: `~${Math.round(squatsMax * volumeMult * 3)}+ squats, ${burpeeCount * (week <= 2 ? 4 : week === 3 ? 5 : 6)} burpees, core work`,
     coachingNote: "Cardio day. Focus on keeping steady pace. Do full range of motion on all exercises."
   };
 };
 
 // ============================================================================
-// DAY 4: BAR COMPLEX / COMPETITION SETS
+// DAY 4: ENDURANCE SETS (LEVEL-BASED)
+// 2-4 sets based on level
 // ============================================================================
-/**
- * Competition-style bar complexes and battle sequences
- * Each exercise: 60-150% of its own max (progressive by week)
- */
-const generateDay4_BarComplex = (week, level, maxReps, settings) => {
+const generateDay4_EnduranceSets = (week, level, maxReps, settings) => {
   const exercises = [];
   
-  // Use FULL max reps (not reduced)
   const muMax = maxReps.muscleUp;
   const pullMax = maxReps.pullUps;
   const dipsMax = maxReps.dips;
@@ -537,21 +606,16 @@ const generateDay4_BarComplex = (week, level, maxReps, settings) => {
   
   const levelMult = { beginner: 0.85, intermediate: 1.0, advanced: 1.15 }[level];
   
-  // Week-based multipliers for Day 4 (each exercise 60-150% of its own max)
+  // Week multipliers for Day 4
   const weekMultipliers = [
-    { min: 0.60, max: 1.00 },  // Week 1: 60-100%
-    { min: 0.75, max: 1.25 },  // Week 2: 75-125%
-    { min: 0.95, max: 1.40 },  // Week 3: 95-140%
-    { min: 1.15, max: 1.50 }   // Week 4: 115-150%
+    { min: 0.60, max: 1.00 },
+    { min: 0.75, max: 1.25 },
+    { min: 0.95, max: 1.40 },
+    { min: 1.15, max: 1.50 }
   ];
   
   const mult = weekMultipliers[week - 1];
-  const getReps = (exerciseMax, useHigh = false) => {
-    const multiplier = useHigh ? mult.max : (mult.min + mult.max) / 2;
-    const result = Math.max(1, Math.round(exerciseMax * multiplier * levelMult));
-    return Math.min(result, Math.round(exerciseMax * 1.5)); // Cap at 150%
-  };
-
+  
   // WARM-UP
   exercises.push({
     name: "💡 Warm-up (5-7 min)",
@@ -560,206 +624,118 @@ const generateDay4_BarComplex = (week, level, maxReps, settings) => {
     type: "warmup"
   });
 
-  // COMPETITION-STYLE SETS (based on week progression)
-  if (week === 1) {
-    // Week 1: Weighted to bodyweight progression
-    const weight = level === 'advanced' ? '10 kg' : level === 'intermediate' ? '5 kg' : null;
-    
-    exercises.push({
-      name: "Set 1: Weighted to Bodyweight",
-      sets: weight 
-        ? `${getReps(dipsMax, false, 'push')} weighted dips (${weight})\n${getReps(pullMax, false, 'pull')} weighted pull-ups (${weight})`
-        : `${getReps(dipsMax, false, 'push')} dips\n${getReps(pullMax, false, 'pull')} pull-ups`,
-      rest: level === 'advanced' ? "30s rest" : "45s rest",
-      note: "Start with weight, then go bodyweight. Keep good form."
-    });
-
-    exercises.push({
-      name: "Set 2: Push Then Pull",
-      sets: `${getReps(pushUpsMax, false, 'push')} push-ups\n${muMax > 0 ? getReps(muMax, false, 'muscleup') : Math.max(3, Math.round(5 * levelMult))} ${muMax > 0 ? 'muscle-ups' : 'jump muscle-ups'}`,
-      rest: "45s rest",
-      note: "Move smoothly from one exercise to the next."
-    });
-
-    exercises.push({
-      name: "Set 3: Legs Then Arms",
-      sets: `${getReps(squatsMax, false, 'cardio')} squats\n${Math.round(getReps(squatsMax, false, 'cardio') * 0.6)} jump squats`,
-      rest: "60s rest",
-      note: "Jump squats are fast, then control your upper body work."
-    });
-
-    exercises.push({
-      name: "Set 4: Full Body Mix",
-      sets: `${getReps(dipsMax, false, 'push')} dips\n${getReps(pullMax, false, 'pull')} pull-ups\n${getReps(pushUpsMax, false, 'push')} push-ups\n${muMax > 0 ? getReps(muMax, false, 'muscleup') : Math.max(2, Math.round(3 * levelMult))} ${muMax > 0 ? 'muscle-ups' : 'jump muscle-ups'}`,
-      rest: "2 min rest",
-      note: "Do all exercises one after another. Rest fully between rounds."
-    });
-
-    exercises.push({
-      name: "Set 5: Final Push",
-      sets: `${getReps(dipsMax, false, 'push')} bar dips\n${level === 'advanced' ? 25 : level === 'intermediate' ? 20 : 15} burpees`,
-      rest: "Try to do without stopping",
-      note: "Push through tiredness. Keep good form."
-    });
-
-  } else if (week === 2) {
-    // Week 2: Unbroken sequences with penalties
-    const weight = level === 'advanced' ? '10 kg' : '5 kg';
-    const unbroken = level === 'advanced';
-    
-    exercises.push({
-      name: "Set 1: Pull + Muscle-Up (No Stopping)",
-      sets: `${getReps(pullMax, false, 'pull')} pull-ups + ${muMax > 0 ? getReps(muMax, false, 'muscleup') : Math.max(2, Math.round(3 * levelMult))} ${muMax > 0 ? 'muscle-up' : 'jump muscle-up'}${unbroken ? ' (DON\'T STOP)' : ''}`,
-      rest: unbroken ? "30s penalty if you rest" : "45s rest",
-      note: unbroken ? "Competition rule: If you rest, add 30 seconds. Do it all without stopping." : "Try to do it without stopping."
-    });
-
-    if (level !== 'beginner') {
-      exercises.push({
-        name: "Set 2: Mix Then No Stopping",
-        sets: `${getReps(pushUpsMax, false, 'push')} push-ups\n${getReps(pullMax, true, 'pull')} pull-ups + ${muMax > 0 ? getReps(muMax, false, 'muscleup') : Math.max(2, Math.round(3 * levelMult))} ${muMax > 0 ? 'muscle-up' : 'jump muscle-up'}${level === 'advanced' ? ' (DON\'T STOP)' : ''}`,
-        rest: level === 'advanced' ? "30s penalty if you rest" : "45s rest",
-        note: "Move smoothly between exercises. Push through tiredness."
-      });
-    }
-
-    exercises.push({
-      name: "Set 3: Weighted → Bodyweight",
-      sets: level !== 'beginner'
-        ? `${getReps(squatsMax, false, 'cardio')} weighted squats (${weight})\n${getReps(dipsMax, false, 'push')} dips`
-        : `${getReps(squatsMax, false, 'cardio')} squats\n${getReps(dipsMax, false, 'push')} dips`,
-      rest: "60s rest",
-      note: "Maintain form under load."
-    });
-
-    if (level !== 'beginner') {
-      exercises.push({
-        name: "Set 4: Hard Challenge (No Stopping)",
-        sets: `${getReps(pullMax, true, 'pull')} pull-ups + ${muMax > 0 ? getReps(muMax, true, 'muscleup') : Math.max(3, Math.round(4 * levelMult))} ${muMax > 0 ? 'muscle-up' : 'jump muscle-up'}${level === 'advanced' ? ' (DON\'T STOP)' : ''}`,
-        rest: "90s rest",
-        note: "High reps. Push your limits."
-      });
-    }
-
-    exercises.push({
-      name: "Set 5: Final Mix",
-      sets: `${getReps(dipsMax, false, 'push')} bar dips\n${level === 'advanced' ? 30 : level === 'intermediate' ? 25 : 18} burpees\n${Math.round(getReps(squatsMax, false, 'cardio') * 0.8)} jump squats`,
-      rest: "Do it all without stopping",
-      note: "Final push. Give everything you have."
-    });
-
-  } else if (week === 3) {
-    // Week 3: Round-based complexes (Semifinals style)
-    const rounds1 = level === 'advanced' ? 12 : level === 'intermediate' ? 10 : 7;
-    const rounds2 = Math.round(rounds1 * 0.85);
-    const rounds3 = Math.round(rounds1 * 0.7);
-    const weight = level === 'advanced' ? '10 kg' : '5 kg';
-    
-    exercises.push({
-      name: "Set 1: Round by Round",
-      sets: `1 pull-up + ${muMax > 0 ? '1' : '1'} ${muMax > 0 ? 'muscle-up' : 'jump muscle-up'} × ${rounds1} rounds`,
-      rest: level === 'advanced' ? "No rest between rounds" : "15s between rounds",
-      note: "Do each round without stopping if you can. Keep steady pace."
-    });
-
-    exercises.push({
-      name: "Set 2: Push Then Legs",
-      sets: level !== 'beginner'
-        ? `${getReps(pushUpsMax, false, 'push')} push-ups\n${getReps(squatsMax, false, 'cardio')} weighted squats (${weight})`
-        : `${getReps(pushUpsMax, false, 'push')} push-ups\n${getReps(squatsMax, false, 'cardio')} squats`,
-      rest: "45s rest",
-      note: "Move smoothly from push-ups to squats."
-    });
-
-    exercises.push({
-      name: "Set 3: More Rounds (Fewer This Time)",
-      sets: `1 pull-up + ${muMax > 0 ? '1' : '1'} ${muMax > 0 ? 'muscle-up' : 'jump muscle-up'} × ${rounds2} rounds`,
-      rest: level === 'advanced' ? "No rest between rounds" : "15s between rounds",
-      note: "You're getting tired. Stay strong and consistent."
-    });
-
-    exercises.push({
-      name: "Set 4: Dips Then Jump Squats",
-      sets: `${getReps(dipsMax, false, 'push')} dips\n${Math.round(getReps(squatsMax, false, 'cardio') * 0.8)} jump squats`,
-      rest: "45s rest",
-      note: "Fast explosive movements."
-    });
-
-    exercises.push({
-      name: "Set 5: Last Rounds",
-      sets: `1 pull-up + ${muMax > 0 ? '1' : '1'} ${muMax > 0 ? 'muscle-up' : 'jump muscle-up'} × ${rounds3} rounds`,
-      rest: "60s rest",
-      note: "Almost done. Push through."
-    });
-
-    exercises.push({
-      name: "Set 6: Final Mix",
-      sets: `${getReps(pullMax, true, 'pull')} pull-ups\n${getReps(pushUpsMax, true, 'push')} push-ups\n${level === 'advanced' ? 35 : level === 'intermediate' ? 30 : 22} burpees`,
-      rest: "Do it all without stopping",
-      note: "High reps to finish. Stay strong mentally."
-    });
-
-  } else {
-    // Week 4: Finals style - Progressive/degressive complexes (CHALLENGE WEEK!)
-    const weight = level === 'advanced' ? '10 kg' : '5 kg';
-    
-    exercises.push({
-      name: "Set 1: Muscle-Ups Getting Easier",
-      sets: level === 'advanced' && level !== 'beginner'
-        ? `${getReps(squatsMax, false, 'cardio')} weighted squats (10 kg)\n${getReps(muMax, false, 'muscleup')} ${muMax > 0 ? 'weighted muscle-ups (10 kg)' : 'jump muscle-ups'}\n${getReps(pullMax, false, 'pull')} pull-ups\n${getReps(muMax, true, 'muscleup')} ${muMax > 0 ? 'weighted muscle-ups (5 kg)' : 'jump muscle-ups'}\n${getReps(dipsMax, false, 'push')} dips\n${getReps(muMax, true, 'muscleup')} ${muMax > 0 ? 'muscle-ups (no weight)' : 'jump muscle-ups'}`
-        : level === 'intermediate'
-        ? `${getReps(squatsMax, false, 'cardio')} weighted squats (5 kg)\n${getReps(muMax, true, 'muscleup')} ${muMax > 0 ? 'muscle-ups' : 'jump muscle-ups'}\n${getReps(pullMax, false, 'pull')} pull-ups`
-        : `${getReps(squatsMax, false, 'cardio')} squats\n${getReps(muMax, false, 'muscleup')} ${muMax > 0 ? 'muscle-ups' : 'jump muscle-ups'}\n${getReps(pullMax, false, 'pull')} pull-ups`,
-      rest: "45s rest",
-      note: "Start with weight, then go to bodyweight. Add other exercises in between."
-    });
-
-    exercises.push({
-      name: "Set 2: Dips Getting Easier",
-      sets: level !== 'beginner'
-        ? level === 'advanced'
-          ? `${getReps(dipsMax, false, 'push')} weighted dips (10 kg)\n${getReps(pullMax, false, 'pull')} pull-ups\n${getReps(dipsMax, true, 'push')} weighted dips (5 kg)\n${getReps(pushUpsMax, false, 'push')} push-ups\n${getReps(dipsMax, true, 'push')} dips (no weight)`
-          : `${getReps(dipsMax, false, 'push')} weighted dips (5 kg)\n${getReps(pullMax, false, 'pull')} pull-ups\n${getReps(dipsMax, true, 'push')} dips (no weight)`
-        : `${getReps(dipsMax, false, 'push')} dips\n${getReps(pullMax, false, 'pull')} pull-ups`,
-      rest: "45s rest",
-      note: "Start heavy, finish with bodyweight. Add pull-ups or push-ups in between."
-    });
-
-    exercises.push({
-      name: "Set 3: Pull-Ups Getting Easier",
-      sets: level !== 'beginner'
-        ? level === 'advanced'
-          ? `${getReps(pullMax, false, 'pull')} weighted pull-ups (10 kg)\n${getReps(dipsMax, false, 'push')} dips\n${getReps(pullMax, true, 'pull')} weighted pull-ups (5 kg)\n${getReps(pushUpsMax, false, 'push')} push-ups\n${getReps(pullMax, true, 'pull')} pull-ups (no weight)`
-          : `${getReps(pullMax, false, 'pull')} weighted pull-ups (5 kg)\n${getReps(dipsMax, false, 'push')} dips\n${getReps(pullMax, true, 'pull')} pull-ups (no weight)`
-        : `${getReps(pullMax, false, 'pull')} pull-ups\n${getReps(dipsMax, false, 'push')} dips`,
-      rest: "45s rest",
-      note: "Start with weight, finish with bodyweight. Add dips or push-ups in between."
-    });
-
-    exercises.push({
-      name: "Set 4: High Rep Push",
-      sets: `${getReps(pushUpsMax, true, 'push')} push-ups\n${muMax > 0 ? getReps(muMax, true, 'muscleup') : Math.max(5, Math.round(7 * levelMult))} ${muMax > 0 ? 'muscle-ups' : 'jump muscle-ups'}`,
-      rest: "2 min rest",
-      note: "High reps. Get ready for the final push."
-    });
-
-    exercises.push({
-      name: "Set 5: FINAL CHALLENGE (Competition Mode)",
-      sets: `${getReps(dipsMax, true, 'push')} bar dips\n${getReps(pullMax, true, 'pull')} pull-ups\n${getReps(pushUpsMax, true, 'push')} push-ups\n${getReps(squatsMax, true, 'cardio')} squats\n${level === 'advanced' ? 40 : level === 'intermediate' ? 32 : 25} burpees\n${muMax > 0 ? getReps(muMax, true, 'muscleup') : Math.max(4, Math.round(6 * levelMult))} ${muMax > 0 ? 'muscle-ups' : 'jump muscle-ups'}`,
-      rest: "Do it ALL without stopping - Competition finish!",
-      note: "🏆 FINALS MODE: Give everything. This is like competition day. Don't stop. Do it all without resting."
-    });
-  }
+  // Get endurance sets based on level
+  const sets = getEnduranceSets(level, week, muMax, pullMax, dipsMax, pushUpsMax, squatsMax, mult, levelMult);
+  exercises.push(...sets);
 
   return {
     day: 4,
     focus: "Endurance Sets",
     exercises,
-    totalVolume: `~${Math.round((pullMax + dipsMax + pushUpsMax) * mult.max * levelMult + (muMax * mult.max * levelMult * 2) + (squatsMax * mult.max * levelMult))} total reps`,
     coachingNote: week === 4 
-      ? "🏆 COMPETITION MODE: Push through extreme tiredness. Keep good form. This is what competition feels like."
+      ? "Competition mode: Push through extreme tiredness. Keep good form."
       : "Competition-style sets. Focus on doing each set well. Rest fully between exercises."
   };
+};
+
+// Get endurance sets based on level
+const getEnduranceSets = (level, week, muMax, pullMax, dipsMax, pushUpsMax, squatsMax, mult, levelMult) => {
+  const sets = [];
+  const getReps = (exerciseMax, useHigh = false) => {
+    const multiplier = useHigh ? mult.max : (mult.min + mult.max) / 2;
+    const result = Math.max(1, Math.round(exerciseMax * multiplier * levelMult));
+    return Math.min(result, Math.round(exerciseMax * 1.5));
+  };
+
+  if (level === 'beginner') {
+    // Beginner: 2-3 sets
+    sets.push({
+      name: "Set 1: Unbroken Combo",
+      sets: `${getReps(pullMax, false)} pull-ups\n${getReps(dipsMax, false)} dips\n${getReps(pushUpsMax, false)} push-ups`,
+      rest: "2 min rest",
+      note: "Complete all exercises without stopping. Rest fully after."
+    });
+
+    sets.push({
+      name: "Set 2: Degressive Ladder",
+      sets: `${getReps(squatsMax, false)} squats\n${Math.round(getReps(pullMax, false) * 0.8)} pull-ups\n${Math.round(getReps(dipsMax, false) * 0.8)} dips`,
+      rest: "90s rest",
+      note: "Each set slightly easier than previous."
+    });
+
+    if (week >= 3) {
+      sets.push({
+        name: "Set 3: Mixed Endurance",
+        sets: `${Math.round(getReps(pushUpsMax, false) * 0.9)} push-ups\n${getReps(squatsMax, false)} squats\n${Math.round(getReps(pullMax, false) * 0.7)} pull-ups`,
+        rest: "2 min rest",
+        note: "Moderate volume endurance set."
+      });
+    }
+
+  } else if (level === 'intermediate') {
+    // Intermediate: 3-4 sets (includes Half Barbarian + FIBO Round of 16 style)
+    sets.push({
+      name: "Set 1: Half Barbarian",
+      sets: `${getReps(dipsMax, false)} weighted dips (5 kg)\n${getReps(pullMax, false)} weighted pull-ups (5 kg)\n${getReps(pushUpsMax, false)} push-ups\n${muMax > 0 ? getReps(muMax, false) : 3} ${muMax > 0 ? 'muscle-ups' : 'jump muscle-ups'}\n${getReps(squatsMax, false)} squats`,
+      rest: "90s rest",
+      note: "Half weight version. Keep good form under load."
+    });
+
+    sets.push({
+      name: "Set 2: FIBO Round of 16 Style",
+      sets: `${getReps(dipsMax, true)} dips\n${getReps(pullMax, true)} pull-ups\n${getReps(pushUpsMax, true)} push-ups\n${muMax > 0 ? getReps(muMax, false) : 3} ${muMax > 0 ? 'muscle-ups' : 'jump muscle-ups'}\n${getReps(squatsMax, false)} squats`,
+      rest: "60s rest",
+      note: "Competition-style sequence. Move smoothly between exercises."
+    });
+
+    sets.push({
+      name: "Set 3: Unbroken Sequence",
+      sets: `${getReps(pullMax, false)} pull-ups + ${muMax > 0 ? getReps(muMax, false) : 2} ${muMax > 0 ? 'muscle-ups' : 'jump muscle-ups'} (UNBROKEN)\n${getReps(dipsMax, false)} dips\n${getReps(pushUpsMax, false)} push-ups`,
+      rest: "2 min rest",
+      note: "Pull + MU must be done without stopping. Rest penalty if you break."
+    });
+
+    if (week >= 3) {
+      sets.push({
+        name: "Set 4: Weighted to Bodyweight",
+        sets: `${Math.round(getReps(dipsMax, false) * 0.8)} weighted dips (5 kg)\n${Math.round(getReps(dipsMax, false) * 0.9)} dips (bodyweight)\n${Math.round(getReps(pullMax, false) * 0.8)} weighted pull-ups (5 kg)\n${Math.round(getReps(pullMax, false) * 0.9)} pull-ups (bodyweight)`,
+        rest: "90s rest",
+        note: "Start with weight, finish with bodyweight. Gets easier as you go."
+      });
+    }
+
+  } else {
+    // Advanced: 4 sets (includes 80% Barbarian + FIBO Quarterfinal)
+    sets.push({
+      name: "Set 1: 80% Barbarian Requirement",
+      sets: `${getReps(dipsMax, false)} weighted dips (10 kg)\n${getReps(pullMax, false)} weighted pull-ups (10 kg)\n${getReps(pushUpsMax, true)} push-ups\n${muMax > 0 ? getReps(muMax, false) : 4} ${muMax > 0 ? 'weighted muscle-ups (10 kg)' : 'jump muscle-ups'}\n${getReps(squatsMax, false)} weighted squats (10 kg)`,
+      rest: "60s rest",
+      note: "High weight version. Maintain form under load."
+    });
+
+    sets.push({
+      name: "Set 2: FIBO Quarterfinal Routine",
+      sets: `${getReps(squatsMax, false)} squats (10 kg vest)\n1 pull-up + ${muMax > 0 ? '1' : '1'} ${muMax > 0 ? 'muscle-up' : 'jump muscle-up'} × ${week === 4 ? 10 : 8} rounds (UNBROKEN)\n${getReps(pushUpsMax, true)} push-ups\n1 pull-up + ${muMax > 0 ? '1' : '1'} ${muMax > 0 ? 'muscle-up' : 'jump muscle-up'} × ${week === 4 ? 8 : 6} rounds`,
+      rest: "2 min rest (30s penalty if rest during unbroken sequence)",
+      note: "Competition rule: If you rest during unbroken sequence, add 30 seconds."
+    });
+
+    sets.push({
+      name: "Set 3: Progressive Complex",
+      sets: `${getReps(dipsMax, false)} weighted dips (10 kg)\n${Math.round(getReps(dipsMax, false) * 0.85)} weighted dips (5 kg)\n${Math.round(getReps(dipsMax, false) * 0.9)} dips (bodyweight)\n${getReps(pullMax, false)} weighted pull-ups (10 kg)\n${Math.round(getReps(pullMax, false) * 0.85)} weighted pull-ups (5 kg)\n${Math.round(getReps(pullMax, false) * 0.9)} pull-ups (bodyweight)`,
+      rest: "45s rest",
+      note: "Weight decreases each round. Push through fatigue."
+    });
+
+    sets.push({
+      name: "Set 4: FINAL CHALLENGE",
+      sets: `${getReps(dipsMax, true)} bar dips\n${getReps(pullMax, true)} pull-ups\n${getReps(pushUpsMax, true)} push-ups\n${getReps(squatsMax, true)} squats\n${week === 4 ? 35 : 28} burpees\n${muMax > 0 ? getReps(muMax, true) : 5} ${muMax > 0 ? 'muscle-ups' : 'jump muscle-ups'}`,
+      rest: "Complete unbroken - Competition finish!",
+      note: "Competition mode: Do it ALL without stopping. Give everything."
+    });
+  }
+
+  return sets;
 };
 
 module.exports = {
