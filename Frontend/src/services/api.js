@@ -154,28 +154,18 @@ export const productsAPI = {
       throw new Error('Admin authentication required. Please log in again.');
     }
     
-    console.log('🚀 productsAPI.create: Creating product with password:', adminPassword ? adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2) : 'NONE');
+    console.log('🚀 productsAPI.create: Creating product');
+    console.log('   Admin password in localStorage:', adminPassword ? adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2) : 'NONE');
     
-    // Check if productData is FormData, if so, let axios handle headers
-    const isFormData = productData instanceof FormData;
-    
-    // Add admin password header
-    const config = {
-      headers: {
-        'x-admin-password': adminPassword.trim()
-      }
-    };
-    
-    // For FormData, axios will set Content-Type automatically
-    if (!isFormData) {
-      config.headers['Content-Type'] = 'application/json';
-    }
-    
+    // Interceptor will add x-admin-password header automatically
+    // No need to set it manually here
     try {
-      const response = await api.post('/products', productData, config);
+      const response = await api.post('/products', productData);
       return response.data;
     } catch (error) {
       console.error('❌ productsAPI.create error:', error);
+      console.error('   Error response:', error.response?.data);
+      console.error('   Error status:', error.response?.status);
       if (error.response?.status === 403 || error.response?.status === 401) {
         localStorage.removeItem('adminPassword');
         throw new Error('Invalid admin password. Please log in again.');
