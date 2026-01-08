@@ -264,12 +264,15 @@ export const productsAPI = {
           console.error('❌ Authentication failed - clearing stored password');
           localStorage.removeItem('adminPassword');
           
-          // Build a clear error message
-          const errorMsg = errorData.message || 'Authentication failed';
-          const hint = errorData.hint ? `\n\n${errorData.hint}` : '';
-          const fullError = `${errorMsg}${hint}\n\nPlease go to the admin login page and log in again with the correct password from Render.`;
+          // Show user-friendly error message
+          const errorMsg = errorData.message || 'Admin session expired';
+          const hint = errorData.hint ? `\n${errorData.hint}` : '';
+          const userMessage = `Admin session expired. Please log in again.${hint}`;
           
-          throw new Error(fullError);
+          // Show alert to user
+          alert(`🔐 ${userMessage}`);
+          
+          throw new Error(userMessage);
         }
         
         throw new Error(errorData.message || `Failed to upload image: ${response.status}`);
