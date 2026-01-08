@@ -162,55 +162,22 @@ export const productsAPI = {
 
   // Upload image to Cloudinary
   uploadImage: async (file) => {
-    console.log('🚀 Frontend: Starting image upload...');
-    console.log('🚀 Frontend: File details:', {
-      name: file.name,
-      type: file.type,
-      size: file.size
-    });
-    
-    // Get admin password from localStorage
-    // If user is already logged into admin dashboard, trust that authentication
     const adminPassword = localStorage.getItem('adminPassword');
     
     if (!adminPassword) {
-      console.error('❌ No admin password found in localStorage!');
       alert('❌ Admin authentication required.\n\nPlease log in to the admin panel first.');
       throw new Error('Admin authentication required. Please log in to the admin panel first.');
     }
-    
-    // No need to verify again - if they're in the admin dashboard, they're authenticated
-    console.log('🚀 Using stored admin password for upload');
     
     const formData = new FormData();
     formData.append('image', file);
 
     try {
-      console.log('🚀 Frontend: Sending upload request...');
-      
-      // Send admin password in x-admin-password header (NOT in FormData)
-      // FormData is ONLY for the image file
-      const headers = new Headers();
-      headers.append('x-admin-password', adminPassword);
-      
-      // Also send legacy headers for backward compatibility
-      headers.append('adminpassword', adminPassword);
-      
-      console.log('🚀 Frontend: Upload headers prepared');
-      console.log('   Password being sent in x-admin-password header');
-      console.log('   Password length:', adminPassword.length);
-      console.log('   Password preview:', adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2));
-      console.log('   Full password (for debugging):', adminPassword);
-      
-      // Log all headers being sent
-      console.log('   All headers:', {
-        'x-admin-password': adminPassword,
-        'adminpassword': adminPassword
-      });
-      
       const response = await fetch(`${API_BASE_URL}/upload/image`, {
         method: 'POST',
-        headers: headers,
+        headers: {
+          'x-admin-password': adminPassword
+        },
         body: formData
       });
 
