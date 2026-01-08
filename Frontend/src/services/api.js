@@ -6,9 +6,9 @@ const API_BASE_URL = API_CONFIG.getBaseURL();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // Don't set default Content-Type - let axios set it automatically based on data type
+  // For JSON: application/json
+  // For FormData: multipart/form-data with boundary (axios handles this automatically)
 });
 
 // Request interceptor to add auth token and admin password
