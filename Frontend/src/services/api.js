@@ -227,26 +227,18 @@ export const productsAPI = {
     try {
       console.log('🚀 Frontend: Sending upload request...');
       
-      // Use Headers API to properly set custom headers with FormData
+      // Send admin password in x-admin-password header (NOT in FormData)
+      // FormData is ONLY for the image file
       const headers = new Headers();
+      headers.append('x-admin-password', adminPassword);
+      
+      // Also send legacy headers for backward compatibility
       headers.append('adminpassword', adminPassword);
-      headers.append('AdminPassword', adminPassword);
-      headers.append('adminPassword', adminPassword);
       
       console.log('🚀 Frontend: Upload headers prepared');
-      console.log('   Password being sent:', adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2));
+      console.log('   Password being sent in x-admin-password header');
       console.log('   Password length:', adminPassword.length);
-      
-      // Log all headers being sent
-      const headersObj = {};
-      headers.forEach((value, key) => {
-        if (key.toLowerCase().includes('password')) {
-          headersObj[key] = value.substring(0, 2) + '***' + value.substring(value.length - 2);
-        } else {
-          headersObj[key] = value;
-        }
-      });
-      console.log('   Headers being sent:', headersObj);
+      console.log('   Password preview:', adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2));
       
       const response = await fetch(`${API_BASE_URL}/upload/image`, {
         method: 'POST',

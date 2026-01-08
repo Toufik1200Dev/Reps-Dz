@@ -1,12 +1,11 @@
 const adminAuth = (req, res, next) => {
-  // Express normalizes headers to lowercase, so check lowercase version
-  // Also check original case variants just in case
-  const adminPassword = req.headers.adminpassword || 
+  // Read admin password from x-admin-password header (Express normalizes to lowercase)
+  // Also check legacy header names for backward compatibility
+  const adminPassword = req.headers['x-admin-password'] || 
+                       req.headers['x-admin-password'] ||
+                       req.headers.adminpassword || 
                        req.headers['adminpassword'] || 
-                       req.headers['admin-password'] || 
-                       req.headers['adminpassword'] ||
-                       req.headers['AdminPassword'] || 
-                       req.headers['Admin-Password'];
+                       req.headers['admin-password'];
   
   // Debug logging
   console.log('🔐 Admin auth check:', {
@@ -14,7 +13,7 @@ const adminAuth = (req, res, next) => {
     method: req.method,
     hasAdminPassword: !!adminPassword,
     adminPasswordLength: adminPassword?.length || 0,
-    headerKeys: Object.keys(req.headers).filter(h => h.toLowerCase().includes('admin'))
+    headerKeys: Object.keys(req.headers).filter(h => h.toLowerCase().includes('admin') || h.toLowerCase().includes('x-admin'))
   });
   
   if (!adminPassword) {
