@@ -239,6 +239,13 @@ export const productsAPI = {
       console.log('   Password being sent in x-admin-password header');
       console.log('   Password length:', adminPassword.length);
       console.log('   Password preview:', adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2));
+      console.log('   Full password (for debugging):', adminPassword);
+      
+      // Log all headers being sent
+      console.log('   All headers:', {
+        'x-admin-password': adminPassword,
+        'adminpassword': adminPassword
+      });
       
       const response = await fetch(`${API_BASE_URL}/upload/image`, {
         method: 'POST',

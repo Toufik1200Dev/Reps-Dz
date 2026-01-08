@@ -17,8 +17,19 @@ const adminAuth = (req, res, next) => {
     receivedLength: password?.length || 0,
     expectedLength: expectedPassword?.length || 0,
     receivedEndsWith: password ? password.substring(password.length - 2) : 'none',
-    expectedEndsWith: expectedPassword ? expectedPassword.substring(expectedPassword.length - 2) : 'none'
+    expectedEndsWith: expectedPassword ? expectedPassword.substring(expectedPassword.length - 2) : 'none',
+    allHeaders: Object.keys(req.headers).filter(h => h.toLowerCase().includes('admin') || h.toLowerCase().includes('x-admin'))
   });
+  
+  // EXTRA DEBUG: Log the actual values (be careful in production)
+  if (password) {
+    console.log('🔐 [DEBUG] Received password:', password);
+    console.log('🔐 [DEBUG] Received password (trimmed):', password.trim());
+  }
+  if (expectedPassword) {
+    console.log('🔐 [DEBUG] Expected password:', expectedPassword);
+    console.log('🔐 [DEBUG] Expected password (trimmed):', expectedPassword.trim());
+  }
   
   // Validate password exists
   if (!password) {
