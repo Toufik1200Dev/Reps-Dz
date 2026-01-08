@@ -62,33 +62,20 @@ export const authAPI = {
 export const productsAPI = {
   // Get all products with filtering and pagination
   getAllProducts: async (params = {}) => {
-    console.log('🚀 Frontend: Fetching products...');
-    console.log('🚀 Frontend: Params:', params);
-    
     const queryString = new URLSearchParams(params).toString();
-    console.log('🚀 Frontend: API URL:', `${API_BASE_URL}/products?${queryString}`);
     
     try {
-      console.log('🚀 Frontend: Sending request...');
       const response = await fetch(`${API_BASE_URL}/products?${queryString}`);
-
-      console.log('🚀 Frontend: Response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Frontend: Products fetch failed:', errorText);
         throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`);
       }
       
       const result = await response.json();
-      console.log('✅ Frontend: Products fetched successfully:', result);
       return result;
     } catch (error) {
-      console.error('❌ Frontend: Products fetch error:', error);
+      console.error('Failed to fetch products:', error);
       throw error;
     }
   },
