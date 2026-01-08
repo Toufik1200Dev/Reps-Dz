@@ -198,7 +198,7 @@ const generateDay1_Pull = (week, level, maxReps, settings, seed, usedMethods) =>
   
   // WARM-UP
   exercises.push({
-    name: "💡 Warm-up (5-7 min)",
+    name: "Warm-up (5-7 min)",
     sets: "Tempo pull-ups x10-15\nArm circles, shoulder mobility\nHang holds: 3x15s\nMuscle-up practice (if applicable)",
     rest: "No rest needed",
     type: "warmup"
@@ -211,6 +211,17 @@ const generateDay1_Pull = (week, level, maxReps, settings, seed, usedMethods) =>
   // Always add 1 finisher (Australian rows mandatory for beginners)
   const finisher = getDay1Finisher(week, level, muMax, pullMax, pullPercentage, settings, levelMult);
   exercises.push(finisher);
+  
+  // Renumber exercises (skip warm-up, finisher, and special labels)
+  let exerciseNum = 1;
+  exercises.forEach(ex => {
+    if (ex.type !== 'warmup' && !ex.name.includes('Finisher') && !ex.name.includes('PART')) {
+      // Extract the format/method name without "Method X:" prefix
+      const nameWithoutPrefix = ex.name.replace(/^Method \d+:\s*/, '');
+      ex.name = `Exercise ${exerciseNum}: ${nameWithoutPrefix}`;
+      exerciseNum++;
+    }
+  });
 
   // Extract methods for output format
   const methodNames = methods.map(m => {
@@ -329,7 +340,7 @@ const method1_DegressivePullMU = (muMax, pullMax, pullPercentage) => {
   }
   
   return {
-    name: "Method 1: Degressive Pull + Muscle-Up",
+    name: "Degressive Pull + Muscle-Up",
     format: "Degressive Sets",
     duration: `${Math.min(3, rounds)} rounds`,
     sets: setsDesc.trim(),
@@ -356,7 +367,7 @@ const method2_EMOMBlock = (week, level, pullMax, muMax, pullPercentage, settings
   });
   
   return {
-    name: "Method 2: EMOM Block",
+    name: "EMOM Block",
     format: "EMOM",
     duration: `${durations[0] + durations[1]} min total`,
     sets: setsDesc.trim(),
@@ -383,7 +394,7 @@ const method3_SeparatedVolume = (muMax, pullMax, pullPercentage) => {
   setsDesc += `Pull-ups:\n4 sets × ${pull80} reps\n5 sets × ${pull60} reps\n6 sets × ${pull50} reps`;
   
   return {
-    name: "Method 3: Separated Volume",
+    name: "Separated Volume",
     format: "Volume Sets",
     duration: "15 sets total",
     sets: setsDesc,
@@ -404,7 +415,7 @@ const method4_Pyramids = (pullMax, muMax, pullPercentage) => {
   }
   
   return {
-    name: "Method 4: Pyramids",
+    name: "Pyramids",
     format: "Pyramid",
     duration: "Variable",
     sets: setsDesc,
@@ -428,7 +439,7 @@ const method5_SupersetPull = (pullMax, muMax, level) => {
   setsDesc += `\n× 4 rounds`;
   
   return {
-    name: "Method 5: Superset Pull",
+    name: "Superset Pull",
     format: "Superset",
     duration: "4 rounds",
     sets: setsDesc,
@@ -450,7 +461,7 @@ const method6_TimerChallenge = (pullMax, muMax, pullPercentage) => {
   setsDesc += `\nAs fast as possible`;
   
   return {
-    name: "Method 6: Timed Challenge",
+    name: "Timed Challenge",
     format: "Timed Challenge",
     duration: "For time",
     sets: setsDesc,
@@ -468,7 +479,7 @@ const method7_IsometricLadder = (pullMax, level) => {
   const setsDesc = `Hold at top ${holdTimes[0]}s → Hold in middle ${holdTimes[1]}s → Dead hang ${holdTimes[2]}s → ${pullReps} pull-ups\n× 3-4 rounds`;
   
   return {
-    name: "Method 7: Isometric Ladder",
+    name: "Isometric Ladder",
     format: "Isometric + Reps",
     duration: "3-4 rounds",
     sets: setsDesc,
@@ -520,7 +531,7 @@ const generateDay2_Push = (week, level, maxReps, settings, seed, usedMethods) =>
   
   // WARM-UP
   exercises.push({
-    name: "💡 Warm-up (5-7 min)",
+    name: "Warm-up (5-7 min)",
     sets: "Tempo push-ups x15-20\nShoulder circles and stretches\nArm swings\nTempo dips x10-15",
     rest: "No rest needed",
     type: "warmup"
@@ -533,6 +544,17 @@ const generateDay2_Push = (week, level, maxReps, settings, seed, usedMethods) =>
   // Always add 1 finisher
   const finisher = getDay2Finisher(week, level, dipsMax, pushUpsMax, settings, levelMult);
   exercises.push(finisher);
+  
+  // Renumber exercises (skip warm-up, finisher, and special labels)
+  let exerciseNum = 1;
+  exercises.forEach(ex => {
+    if (ex.type !== 'warmup' && !ex.name.includes('Finisher') && !ex.name.includes('PART')) {
+      // Extract the format/method name without "Method X:" prefix
+      const nameWithoutPrefix = ex.name.replace(/^Method \d+:\s*/, '');
+      ex.name = `Exercise ${exerciseNum}: ${nameWithoutPrefix}`;
+      exerciseNum++;
+    }
+  });
 
   // Extract methods for output
   const methodNames = methods.map(m => {
@@ -620,7 +642,7 @@ const methodPush1_DensityCircuit = (dipsMax, pushUpsMax) => {
   const barDips = Math.round(x * 0.8);
   
   return {
-    name: "Method 1: Density Circuit",
+    name: "Density Circuit",
     format: "Density",
     duration: "5 rounds",
     sets: `${x} dips\n${pushReps} push-ups\n${barDips} bar dips\n× 5 rounds`,
@@ -644,7 +666,7 @@ const methodPush2_EMOMBlocks = (dipsMax, pushUpsMax, settings, levelMult, week) 
   });
   
   return {
-    name: "Method 2: EMOM Blocks",
+    name: "EMOM Blocks",
     format: "EMOM",
     duration: `${durations[0] + durations[1]} min total`,
     sets: setsDesc.trim(),
@@ -659,7 +681,7 @@ const methodPush3_EMOMMUCombo = (muMax, dipsMax) => {
   const barDips = Math.max(1, Math.round(dipsMax * 0.20));
   
   return {
-    name: "Method 3: EMOM Muscle-Up Combo",
+    name: "EMOM Muscle-Up Combo",
     format: "EMOM",
     duration: "8 min",
     sets: `EMOM 8 min:\n1 muscle-up\n${barDips} bar dips`,
@@ -676,7 +698,7 @@ const methodPush4_SeparatedVolumePush = (dipsMax, pushUpsMax) => {
   const barDips80 = Math.max(1, Math.round(dipsMax * 0.75));
   
   return {
-    name: "Method 4: Separated Volume",
+    name: "Separated Volume",
     format: "Volume Sets",
     duration: "15 sets total",
     sets: `5 sets × ${dips80} dips\n5 sets × ${push80} push-ups\n5 sets × ${barDips80} bar dips`,
@@ -692,7 +714,7 @@ const methodPush5_PyramidsPush = (dipsMax, pushUpsMax) => {
   const topPush = Math.max(1, Math.round(pushUpsMax * 0.70));
   
   return {
-    name: "Method 5: Pyramids",
+    name: "Pyramids",
     format: "Pyramid",
     duration: "Variable",
     sets: `Dips: 1 → ${topDips} → 1 (increase by 3 per step)\nPush-ups: 1 → ${topPush} → 1 (increase by 3 per step)`,
@@ -708,7 +730,7 @@ const methodPush6_NoStopSets = (dipsMax, pushUpsMax) => {
   const pushReps = Math.max(1, Math.round(pushUpsMax * 0.40));
   
   return {
-    name: "Method 6: No-Stop Sets",
+    name: "No-Stop Sets",
     format: "No-stop",
     duration: "4 rounds",
     sets: `${dipReps} dips + ${pushReps} push-ups (no rest between)\n× 4 rounds`,
@@ -745,7 +767,7 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings, seed) => {
 
   // WARM-UP
   exercises.push({
-    name: "💡 Warm-up (5-7 min)",
+    name: "Warm-up (5-7 min)",
     sets: "Easy jogging 3-5 min\nLeg swings forward and back\nTempo squats x15-20\nHip circles",
     rest: "No rest needed",
     type: "warmup"
@@ -889,7 +911,7 @@ const generateDay4_EnduranceSets = (week, level, maxReps, settings, seed) => {
   
   // WARM-UP
   exercises.push({
-    name: "💡 Warm-up (5-7 min)",
+    name: "Warm-up (5-7 min)",
     sets: "Tempo pull-ups x10\nTempo dips x10\nArm circles\nShoulder warm-up" + (muMax > 0 ? "\nMuscle-up practice" : ""),
     rest: "No rest needed",
     type: "warmup"
@@ -906,6 +928,27 @@ const generateDay4_EnduranceSets = (week, level, maxReps, settings, seed) => {
   // PART 3: FINISHER (MENTAL, SHORT) - 5-8 min
   const finisher = generateDay4_Finisher(week, level, muMax, pullMax, pullPercentage, dipsMax, pushUpsMax, volumeCap, levelMult, repLimits, seed);
   exercises.push(finisher);
+  
+  // Renumber exercises (skip warm-up, remove PART labels, number sequentially)
+  let exerciseNum = 1;
+  exercises.forEach(ex => {
+    if (ex.type !== 'warmup') {
+      // Remove PART labels and any remaining emojis, keep the description
+      const cleanName = ex.name
+        .replace(/🧩\s*/g, '')
+        .replace(/🔥\s*/g, '')
+        .replace(/⚡\s*/g, '')
+        .replace(/PART\s*1:\s*/i, '')
+        .replace(/PART\s*2:\s*/i, '')
+        .replace(/PART\s*3:\s*/i, '')
+        .replace(/Main Set - /i, '')
+        .replace(/Finisher - /i, '')
+        .replace(/Activation - /i, '')
+        .trim();
+      ex.name = `Exercise ${exerciseNum}: ${cleanName}`;
+      exerciseNum++;
+    }
+  });
 
   // Extract methods for output
   const methodNames = [];
@@ -944,7 +987,7 @@ const generateDay4_Activation = (week, level, muMax, pullMax, pullPercentage, di
     const pushReps = Math.max(1, Math.min(repLimits.pushUps, Math.round(pushUpsMax * activationPercentage)));
     
     return {
-      name: "🧩 PART 1: Activation - Easy EMOM",
+      name: "Activation - Easy EMOM",
       format: "EMOM",
       duration: `${duration} min`,
       sets: `EMOM ${duration} min:\nMin 1: ${pullReps} pull-ups\nMin 2: ${pushReps} push-ups\nAlternate each minute`,
@@ -958,7 +1001,7 @@ const generateDay4_Activation = (week, level, muMax, pullMax, pullPercentage, di
     const dipReps = Math.max(1, Math.min(repLimits.dips, Math.round(dipsMax * activationPercentage)));
     
     return {
-      name: "🧩 PART 1: Activation - Light Unbroken Bar Flow",
+      name: "Activation - Light Unbroken Bar Flow",
       format: "Unbroken Flow",
       duration: `${duration} min`,
       sets: `${pullReps} pull-ups\n${dipReps} dips\n× 2-3 rounds (smooth transitions)`,
@@ -974,7 +1017,7 @@ const generateDay4_Activation = (week, level, muMax, pullMax, pullPercentage, di
     const dipReps = Math.max(1, Math.min(repLimits.dips, Math.round(dipsMax * activationPercentage)));
     
     return {
-      name: "🧩 PART 1: Activation - Submaximal Sets",
+      name: "Activation - Submaximal Sets",
       format: "Volume Sets",
       duration: `${duration} min`,
       sets: `${pullReps} pull-ups\n${dipReps} dips\n${pushReps} push-ups\n× 2 sets`,
@@ -1055,7 +1098,7 @@ const generateDay4_MainSet = (week, level, muMax, pullMax, pullPercentage, dipsM
     const round1Push = getReps(pushUpsMax, null, false);
     
     return {
-      name: "🔥 PART 2: Main Set - Degressive Ladder",
+      name: "PART 2: Main Set - Degressive Ladder",
       format: "Degressive Ladder",
       duration: `${duration} min`,
       sets: `Round 1: ${round1Pull} pull-ups, ${round1Dips} dips, ${round1Push} push-ups\nRound 2: ${Math.round(round1Pull * 0.85)} pull-ups, ${Math.round(round1Dips * 0.85)} dips, ${Math.round(round1Push * 0.85)} push-ups\nRound 3: ${Math.round(round1Pull * 0.7)} pull-ups, ${Math.round(round1Dips * 0.7)} dips, ${Math.round(round1Push * 0.7)} push-ups\nRest only if needed`,
@@ -1072,7 +1115,7 @@ const generateDay4_MainSet = (week, level, muMax, pullMax, pullPercentage, dipsM
     const squatsReps = getReps(squatsMax, null, false);
     
     return {
-      name: "🔥 PART 2: Main Set - Timed Rounds",
+      name: "PART 2: Main Set - Timed Rounds",
       format: "Timed Rounds",
       duration: `${duration} min`,
       sets: `${pullReps} pull-ups\n${pushReps} push-ups\n${squatsReps} squats\n× 3-4 rounds (complete as fast as possible, record time)`,
@@ -1090,7 +1133,7 @@ const generateDay4_MainSet = (week, level, muMax, pullMax, pullPercentage, dipsM
     const muCount = muReps;
     
     return {
-      name: "🔥 PART 2: Main Set - Mixed Endurance",
+      name: "PART 2: Main Set - Mixed Endurance",
       format: "Mixed Endurance",
       duration: `${duration} min`,
       sets: `${muCount > 0 ? muCount + ' muscle-ups\n' : ''}${pullReps} pull-ups\n${dipReps} dips\n${pushReps} push-ups\n× 3 rounds`,
@@ -1108,7 +1151,7 @@ const generateDay4_MainSet = (week, level, muMax, pullMax, pullPercentage, dipsM
     const muCount = muReps;
     
     return {
-      name: "🔥 PART 2: Main Set - FIBO Round of 16 Style",
+      name: "PART 2: Main Set - FIBO Round of 16 Style",
       format: "FIBO Competition Style",
       duration: `${duration} min`,
       sets: `${dipReps} dips\n${pullReps} pull-ups\n${pushReps} push-ups\n${muCount} muscle-ups\n× 3 rounds (competition pace)`,
@@ -1126,7 +1169,7 @@ const generateDay4_MainSet = (week, level, muMax, pullMax, pullPercentage, dipsM
     const rounds = week === 4 ? 8 : 6;
     
     return {
-      name: "🔥 PART 2: Main Set - FIBO Quarterfinal Routine",
+      name: "PART 2: Main Set - FIBO Quarterfinal Routine",
       format: "FIBO Competition Style",
       duration: `${duration} min`,
       sets: `1 pull-up + 1 muscle-up × ${rounds} rounds (UNBROKEN)\n${pushReps} push-ups\n${dipReps} dips\n1 pull-up + 1 muscle-up × ${rounds} rounds`,
@@ -1146,7 +1189,7 @@ const generateDay4_MainSet = (week, level, muMax, pullMax, pullPercentage, dipsM
     const weight = week === 4 ? 10 : 5;
     
     return {
-      name: "🔥 PART 2: Main Set - 80% Barbarian Requirement",
+      name: "PART 2: Main Set - 80% Barbarian Requirement",
       format: "Unbroken Complex",
       duration: `${duration} min`,
       sets: `${dipReps} weighted dips (${weight} kg)\n${pullReps} weighted pull-ups (${weight} kg)\n${pushReps} push-ups\n${muCount} ${muMax > 0 ? `weighted muscle-ups (${weight} kg)` : 'jump muscle-ups'}\n${squatsReps} weighted squats (${weight} kg)\n× 2 rounds`,
@@ -1164,7 +1207,7 @@ const generateDay4_MainSet = (week, level, muMax, pullMax, pullPercentage, dipsM
     const muCount = muReps;
     
     return {
-      name: "🔥 PART 2: Main Set - Unbroken Complex",
+      name: "PART 2: Main Set - Unbroken Complex",
       format: "Unbroken Complex",
       duration: `${duration} min`,
       sets: `${pullReps} pull-ups\n${dipReps} dips\n${pushReps} push-ups\n${muCount > 0 ? muCount + ' muscle-ups\n' : ''}(Complete unbroken, rest if absolutely needed)`,
@@ -1192,7 +1235,7 @@ const generateDay4_Finisher = (week, level, muMax, pullMax, pullPercentage, dips
     const pullReps = Math.max(1, Math.min(repLimits.pullUps, Math.round(pullMax * pullPercentage * 0.3)));
     
     return {
-      name: "⚡ PART 3: Finisher - Isometric Holds",
+      name: "PART 3: Finisher - Isometric Holds",
       format: "Isometric + Reps",
       duration: `${duration} min`,
       sets: `Hold at top ${holdTimes[0]}s → Hold in middle ${holdTimes[1]}s → Dead hang ${holdTimes[2]}s → ${pullReps} pull-ups\n× 2 rounds`,
@@ -1207,7 +1250,7 @@ const generateDay4_Finisher = (week, level, muMax, pullMax, pullPercentage, dips
     const pushReps = Math.max(1, Math.min(repLimits.pushUps, Math.round(pushUpsMax * 0.4)));
     
     return {
-      name: "⚡ PART 3: Finisher - AMRAP",
+      name: "PART 3: Finisher - AMRAP",
       format: "AMRAP",
       duration: `${duration} min`,
       sets: `As many rounds as possible in ${duration} min:\n${pullReps} pull-ups\n${pushReps} push-ups\n(Rest only if needed)`,
@@ -1222,7 +1265,7 @@ const generateDay4_Finisher = (week, level, muMax, pullMax, pullPercentage, dips
     const pushReps = Math.max(1, Math.min(repLimits.pushUps, Math.round(pushUpsMax * 0.25)));
     
     return {
-      name: "⚡ PART 3: Finisher - Short EMOM",
+      name: "PART 3: Finisher - Short EMOM",
       format: "EMOM",
       duration: `${duration} min`,
       sets: `EMOM ${duration} min:\n${pullReps} pull-ups + ${pushReps} push-ups`,
@@ -1237,7 +1280,7 @@ const generateDay4_Finisher = (week, level, muMax, pullMax, pullPercentage, dips
     const pullReps = Math.max(1, Math.min(repLimits.pullUps, Math.round(pullMax * pullPercentage * 0.35)));
     
     return {
-      name: "⚡ PART 3: Finisher - Max Reps Under Tension",
+      name: "PART 3: Finisher - Max Reps Under Tension",
       format: "Max Reps",
       duration: `${duration} min`,
       sets: `10s hold at top → ${pullReps} pull-ups → 10s hold at bottom → ${pullReps} pull-ups\n× 2 rounds`,
