@@ -20,9 +20,13 @@ api.interceptors.request.use(
     }
     
     // Add admin password header if available (for admin routes)
+    // IMPORTANT: Must set this BEFORE the request so browser includes it in preflight
     const adminPassword = localStorage.getItem('adminPassword');
     if (adminPassword) {
+      // Ensure header is set properly - use direct assignment
       config.headers['x-admin-password'] = adminPassword.trim();
+      // Also set with common variations for compatibility
+      config.headers['X-Admin-Password'] = adminPassword.trim();
     }
     
     return config;

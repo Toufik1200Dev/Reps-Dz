@@ -58,7 +58,10 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   
   // Allow all headers that might be sent (including x-admin-password for admin auth)
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-password, adminpassword, AdminPassword, adminPassword, X-Admin-Password');
+  // Important: List all possible header variations
+  const requestedHeaders = req.headers['access-control-request-headers'];
+  const allowedHeaders = 'Content-Type, Authorization, x-admin-password, adminpassword, AdminPassword, adminPassword, X-Admin-Password, X-ADMIN-PASSWORD';
+  res.header('Access-Control-Allow-Headers', allowedHeaders);
   
   // Allow credentials (cookies, authorization headers)
   res.header('Access-Control-Allow-Credentials', 'true');
