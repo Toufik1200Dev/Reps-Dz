@@ -177,7 +177,7 @@ export const productsAPI = {
       throw new Error('Admin authentication required. Please log in to the admin panel first.');
     }
     
-    // Verify password is still valid before uploading
+    // Verify password is still valid before uploading - THIS IS MANDATORY
     console.log('🔐 Verifying admin password before upload...');
     console.log('   Password length:', adminPassword.length);
     console.log('   Password ends with:', adminPassword.substring(adminPassword.length - 2));
@@ -188,6 +188,14 @@ export const productsAPI = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: adminPassword })
       });
+      
+      if (!verifyResponse.ok) {
+        const errorData = await verifyResponse.json().catch(() => ({}));
+        console.error('❌ Password verification failed with status:', verifyResponse.status);
+        console.error('❌ Error data:', errorData);
+        localStorage.removeItem('adminPassword');
+        throw new Error(`Password verification failed: ${errorData.message || 'Invalid password'}. Please log in again with the correct password.`);
+      }
       
       const verifyData = await verifyResponse.json();
       console.log('🔐 Verification response:', verifyData);
@@ -200,12 +208,9 @@ export const productsAPI = {
       
       console.log('✅ Admin password verified, proceeding with upload...');
     } catch (verifyError) {
-      console.error('❌ Password verification failed:', verifyError);
-      if (verifyError.message.includes('session has expired') || verifyError.message.includes('password changed')) {
-        throw verifyError;
-      }
-      console.warn('⚠️ Could not verify password, but proceeding with upload anyway...');
-      // Don't throw - let the upload attempt happen so we can see the actual error
+      console.error('❌ Password verification failed - BLOCKING upload:', verifyError);
+      // ALWAYS throw - don't proceed with upload if password is invalid
+      throw verifyError;
     }
     
     const formData = new FormData();

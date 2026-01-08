@@ -36,14 +36,17 @@ export const AdminAuthProvider = ({ children }) => {
     const storedPassword = localStorage.getItem('adminPassword');
     if (storedPassword) {
       // Verify with backend that the stored password is still valid
+      console.log('🔐 Checking stored admin password on page load...');
       try {
         const result = await adminAPI.login(storedPassword);
         if (result.success) {
+          console.log('✅ Stored password is valid, setting authenticated state');
           setIsAdminAuthenticated(true);
           setAdminPassword(storedPassword);
           return true;
         } else {
           // Password is invalid, clear it
+          console.log('❌ Stored password is invalid, clearing localStorage');
           localStorage.removeItem('adminPassword');
           setIsAdminAuthenticated(false);
           setAdminPassword('');
@@ -51,11 +54,15 @@ export const AdminAuthProvider = ({ children }) => {
         }
       } catch (error) {
         // On error, clear stored password for security
+        console.error('❌ Error verifying stored password:', error);
+        console.log('   Clearing localStorage for security');
         localStorage.removeItem('adminPassword');
         setIsAdminAuthenticated(false);
         setAdminPassword('');
         return false;
       }
+    } else {
+      console.log('ℹ️ No stored password found');
     }
     return false;
   };
