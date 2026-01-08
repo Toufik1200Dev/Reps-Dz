@@ -572,9 +572,11 @@ export default function ProductsPage() {
     try {
       setLoading(true);
       const res = await productsAPI.getAllProducts();
-      setProducts(res.data?.products || res.data || []);
+      // getAllProducts uses fetch, so res is the JSON object directly (not wrapped in data)
+      setProducts(res.products || []);
     } catch (error) {
       console.error('Failed to load products', error);
+      alert('Failed to load products: ' + (error.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }

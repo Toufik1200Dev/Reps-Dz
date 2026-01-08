@@ -151,8 +151,17 @@ export const productsAPI = {
       });
       return response.data;
     } catch (error) {
+      // Log detailed error for debugging
+      if (error.response) {
+        console.error('Failed to create product:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      } else {
+        console.error('Failed to create product:', error.message);
+      }
       handleAdminAuthError(error);
-      console.error('Failed to create product:', error);
       throw error;
     }
   },
