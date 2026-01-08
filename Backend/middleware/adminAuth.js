@@ -5,15 +5,26 @@
  */
 const adminAuth = (req, res, next) => {
   // Read password from x-admin-password header
-  // Express normalizes headers to lowercase, so 'x-admin-password' becomes 'x-admin-password'
-  // But custom headers with hyphens might need to be accessed differently
+  // Express normalizes headers to lowercase and converts hyphens
+  // 'x-admin-password' in request becomes 'x-admin-password' in req.headers
+  // Try multiple variations to ensure we catch it
   const password = req.headers['x-admin-password'] || 
                    req.headers['x-admin-password'] ||
+                   req.headers['xadminpassword'] ||
                    req.headers.adminpassword || // Legacy support
                    req.headers['adminpassword'];
   
-  // EXTRA DEBUG: Log ALL headers to see what's actually received
-  console.log('🔐 [DEBUG] All request headers:', JSON.stringify(req.headers, null, 2));
+  // EXTRA DEBUG: Log specific headers we're looking for
+  console.log('🔐 [DEBUG] Header check:', {
+    'x-admin-password': req.headers['x-admin-password'] || 'NOT FOUND',
+    'adminpassword': req.headers.adminpassword || 'NOT FOUND',
+    'xadminpassword': req.headers['xadminpassword'] || 'NOT FOUND',
+    allHeaderKeys: Object.keys(req.headers).filter(h => 
+      h.toLowerCase().includes('admin') || 
+      h.toLowerCase().includes('password') ||
+      h.toLowerCase().includes('x-admin')
+    )
+  });
   
   // TEMPORARY DEBUG LOGS - Remove after fix
   const expectedPassword = process.env.ADMIN_PASSWORD;
