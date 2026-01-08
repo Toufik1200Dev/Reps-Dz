@@ -14,9 +14,8 @@ import {
   ShoppingCart,
   Close
 } from '@mui/icons-material';
-import { useAdminAuth } from '../../contexts/AdminAuthContext';
+import { adminAPI } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import API_CONFIG from '../../config/api';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
@@ -27,8 +26,6 @@ const statusColors = {
 };
 
 export default function Orders() {
-  const { getAuthHeaders } = useAdminAuth();
-
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,28 +36,15 @@ export default function Orders() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // Fetch orders from API
+  // Fetch orders from API using axios (interceptor handles x-admin-password)
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_CONFIG.getBaseURL()}/admin/orders`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch orders');
-      }
-
-      const data = await response.json();
-      setOrders(data.data.orders || []);
+      const response = await adminAPI.getAllOrders();
+      setOrders(response.data?.orders || []);
     } catch (err) {
       console.error('Error fetching orders:', err);
-      // For demo purposes, if fetch fails, use mock data? No, let's just show error or empty.
-      // Actually, let's not break the admin perspective, stick to fetched data or empty.
-      setError(err.message);
+      setError(err.message || 'Failed to fetch orders');
     } finally {
       setLoading(false);
     }
@@ -81,23 +65,10 @@ export default function Orders() {
     return matchesSearch && matchesStatus;
   });
 
-  // Handle order status update
+  // Handle order status update using axios (interceptor handles x-admin-password)
   const handleStatusUpdate = async (orderId, newStatus, notes, trackingNumber) => {
     try {
-      const response = await fetch(`${API_CONFIG.getBaseURL()}/admin/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        },
-        body: JSON.stringify({
-          status: newStatus,
-          notes,
-          trackingNumber
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to update order');
+      await adminAPI.updateOrderStatus(orderId, newStatus, notes, trackingNumber);
 
       setOrders(prevOrders =>
         prevOrders.map(order =>
@@ -116,18 +87,12 @@ export default function Orders() {
     }
   };
 
-  // Handle order deletion
+  // Handle order deletion using axios (interceptor handles x-admin-password)
   const handleDeleteOrder = async (orderId) => {
     if (!window.confirm('Are you sure you want to delete this order?')) return;
 
     try {
-      const response = await fetch(`${API_CONFIG.getBaseURL()}/admin/orders/${orderId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) throw new Error('Failed to delete order');
-
+      await adminAPI.deleteOrder(orderId);
       setOrders(prevOrders => prevOrders.filter(order => order._id !== orderId));
       setSnackbar({ open: true, message: 'Order deleted successfully!', severity: 'success' });
     } catch (err) {

@@ -253,8 +253,10 @@ export const adminAPI = {
   // Orders Management - interceptor handles x-admin-password automatically
   getAllOrders: (params) => api.get('/admin/orders', { params }),
   getOrderById: (id) => api.get(`/admin/orders/${id}`),
-  updateOrderStatus: (id, status) => api.patch(`/admin/orders/${id}/status`, { status }),
+  updateOrderStatus: (id, status, notes, trackingNumber) => 
+    api.patch(`/admin/orders/${id}/status`, { status, notes, trackingNumber }),
   updateOrderPayment: (id, paymentData) => api.patch(`/admin/orders/${id}/payment`, paymentData),
+  deleteOrder: (id) => api.delete(`/admin/orders/${id}`),
   
   // Customers Management - interceptor handles x-admin-password automatically
   getAllCustomers: (params) => api.get('/admin/customers', { params }),

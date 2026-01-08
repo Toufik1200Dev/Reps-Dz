@@ -7,13 +7,10 @@ import {
   People,
   LocalShipping
 } from '@mui/icons-material';
-import { useAdminAuth } from '../../contexts/AdminAuthContext';
-import API_CONFIG from '../../config/api';
+import { adminAPI } from '../../services/api';
 import { getVisitorStats, getProductClickStats } from '../../utils/analytics';
 
 export default function Analytics() {
-  const { getAuthHeaders } = useAdminAuth();
-  
   const [visitorStats, setVisitorStats] = useState({ daily: [], total: 0, today: 0 });
   const [productClickStats, setProductClickStats] = useState({ byProduct: [], total: 0 });
   const [orderStats, setOrderStats] = useState({ byProduct: [], total: 0, totalOrders: 0 });
@@ -29,17 +26,9 @@ export default function Analytics() {
         setVisitorStats(getVisitorStats());
         setProductClickStats(getProductClickStats());
 
-        // Fetch orders from API
-        const response = await fetch(`${API_CONFIG.getBaseURL()}/admin/orders`, {
-          headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeaders()
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const orders = data.data?.orders || [];
+        // Fetch orders from API using axios (interceptor handles x-admin-password)
+        const response = await adminAPI.getAllOrders();
+        const orders = response.data?.orders || [];
 
           // Calculate order statistics by product
           const ordersByProduct = {};
@@ -70,12 +59,11 @@ export default function Analytics() {
           // Convert to array and sort by orders
           const productOrderStats = Object.values(ordersByProduct).sort((a, b) => b.orders - a.orders);
 
-          setOrderStats({
-            byProduct: productOrderStats,
-            total: totalRevenue,
-            totalOrders: orders.length
-          });
-        }
+        setOrderStats({
+          byProduct: productOrderStats,
+          total: totalRevenue,
+          totalOrders: orders.length
+        });
       } catch (err) {
         console.error('Error fetching analytics data:', err);
       } finally {
