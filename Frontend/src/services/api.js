@@ -265,7 +265,6 @@ export const productsAPI = {
           localStorage.removeItem('adminPassword');
           
           // Show user-friendly error message
-          const errorMsg = errorData.message || 'Admin session expired';
           const hint = errorData.hint ? `\n${errorData.hint}` : '';
           const userMessage = `Admin session expired. Please log in again.${hint}`;
           
