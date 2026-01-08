@@ -277,9 +277,18 @@ export const adminAPI = {
       throw new Error('Admin authentication required. Please log in again.');
     }
     
-    const headers = new Headers();
-    headers.append('Content-Type', 'application/json');
-    headers.append('x-admin-password', adminPassword.trim());
+    console.log('🚀 Creating product with password:', adminPassword ? adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2) : 'NONE');
+    
+    // Use plain object for headers - fetch handles it correctly
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-admin-password': adminPassword.trim()
+    };
+    
+    console.log('🚀 Request headers:', {
+      'Content-Type': headers['Content-Type'],
+      'x-admin-password': headers['x-admin-password'] ? headers['x-admin-password'].substring(0, 2) + '***' + headers['x-admin-password'].substring(headers['x-admin-password'].length - 2) : 'NONE'
+    });
     
     const response = await fetch(`${API_BASE_URL}/products`, {
       method: 'POST',
@@ -287,8 +296,15 @@ export const adminAPI = {
       body: JSON.stringify(productData)
     });
     
+    console.log('📡 Product creation response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    });
+    
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Failed to create product' }));
+      console.error('❌ Product creation failed:', errorData);
       if (response.status === 403 || response.status === 401) {
         localStorage.removeItem('adminPassword');
         throw new Error('Invalid admin password. Please log in again.');
