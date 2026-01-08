@@ -22,17 +22,7 @@ api.interceptors.request.use(
     // Add admin password header if available (for admin routes)
     const adminPassword = localStorage.getItem('adminPassword');
     if (adminPassword) {
-      const trimmedPassword = adminPassword.trim();
-      config.headers['x-admin-password'] = trimmedPassword;
-      console.log('🔐 [INTERCEPTOR] Added x-admin-password header:', {
-        url: config.url,
-        method: config.method,
-        passwordLength: trimmedPassword.length,
-        passwordPreview: trimmedPassword.substring(0, 2) + '***' + trimmedPassword.substring(trimmedPassword.length - 2),
-        allHeaders: Object.keys(config.headers)
-      });
-    } else {
-      console.log('⚠️ [INTERCEPTOR] No admin password in localStorage for:', config.url);
+      config.headers['x-admin-password'] = adminPassword.trim();
     }
     
     return config;
@@ -154,22 +144,15 @@ export const productsAPI = {
       throw new Error('Admin authentication required. Please log in again.');
     }
     
-    console.log('🚀 productsAPI.create: Creating product');
-    console.log('   Admin password in localStorage:', adminPassword ? adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2) : 'NONE');
-    
-    // Interceptor will add x-admin-password header automatically
-    // No need to set it manually here
     try {
       const response = await api.post('/products', productData);
       return response.data;
     } catch (error) {
-      console.error('❌ productsAPI.create error:', error);
-      console.error('   Error response:', error.response?.data);
-      console.error('   Error status:', error.response?.status);
       if (error.response?.status === 403 || error.response?.status === 401) {
         localStorage.removeItem('adminPassword');
         throw new Error('Invalid admin password. Please log in again.');
       }
+      console.error('Failed to create product:', error);
       throw error;
     }
   },
@@ -216,31 +199,14 @@ export const productsAPI = {
         body: formData
       });
 
-      console.log('🚀 Frontend: Response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        console.error('❌ Frontend: Upload failed:', errorData);
-        console.error('❌ Response status:', response.status);
-        console.error('❌ Error message:', errorData.message);
-        console.error('❌ Error hint:', errorData.hint);
         
         if (response.status === 403 || response.status === 401) {
-          // Authentication error - clear stored password and prompt re-login
-          console.error('❌ Authentication failed - clearing stored password');
           localStorage.removeItem('adminPassword');
-          
-          // Show user-friendly error message
           const hint = errorData.hint ? `\n${errorData.hint}` : '';
           const userMessage = `Invalid admin password. Please log in again.${hint}`;
-          
-          // Show alert to user
           alert(`🔐 ${userMessage}`);
-          
           throw new Error(userMessage);
         }
         
@@ -248,10 +214,9 @@ export const productsAPI = {
       }
       
       const result = await response.json();
-      console.log('✅ Frontend: Upload successful:', result);
       return result;
     } catch (error) {
-      console.error('❌ Frontend: Upload error:', error);
+      console.error('Image upload error:', error);
       throw error;
     }
   }
@@ -262,32 +227,19 @@ export const adminAPI = {
   // Admin Authentication - Verify password with backend (NO FALLBACK)
   login: async (password) => {
     try {
-      console.log('🔐 Attempting admin login with backend...');
-      console.log('   Password provided:', password ? `***${password.substring(password.length - 2)}` : 'empty');
-      
       const response = await api.post('/admin/login', { password });
-      console.log('📡 Admin login response:', response.data);
       
       if (response.data && response.data.success) {
-        // Store admin password in localStorage for future requests
         localStorage.setItem('adminPassword', password);
-        console.log('✅ Admin login successful - password stored');
         return { success: true, message: 'Admin logged in successfully' };
       }
       
-      console.log('❌ Admin login failed:', response.data?.message);
-      // Clear any old password on failure
       localStorage.removeItem('adminPassword');
       return { success: false, message: response.data?.message || 'Invalid password' };
     } catch (error) {
-      console.error('❌ Admin login API error:', error);
-      console.error('   Error response:', error.response?.data);
-      console.error('   Error status:', error.response?.status);
-      
-      // Clear password on API error (don't allow old passwords)
       localStorage.removeItem('adminPassword');
-      
       const message = error.response?.data?.message || error.message || 'Error verifying admin password. Please check your connection.';
+      console.error('Admin login error:', message);
       return { success: false, message };
     }
   },
@@ -310,18 +262,10 @@ export const adminAPI = {
       throw new Error('Admin authentication required. Please log in again.');
     }
     
-    console.log('🚀 Creating product with password:', adminPassword ? adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2) : 'NONE');
-    
-    // Use plain object for headers - fetch handles it correctly
     const headers = {
       'Content-Type': 'application/json',
       'x-admin-password': adminPassword.trim()
     };
-    
-    console.log('🚀 Request headers:', {
-      'Content-Type': headers['Content-Type'],
-      'x-admin-password': headers['x-admin-password'] ? headers['x-admin-password'].substring(0, 2) + '***' + headers['x-admin-password'].substring(headers['x-admin-password'].length - 2) : 'NONE'
-    });
     
     const response = await fetch(`${API_BASE_URL}/products`, {
       method: 'POST',
@@ -329,19 +273,13 @@ export const adminAPI = {
       body: JSON.stringify(productData)
     });
     
-    console.log('📡 Product creation response:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok
-    });
-    
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Failed to create product' }));
-      console.error('❌ Product creation failed:', errorData);
       if (response.status === 403 || response.status === 401) {
         localStorage.removeItem('adminPassword');
         throw new Error('Invalid admin password. Please log in again.');
       }
+      console.error('Failed to create product:', errorData.message);
       throw new Error(errorData.message || 'Failed to create product');
     }
     return response.json();

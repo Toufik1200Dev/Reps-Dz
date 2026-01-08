@@ -65,9 +65,6 @@ app.use((req, res, next) => {
   
   // Handle preflight requests - MUST respond with 200 and correct headers
   if (req.method === 'OPTIONS') {
-    console.log('✅ [CORS] Preflight request handled for:', req.path);
-    console.log('   Origin:', origin);
-    console.log('   Requested headers:', req.headers['access-control-request-headers']);
     return res.status(200).end();
   }
   

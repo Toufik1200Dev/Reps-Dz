@@ -30,32 +30,18 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
       const uploadPromises = files.map(file => productsAPI.uploadImage(file));
       const results = await Promise.all(uploadPromises);
       
-      console.log('📸 All upload responses:', results);
-      
       // Process each result and call onUpload for each URL
-      results.forEach((res, index) => {
-        console.log(`📸 Upload response ${index + 1}:`, res);
-        
+      results.forEach((res) => {
         // Backend returns: { success: true, data: { url: ... } }
         let url = null;
         if (res && typeof res === 'object') {
-          // Try res.data.url (most likely)
-          url = res.data?.url;
-          // Try res.url (fallback)
-          if (!url) url = res.url;
-          // Try res.data if it's a string
-          if (!url && typeof res.data === 'string') url = res.data;
-          // Try res.secure_url (Cloudinary direct)
-          if (!url) url = res.secure_url;
+          url = res.data?.url || res.url || (typeof res.data === 'string' ? res.data : null) || res.secure_url;
         }
         
-        console.log(`🔗 Extracted URL ${index + 1}:`, url);
-        
         if (url && typeof url === 'string' && url.length > 0) {
-          console.log(`✅ Calling onUpload with URL ${index + 1}:`, url);
           onUpload(url);
         } else {
-          console.error(`❌ No valid URL in upload response ${index + 1}:`, res);
+          console.error('No valid URL in upload response:', res);
         }
       });
       

@@ -22,38 +22,19 @@ const upload = multer({
 
 // Upload single image to Cloudinary
 router.post('/image', adminAuth, upload.single('image'), async (req, res) => {
-  console.log('📤 Image Upload Request:', {
-    method: req.method,
-    url: req.url,
-    origin: req.headers.origin,
-    contentType: req.headers['content-type'],
-    file: req.file ? {
-      originalname: req.file.originalname,
-      mimetype: req.file.mimetype,
-      size: req.file.size
-    } : 'No file'
-  });
-  
   try {
     if (!req.file) {
-      console.log('❌ No file uploaded');
       return res.status(400).json({ message: 'No image file provided' });
     }
-
-    console.log('✅ File received, uploading to Cloudinary...');
     
     // Upload to Cloudinary
-    // uploadImage(file, folder) - folder is a string, not an options object
     const result = await CloudinaryService.uploadImage(req.file.buffer, 'titoubarz/products');
-
-    console.log('✅ Image uploaded successfully:', result.url);
-    console.log('✅ Full result object:', JSON.stringify(result, null, 2));
     
     res.json({
       success: true,
       message: 'Image uploaded successfully',
       data: {
-        url: result.url,  // CloudinaryService returns 'url', not 'secure_url'
+        url: result.url,
         publicId: result.publicId,
         width: result.width,
         height: result.height,
