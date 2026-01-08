@@ -132,13 +132,39 @@ export const productsAPI = {
 
   // Create new product
   create: async (productData) => {
+    const adminPassword = localStorage.getItem('adminPassword');
+    if (!adminPassword) {
+      throw new Error('Admin authentication required. Please log in again.');
+    }
+    
+    console.log('🚀 productsAPI.create: Creating product with password:', adminPassword ? adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2) : 'NONE');
+    
     // Check if productData is FormData, if so, let axios handle headers
     const isFormData = productData instanceof FormData;
-    // Axios automatically sets 'Content-Type: multipart/form-data' for FormData
-    // For JSON, the default 'application/json' from the axios instance is used.
-    const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
-    const response = await api.post('/products', productData, config);
-    return response.data;
+    
+    // Add admin password header
+    const config = {
+      headers: {
+        'x-admin-password': adminPassword.trim()
+      }
+    };
+    
+    // For FormData, axios will set Content-Type automatically
+    if (!isFormData) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+    
+    try {
+      const response = await api.post('/products', productData, config);
+      return response.data;
+    } catch (error) {
+      console.error('❌ productsAPI.create error:', error);
+      if (error.response?.status === 403 || error.response?.status === 401) {
+        localStorage.removeItem('adminPassword');
+        throw new Error('Invalid admin password. Please log in again.');
+      }
+      throw error;
+    }
   },
 
   // Update existing product
