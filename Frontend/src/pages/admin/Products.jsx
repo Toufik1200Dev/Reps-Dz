@@ -209,11 +209,11 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
                   required
                 >
                   <option value="">Select Category</option>
-                  <option value="calisthenics">Calisthenics Equipment</option>
-                  <option value="gym and body building">Gym & Bodybuilding</option>
-                  <option value="clothes">Apparel</option>
-                  <option value="accessories">Accessories</option>
+                  <option value="pull up bar">Pull Up Bar</option>
+                  <option value="paralleles">Paralleles</option>
                   <option value="supplements">Supplements</option>
+                  <option value="gym">Gym</option>
+                  <option value="accessoire">Accessoire</option>
                 </select>
               </div>
             </div>
@@ -457,9 +457,9 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
             <div className="border-t border-gray-100 pt-6">
               <label className="block text-sm font-bold mb-2 text-gray-700">Gallery Images</label>
               <div className="grid grid-cols-3 gap-4 mb-4">
-                {formData.images.gallery.map((url, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group">
-                    <img src={url} alt="" className="w-full h-full object-cover" />
+                {formData.images.gallery && formData.images.gallery.map((url, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group border-2 border-gray-200">
+                    <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
                     <button
                       type="button"
                       onClick={() => {
@@ -472,13 +472,16 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
                     </button>
                   </div>
                 ))}
-                <ImageUploader
-                  label="Add"
-                  multiple={true}
-                  onUpload={(url) => {
-                    handleChange('images.gallery', [...(formData.images.gallery || []), url]);
-                  }}
-                />
+                <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-dashed border-gray-300">
+                  <ImageUploader
+                    label=""
+                    multiple={true}
+                    onUpload={(url) => {
+                      const currentGallery = formData.images.gallery || [];
+                      handleChange('images.gallery', [...currentGallery, url]);
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>

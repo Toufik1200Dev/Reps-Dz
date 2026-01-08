@@ -488,5 +488,10 @@ function getAuthHeaders() {
   }
   
   // Send as 'adminpassword' header (lowercase as per backend expectation)
-  return { 'adminpassword': adminPassword };
+  // Also send as 'AdminPassword' and 'adminPassword' for compatibility
+  return { 
+    'adminpassword': adminPassword,
+    'AdminPassword': adminPassword,
+    'adminPassword': adminPassword
+  };
 }
