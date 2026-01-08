@@ -178,8 +178,11 @@ export const productsAPI = {
     }
     
     // Verify password is still valid before uploading
+    console.log('🔐 Verifying admin password before upload...');
+    console.log('   Password length:', adminPassword.length);
+    console.log('   Password ends with:', adminPassword.substring(adminPassword.length - 2));
+    
     try {
-      console.log('🔐 Verifying admin password before upload...');
       const verifyResponse = await fetch(`${API_BASE_URL}/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -187,6 +190,7 @@ export const productsAPI = {
       });
       
       const verifyData = await verifyResponse.json();
+      console.log('🔐 Verification response:', verifyData);
       
       if (!verifyData.success) {
         console.error('❌ Stored password is invalid! Clearing localStorage...');
@@ -196,10 +200,12 @@ export const productsAPI = {
       
       console.log('✅ Admin password verified, proceeding with upload...');
     } catch (verifyError) {
-      if (verifyError.message.includes('session has expired')) {
+      console.error('❌ Password verification failed:', verifyError);
+      if (verifyError.message.includes('session has expired') || verifyError.message.includes('password changed')) {
         throw verifyError;
       }
-      console.warn('⚠️ Could not verify password, proceeding anyway...', verifyError);
+      console.warn('⚠️ Could not verify password, but proceeding with upload anyway...');
+      // Don't throw - let the upload attempt happen so we can see the actual error
     }
     
     const formData = new FormData();
@@ -215,6 +221,19 @@ export const productsAPI = {
       headers.append('adminPassword', adminPassword);
       
       console.log('🚀 Frontend: Upload headers prepared');
+      console.log('   Password being sent:', adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2));
+      console.log('   Password length:', adminPassword.length);
+      
+      // Log all headers being sent
+      const headersObj = {};
+      headers.forEach((value, key) => {
+        if (key.toLowerCase().includes('password')) {
+          headersObj[key] = value.substring(0, 2) + '***' + value.substring(value.length - 2);
+        } else {
+          headersObj[key] = value;
+        }
+      });
+      console.log('   Headers being sent:', headersObj);
       
       const response = await fetch(`${API_BASE_URL}/upload/image`, {
         method: 'POST',
