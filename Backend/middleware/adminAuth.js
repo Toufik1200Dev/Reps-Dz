@@ -1,11 +1,25 @@
 const adminAuth = (req, res, next) => {
-  // Check for admin password in multiple header formats (headers are case-insensitive in Express)
-  // Express normalizes headers to lowercase, but check multiple variants just in case
-  const adminPassword = req.headers.adminpassword || req.headers['adminpassword'] || req.headers['admin-password'] || req.headers['AdminPassword'] || req.headers['Admin-Password'];
+  // Express normalizes headers to lowercase, so check lowercase version
+  // Also check original case variants just in case
+  const adminPassword = req.headers.adminpassword || 
+                       req.headers['adminpassword'] || 
+                       req.headers['admin-password'] || 
+                       req.headers['adminpassword'] ||
+                       req.headers['AdminPassword'] || 
+                       req.headers['Admin-Password'];
+  
+  // Debug logging
+  console.log('🔐 Admin auth check:', {
+    path: req.path,
+    method: req.method,
+    hasAdminPassword: !!adminPassword,
+    adminPasswordLength: adminPassword?.length || 0,
+    headerKeys: Object.keys(req.headers).filter(h => h.toLowerCase().includes('admin'))
+  });
   
   if (!adminPassword) {
     console.log('❌ Admin auth failed: No password header found');
-    console.log('   Request headers keys:', Object.keys(req.headers).filter(h => h.toLowerCase().includes('admin')));
+    console.log('   All header keys:', Object.keys(req.headers));
     return res.status(401).json({
       success: false,
       message: 'Admin password required'

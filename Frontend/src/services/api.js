@@ -181,11 +181,19 @@ export const productsAPI = {
       const authHeaders = getAuthHeaders();
       console.log('🚀 Frontend: Auth headers:', authHeaders);
       
+      if (!authHeaders.adminpassword && !authHeaders.AdminPassword && !authHeaders.adminPassword) {
+        console.error('❌ No admin password in headers! User must be logged in.');
+        throw new Error('Admin authentication required. Please log in first.');
+      }
+      
       // Don't set Content-Type for FormData - browser will set it automatically with boundary
-      const headers = {
-        ...authHeaders
-        // Note: We intentionally DON'T set Content-Type - browser sets it automatically for FormData
-      };
+      // But we MUST include our custom headers
+      const headers = new Headers();
+      if (authHeaders.adminpassword) headers.append('adminpassword', authHeaders.adminpassword);
+      if (authHeaders.AdminPassword) headers.append('AdminPassword', authHeaders.AdminPassword);
+      if (authHeaders.adminPassword) headers.append('adminPassword', authHeaders.adminPassword);
+      
+      console.log('🚀 Frontend: Final headers being sent:', Object.fromEntries(headers.entries()));
       
       const response = await fetch(`${API_BASE_URL}/upload/image`, {
         method: 'POST',
@@ -200,9 +208,16 @@ export const productsAPI = {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Frontend: Upload failed:', errorText);
-        throw new Error(`Failed to upload image: ${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('❌ Frontend: Upload failed:', errorData);
+        
+        if (response.status === 403 || response.status === 401) {
+          // Authentication error - clear stored password and prompt re-login
+          localStorage.removeItem('adminPassword');
+          throw new Error('Authentication failed. Please log in again with the correct admin password.');
+        }
+        
+        throw new Error(errorData.message || `Failed to upload image: ${response.status}`);
       }
       
       const result = await response.json();
