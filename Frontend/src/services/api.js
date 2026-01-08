@@ -187,12 +187,26 @@ export const productsAPI = {
 
   // Delete product
   delete: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    });
-    if (!response.ok) throw new Error('Failed to delete product');
-    return response.json();
+    const adminPassword = localStorage.getItem('adminPassword');
+    if (!adminPassword) {
+      throw new Error('Admin authentication required. Please log in again.');
+    }
+    
+    try {
+      const response = await api.delete(`/products/${id}`, {
+        headers: {
+          'x-admin-password': adminPassword.trim()
+        }
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 403 || error.response?.status === 401) {
+        localStorage.removeItem('adminPassword');
+        throw new Error('Invalid admin password. Please log in again.');
+      }
+      console.error('Failed to delete product:', error);
+      throw error;
+    }
   },
 
   // Upload image to Cloudinary
