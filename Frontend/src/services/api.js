@@ -173,11 +173,13 @@ export const productsAPI = {
     formData.append('image', file);
 
     try {
+      // Use Headers API to ensure custom header is set correctly
+      const headers = new Headers();
+      headers.append('x-admin-password', adminPassword.trim());
+      
       const response = await fetch(`${API_BASE_URL}/upload/image`, {
         method: 'POST',
-        headers: {
-          'x-admin-password': adminPassword
-        },
+        headers: headers,
         body: formData
       });
 
