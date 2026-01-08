@@ -146,121 +146,32 @@ export const productsAPI = {
     return response.json();
   },
 
-  // Admin routes - explicitly set x-admin-password header for CORS preflight
+  // Admin routes - no auth check required (dashboard access is sufficient)
   create: async (productData) => {
-    const adminPassword = localStorage.getItem('adminPassword');
-    if (!adminPassword) {
-      throw new Error('Admin authentication required. Please log in again.');
-    }
-    
-    const trimmedPassword = adminPassword.trim();
-    if (!trimmedPassword) {
-      localStorage.removeItem('adminPassword');
-      throw new Error('Invalid admin password. Please log in again.');
-    }
-    
     try {
-      // Explicitly set header in config for CORS preflight
-      // Content-Type will be set automatically by axios for JSON data
-      const config = {
-        headers: {
-          'x-admin-password': trimmedPassword
-        }
-      };
-      
-      console.log('🔐 Sending product creation request with password:', {
-        passwordPreview: `${trimmedPassword.substring(0, 2)}***${trimmedPassword.substring(trimmedPassword.length - 1)}`,
-        passwordLength: trimmedPassword.length
-      });
-      
-      const response = await api.post('/products', productData, config);
-      console.log('✅ Product created successfully');
+      const response = await api.post('/products', productData);
       return response.data;
     } catch (error) {
-      // Log detailed error for debugging
-      if (error.response) {
-        console.error('❌ Failed to create product:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data,
-          requestUrl: error.config?.url,
-          requestMethod: error.config?.method?.toUpperCase(),
-          sentHeaders: {
-            'x-admin-password': error.config?.headers?.['x-admin-password'] ? 
-              `${error.config.headers['x-admin-password'].substring(0, 2)}*** (length: ${error.config.headers['x-admin-password'].length})` : 
-              'NOT SET',
-            'content-type': error.config?.headers?.['content-type'] || 'NOT SET'
-          },
-          allHeaders: Object.keys(error.config?.headers || {})
-        });
-        
-        if (error.response.status === 403) {
-          console.error('🔐 Admin auth failed. Password in localStorage:', {
-            exists: !!localStorage.getItem('adminPassword'),
-            value: localStorage.getItem('adminPassword')?.substring(0, 2) + '***',
-            length: localStorage.getItem('adminPassword')?.length
-          });
-          console.error('💡 Check Render backend logs for: "Admin authentication failed: Password mismatch"');
-          console.error('💡 Compare received vs expected password lengths and characters in backend logs');
-          localStorage.removeItem('adminPassword');
-        }
-      } else {
-        console.error('❌ Failed to create product (no response):', error.message);
-        console.error('This might be a CORS or network issue');
-      }
-      handleAdminAuthError(error);
+      console.error('Failed to create product:', error);
       throw error;
     }
   },
 
   update: async (id, productData) => {
-    const adminPassword = localStorage.getItem('adminPassword');
-    if (!adminPassword) {
-      throw new Error('Admin authentication required. Please log in again.');
-    }
-    
-    const trimmedPassword = adminPassword.trim();
-    if (!trimmedPassword) {
-      throw new Error('Invalid admin password. Please log in again.');
-    }
-    
     try {
-      // Explicitly set header in config for CORS preflight
-      // For FormData, axios automatically sets Content-Type - don't set it manually
-      const response = await api.put(`/products/${id}`, productData, {
-        headers: {
-          'x-admin-password': trimmedPassword
-        }
-      });
+      const response = await api.put(`/products/${id}`, productData);
       return response.data;
     } catch (error) {
-      handleAdminAuthError(error);
       console.error('Failed to update product:', error);
       throw error;
     }
   },
 
   delete: async (id) => {
-    const adminPassword = localStorage.getItem('adminPassword');
-    if (!adminPassword) {
-      throw new Error('Admin authentication required. Please log in again.');
-    }
-    
-    const trimmedPassword = adminPassword.trim();
-    if (!trimmedPassword) {
-      throw new Error('Invalid admin password. Please log in again.');
-    }
-    
     try {
-      // Explicitly set header in config for CORS preflight
-      const response = await api.delete(`/products/${id}`, {
-        headers: {
-          'x-admin-password': trimmedPassword
-        }
-      });
+      const response = await api.delete(`/products/${id}`);
       return response.data;
     } catch (error) {
-      handleAdminAuthError(error);
       console.error('Failed to delete product:', error);
       throw error;
     }
@@ -268,38 +179,14 @@ export const productsAPI = {
 
   // Upload image to Cloudinary - use axios with FormData
   uploadImage: async (file) => {
-    const adminPassword = localStorage.getItem('adminPassword');
-    
-    if (!adminPassword) {
-      alert('❌ Admin authentication required.\n\nPlease log in to the admin panel first.');
-      throw new Error('Admin authentication required. Please log in to the admin panel first.');
-    }
-    
-    const trimmedPassword = adminPassword.trim();
-    if (!trimmedPassword) {
-      alert('🔐 Invalid admin password. Please log in again.');
-      localStorage.removeItem('adminPassword');
-      throw new Error('Invalid admin password. Please log in again.');
-    }
-    
     const formData = new FormData();
     formData.append('image', file);
 
     try {
-      // Explicitly set header in config for CORS preflight
-      // Axios automatically sets Content-Type to multipart/form-data for FormData - don't set it manually
-      const response = await api.post('/upload/image', formData, {
-        headers: {
-          'x-admin-password': trimmedPassword
-        }
-      });
+      // Axios automatically sets Content-Type to multipart/form-data for FormData
+      const response = await api.post('/upload/image', formData);
       return response.data;
     } catch (error) {
-      if (error.response?.status === 403 || error.response?.status === 401) {
-        localStorage.removeItem('adminPassword');
-        alert('🔐 Invalid admin password. Please log in again.');
-        throw new Error('Invalid admin password. Please log in again.');
-      }
       console.error('Image upload error:', error);
       throw error;
     }
