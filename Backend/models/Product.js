@@ -109,24 +109,46 @@ const productSchema = new mongoose.Schema({
 });
 
 // Middleware to auto-generate slug and finalPrice
-productSchema.pre('save', function(next) {
-  // Generate Slug
-  if (this.isModified('name') || !this.slug) {
-    this.slug = slugify(this.name, { lower: true, strict: true });
-  }
+productSchema.pre('save', async function(next) {
+  try {
+    // Generate Slug - ensure uniqueness
+    if (this.isModified('name') || !this.slug) {
+      let baseSlug = slugify(this.name, { lower: true, strict: true });
+      let slug = baseSlug;
+      let counter = 1;
+      
+      // Check if slug exists and make it unique
+      while (true) {
+        const existingProduct = await this.constructor.findOne({ slug });
+        
+        // If no existing product or it's the same product (for updates), use this slug
+        if (!existingProduct || (this._id && existingProduct._id.toString() === this._id.toString())) {
+          break;
+        }
+        
+        // Slug exists for a different product, append counter
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      
+      this.slug = slug;
+    }
 
-  // Calculate Final Price
-  if (this.isModified('price') || this.isModified('discount')) {
-    const discountAmount = (this.price * (this.discount || 0)) / 100;
-    this.finalPrice = Math.round((this.price - discountAmount) * 100) / 100;
-  }
+    // Calculate Final Price
+    if (this.isModified('price') || this.isModified('discount')) {
+      const discountAmount = (this.price * (this.discount || 0)) / 100;
+      this.finalPrice = Math.round((this.price - discountAmount) * 100) / 100;
+    }
 
-  // Auto update status if stock is 0
-  if (this.stock === 0 && this.status !== 'Draft' && this.status !== 'Hidden') {
-    this.status = 'Out of stock';
-  }
+    // Auto update status if stock is 0
+    if (this.stock === 0 && this.status !== 'Draft' && this.status !== 'Hidden') {
+      this.status = 'Out of stock';
+    }
 
-  next();
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Indexes
