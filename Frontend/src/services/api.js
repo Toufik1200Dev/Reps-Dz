@@ -14,19 +14,16 @@ const api = axios.create({
 // Request interceptor to add auth token and admin password
 api.interceptors.request.use(
   (config) => {
+    // Add user auth token if available
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Add admin password header if available (for admin routes)
-    // IMPORTANT: Must set this BEFORE the request so browser includes it in preflight
+    // Add admin password header if available (standardized to x-admin-password only)
     const adminPassword = localStorage.getItem('adminPassword');
     if (adminPassword) {
-      // Ensure header is set properly - use direct assignment
       config.headers['x-admin-password'] = adminPassword.trim();
-      // Also set with common variations for compatibility
-      config.headers['X-Admin-Password'] = adminPassword.trim();
     }
     
     return config;
@@ -40,13 +37,29 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Handle user auth errors
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
+    
+    // Handle admin auth errors - clear password and force re-login
+    if (error.response?.status === 403 && error.config?.headers?.['x-admin-password']) {
+      localStorage.removeItem('adminPassword');
+    }
+    
     return Promise.reject(error);
   }
 );
+
+// Helper function to handle admin auth errors
+const handleAdminAuthError = (error) => {
+  if (error.response?.status === 403 || error.response?.status === 401) {
+    localStorage.removeItem('adminPassword');
+    throw new Error('Invalid admin password. Please log in again.');
+  }
+  throw error;
+};
 
 // Auth API
 export const authAPI = {
@@ -64,47 +77,39 @@ export const authAPI = {
 
 // Products API
 export const productsAPI = {
-  // Get all products with filtering and pagination
+  // Public routes - use fetch (no auth needed)
   getAllProducts: async (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
-    
     try {
       const response = await fetch(`${API_BASE_URL}/products?${queryString}`);
-
       if (!response.ok) {
         throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`);
       }
-      
-      const result = await response.json();
-      return result;
+      return response.json();
     } catch (error) {
       console.error('Failed to fetch products:', error);
       throw error;
     }
   },
 
-  // Get featured products
   getFeaturedProducts: async () => {
     const response = await fetch(`${API_BASE_URL}/products/featured`);
     if (!response.ok) throw new Error('Failed to fetch featured products');
     return response.json();
   },
 
-  // Get best offers (products with discounts)
   getBestOffers: async (limit = 12) => {
     const response = await fetch(`${API_BASE_URL}/products/best-offers?limit=${limit}`);
     if (!response.ok) throw new Error('Failed to fetch best offers');
     return response.json();
   },
 
-  // Get single product by ID
   getProductById: async (id) => {
     const response = await fetch(`${API_BASE_URL}/products/${id}`);
     if (!response.ok) throw new Error('Failed to fetch product');
     return response.json();
   },
 
-  // Get products by category
   getProductsByCategory: async (category, params = {}) => {
     const queryString = new URLSearchParams(params).toString();
     const response = await fetch(`${API_BASE_URL}/products/category/${category}?${queryString}`);
@@ -112,7 +117,6 @@ export const productsAPI = {
     return response.json();
   },
 
-  // Search products
   searchProducts: async (query, params = {}) => {
     const searchParams = new URLSearchParams({ q: query, ...params });
     const response = await fetch(`${API_BASE_URL}/products/search?${searchParams}`);
@@ -120,14 +124,13 @@ export const productsAPI = {
     return response.json();
   },
 
-  // Get product categories
   getCategories: async () => {
     const response = await fetch(`${API_BASE_URL}/products/categories`);
     if (!response.ok) throw new Error('Failed to fetch categories');
     return response.json();
   },
 
-  // Create new product
+  // Admin routes - use axios (interceptor handles x-admin-password automatically)
   create: async (productData) => {
     const adminPassword = localStorage.getItem('adminPassword');
     if (!adminPassword) {
@@ -135,57 +138,34 @@ export const productsAPI = {
     }
     
     try {
-      // Explicitly set header in config so browser includes it in CORS preflight
-      const response = await api.post('/products', productData, {
-        headers: {
-          'x-admin-password': adminPassword.trim()
-        }
-      });
+      // Interceptor automatically adds x-admin-password header
+      const response = await api.post('/products', productData);
       return response.data;
     } catch (error) {
-      if (error.response?.status === 403 || error.response?.status === 401) {
-        localStorage.removeItem('adminPassword');
-        throw new Error('Invalid admin password. Please log in again.');
-      }
+      handleAdminAuthError(error);
       console.error('Failed to create product:', error);
       throw error;
     }
   },
 
-  // Update existing product
   update: async (id, productData) => {
     const adminPassword = localStorage.getItem('adminPassword');
     if (!adminPassword) {
       throw new Error('Admin authentication required. Please log in again.');
     }
     
-    // Check if productData is FormData
-    const isFormData = productData instanceof FormData;
-    const config = {
-      headers: {
-        'x-admin-password': adminPassword.trim()
-      }
-    };
-    
-    // For FormData, let axios set Content-Type automatically
-    if (!isFormData) {
-      config.headers['Content-Type'] = 'application/json';
-    }
-    
     try {
-      const response = await api.put(`/products/${id}`, productData, config);
+      // For FormData, axios automatically sets Content-Type to multipart/form-data
+      // Interceptor automatically adds x-admin-password header
+      const response = await api.put(`/products/${id}`, productData);
       return response.data;
     } catch (error) {
-      if (error.response?.status === 403 || error.response?.status === 401) {
-        localStorage.removeItem('adminPassword');
-        throw new Error('Invalid admin password. Please log in again.');
-      }
+      handleAdminAuthError(error);
       console.error('Failed to update product:', error);
       throw error;
     }
   },
 
-  // Delete product
   delete: async (id) => {
     const adminPassword = localStorage.getItem('adminPassword');
     if (!adminPassword) {
@@ -193,23 +173,17 @@ export const productsAPI = {
     }
     
     try {
-      const response = await api.delete(`/products/${id}`, {
-        headers: {
-          'x-admin-password': adminPassword.trim()
-        }
-      });
+      // Interceptor automatically adds x-admin-password header
+      const response = await api.delete(`/products/${id}`);
       return response.data;
     } catch (error) {
-      if (error.response?.status === 403 || error.response?.status === 401) {
-        localStorage.removeItem('adminPassword');
-        throw new Error('Invalid admin password. Please log in again.');
-      }
+      handleAdminAuthError(error);
       console.error('Failed to delete product:', error);
       throw error;
     }
   },
 
-  // Upload image to Cloudinary
+  // Upload image to Cloudinary - use axios with FormData
   uploadImage: async (file) => {
     const adminPassword = localStorage.getItem('adminPassword');
     
@@ -222,33 +196,16 @@ export const productsAPI = {
     formData.append('image', file);
 
     try {
-      // Use Headers API to ensure custom header is set correctly
-      const headers = new Headers();
-      headers.append('x-admin-password', adminPassword.trim());
-      
-      const response = await fetch(`${API_BASE_URL}/upload/image`, {
-        method: 'POST',
-        headers: headers,
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        
-        if (response.status === 403 || response.status === 401) {
-          localStorage.removeItem('adminPassword');
-          const hint = errorData.hint ? `\n${errorData.hint}` : '';
-          const userMessage = `Invalid admin password. Please log in again.${hint}`;
-          alert(`🔐 ${userMessage}`);
-          throw new Error(userMessage);
-        }
-        
-        throw new Error(errorData.message || `Failed to upload image: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      return result;
+      // Axios automatically sets Content-Type to multipart/form-data for FormData
+      // Interceptor automatically adds x-admin-password header
+      const response = await api.post('/upload/image', formData);
+      return response.data;
     } catch (error) {
+      if (error.response?.status === 403 || error.response?.status === 401) {
+        localStorage.removeItem('adminPassword');
+        alert('🔐 Invalid admin password. Please log in again.');
+        throw new Error('Invalid admin password. Please log in again.');
+      }
       console.error('Image upload error:', error);
       throw error;
     }
@@ -257,7 +214,7 @@ export const productsAPI = {
 
 // Admin API (comprehensive admin functions)
 export const adminAPI = {
-  // Admin Authentication - Verify password with backend (NO FALLBACK)
+  // Admin Authentication - Verify password with backend
   login: async (password) => {
     try {
       const response = await api.post('/admin/login', { password });
@@ -278,120 +235,40 @@ export const adminAPI = {
   },
   
   logout: () => {
-    // Remove admin password from localStorage
     localStorage.removeItem('adminPassword');
     return Promise.resolve({ success: true, message: 'Admin logged out successfully' });
   },
   
-  // Dashboard
+  // Dashboard - interceptor handles x-admin-password automatically
   getDashboardStats: () => api.get('/admin/dashboard/stats'),
   getRecentOrders: () => api.get('/admin/dashboard/recent-orders'),
   getTopProducts: () => api.get('/admin/dashboard/top-products'),
   
-  // Products Management
-  createProduct: async (productData) => {
-    const adminPassword = localStorage.getItem('adminPassword');
-    if (!adminPassword) {
-      throw new Error('Admin authentication required. Please log in again.');
-    }
-    
-    const headers = {
-      'Content-Type': 'application/json',
-      'x-admin-password': adminPassword.trim()
-    };
-    
-    const response = await fetch(`${API_BASE_URL}/products`, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(productData)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Failed to create product' }));
-      if (response.status === 403 || response.status === 401) {
-        localStorage.removeItem('adminPassword');
-        throw new Error('Invalid admin password. Please log in again.');
-      }
-      console.error('Failed to create product:', errorData.message);
-      throw new Error(errorData.message || 'Failed to create product');
-    }
-    return response.json();
-  },
-
-  updateProduct: async (id, productData) => {
-    const adminPassword = localStorage.getItem('adminPassword');
-    if (!adminPassword) {
-      throw new Error('Admin authentication required. Please log in again.');
-    }
-    
-    const headers = new Headers();
-    headers.append('Content-Type', 'application/json');
-    headers.append('x-admin-password', adminPassword.trim());
-    
-    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
-      method: 'PUT',
-      headers: headers,
-      body: JSON.stringify(productData)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Failed to update product' }));
-      if (response.status === 403 || response.status === 401) {
-        localStorage.removeItem('adminPassword');
-        throw new Error('Invalid admin password. Please log in again.');
-      }
-      throw new Error(errorData.message || 'Failed to update product');
-    }
-    return response.json();
-  },
-
-  deleteProduct: async (id) => {
-    const adminPassword = localStorage.getItem('adminPassword');
-    if (!adminPassword) {
-      throw new Error('Admin authentication required. Please log in again.');
-    }
-    
-    const headers = new Headers();
-    headers.append('x-admin-password', adminPassword.trim());
-    
-    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
-      method: 'DELETE',
-      headers: headers
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Failed to delete product' }));
-      if (response.status === 403 || response.status === 401) {
-        localStorage.removeItem('adminPassword');
-        throw new Error('Invalid admin password. Please log in again.');
-      }
-      throw new Error(errorData.message || 'Failed to delete product');
-    }
-    return response.json();
-  },
-
+  // Products Management - use productsAPI methods
+  createProduct: (productData) => productsAPI.create(productData),
+  updateProduct: (id, productData) => productsAPI.update(id, productData),
+  deleteProduct: (id) => productsAPI.delete(id),
   getAllProducts: (params) => api.get('/admin/products', { params }),
   
-  // Orders Management
+  // Orders Management - interceptor handles x-admin-password automatically
   getAllOrders: (params) => api.get('/admin/orders', { params }),
   getOrderById: (id) => api.get(`/admin/orders/${id}`),
   updateOrderStatus: (id, status) => api.patch(`/admin/orders/${id}/status`, { status }),
   updateOrderPayment: (id, paymentData) => api.patch(`/admin/orders/${id}/payment`, paymentData),
   
-  // Customers Management
+  // Customers Management - interceptor handles x-admin-password automatically
   getAllCustomers: (params) => api.get('/admin/customers', { params }),
   getCustomerById: (id) => api.get(`/admin/customers/${id}`),
   updateCustomer: (id, customerData) => api.put(`/admin/customers/${id}`, customerData),
   
-  // Analytics
+  // Analytics - interceptor handles x-admin-password automatically
   getAnalytics: (params) => api.get('/admin/analytics', { params }),
   getSalesReport: (params) => api.get('/admin/analytics/sales', { params }),
   getCustomerReport: (params) => api.get('/admin/analytics/customers', { params }),
 };
 
-// Orders API
+// Orders API (public routes)
 export const ordersAPI = {
-  // Create order
   createOrder: async (orderData) => {
     const response = await fetch(`${API_BASE_URL}/orders`, {
       method: 'POST',
@@ -403,51 +280,9 @@ export const ordersAPI = {
     if (!response.ok) throw new Error('Failed to create order');
     return response.json();
   },
-
-  // Get all orders (admin)
-  getAllOrders: async () => {
-    const response = await fetch(`${API_BASE_URL}/admin/orders`, {
-      headers: getAuthHeaders()
-    });
-    if (!response.ok) throw new Error('Failed to fetch orders');
-    return response.json();
-  },
-
-  // Get order by ID (admin)
-  getOrderById: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/admin/orders/${id}`, {
-      headers: getAuthHeaders()
-    });
-    if (!response.ok) throw new Error('Failed to fetch order');
-    return response.json();
-  },
-
-  // Update order status (admin)
-  updateOrderStatus: async (id, status) => {
-    const response = await fetch(`${API_BASE_URL}/admin/orders/${id}/status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders()
-      },
-      body: JSON.stringify({ status })
-    });
-    if (!response.ok) throw new Error('Failed to update order status');
-    return response.json();
-  },
-
-  // Delete order (admin)
-  deleteOrder: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/admin/orders/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    });
-    if (!response.ok) throw new Error('Failed to delete order');
-    return response.json();
-  }
 };
 
-// Delivery API
+// Delivery API (public routes)
 export const deliveryAPI = {
   getWilayas: () => api.get('/delivery/wilayas'),
   getWilayaById: (id) => api.get(`/delivery/wilayas/${id}`),
@@ -458,7 +293,7 @@ export const deliveryAPI = {
   getStats: () => api.get('/delivery/stats'),
 };
 
-// Cart API
+// Cart API (public routes - uses user token from interceptor)
 export const cartAPI = {
   get: () => api.get('/cart'),
   add: (item) => api.post('/cart/add', item),
@@ -468,7 +303,7 @@ export const cartAPI = {
   sync: (items) => api.post('/cart/sync', { items })
 };
 
-// Contact API
+// Contact API (public routes)
 export const contactAPI = {
   submit: (contactData) => api.post('/contact', contactData),
   getAll: (params) => api.get('/contact', { params }),
@@ -481,32 +316,27 @@ export const contactAPI = {
 
 // Utility functions
 export const apiUtils = {
-  // Handle API errors
   handleError: (error) => {
     if (error.response) {
-      // Server responded with error status
       const message = error.response.data?.message || 'An error occurred';
       return { error: true, message };
     } else if (error.request) {
-      // Request was made but no response received
       return { error: true, message: 'Network error. Please check your connection.' };
     } else {
-      // Something else happened
       return { error: true, message: 'An unexpected error occurred.' };
     }
   },
 
-  // Format order data for API
   formatOrderData: (cartItems, shippingInfo, paymentMethod) => {
     const products = cartItems.map(item => ({
-        product: item.product._id || item.product.id,
-        name: item.product.name,
-        price: item.product.price,
-        quantity: item.quantity,
-        size: item.size,    // Add size
-        color: item.color,  // Add color
-        image: item.product.images?.[0]?.url || item.product.image
-      }));
+      product: item.product._id || item.product.id,
+      name: item.product.name,
+      price: item.product.price,
+      quantity: item.quantity,
+      size: item.size,
+      color: item.color,
+      image: item.product.images?.[0]?.url || item.product.image
+    }));
 
     const subtotal = products.reduce((total, item) => total + (item.price * item.quantity), 0);
     const deliveryFee = subtotal > 100 ? 0 : 15;
@@ -541,7 +371,6 @@ export const apiUtils = {
     };
   },
 
-  // Format product data for API
   formatProductData: (productData) => {
     return {
       name: productData.name,
@@ -560,22 +389,3 @@ export const apiUtils = {
 };
 
 export default api;
-
-// Helper function to get admin authentication headers
-function getAuthHeaders() {
-  // Get admin password from localStorage
-  const adminPassword = localStorage.getItem('adminPassword');
-  
-  if (!adminPassword) {
-    console.warn('⚠️ Admin password not found in localStorage. Please log in as admin first.');
-    return {};
-  }
-  
-  // Send as 'adminpassword' header (lowercase as per backend expectation)
-  // Also send as 'AdminPassword' and 'adminPassword' for compatibility
-  return { 
-    'adminpassword': adminPassword,
-    'AdminPassword': adminPassword,
-    'adminPassword': adminPassword
-  };
-}
