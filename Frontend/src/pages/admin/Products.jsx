@@ -41,14 +41,36 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
         if (url && typeof url === 'string' && url.length > 0) {
           onUpload(url);
         } else {
-          console.error('No valid URL in upload response:', res);
+          // Invalid URL in upload response - log error details
+          const errorDetails = {
+            response: res,
+            hasData: !!res?.data,
+            dataType: typeof res?.data,
+            urlInData: !!res?.data?.url,
+            urlType: typeof res?.data?.url
+          };
+          console.error('Image upload error: No valid URL in upload response', errorDetails);
+          alert('Image upload failed: Invalid response from server. Please try again.');
         }
       });
       
       // Reset file input to allow re-uploading the same files
       e.target.value = '';
     } catch (error) {
-      console.error('Upload failed', error);
+      // Log detailed error for debugging
+      const errorDetails = {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        code: error.code,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: Object.keys(error.config?.headers || {})
+        }
+      };
+      console.error('Image upload error:', errorDetails);
       
       // Show detailed error message from server
       let errorMessage = 'Image upload failed';
@@ -86,8 +108,9 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
             alt="Preview" 
             className="w-full h-full object-cover rounded-lg border-2 border-gray-200 shadow-sm"
             onError={(e) => {
-              console.error('❌ Image load error:', imageUrl);
-              e.target.style.display = 'none';
+              // Handle image load error silently - show placeholder instead
+              e.target.onerror = null; // Prevent infinite loop
+              e.target.src = '/placeholder-product.png';
             }}
           />
           <button
@@ -511,8 +534,9 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
                       alt={`Gallery ${idx + 1}`} 
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        console.error('❌ Gallery image load error:', url);
-                        e.target.style.display = 'none';
+                        // Handle image load error silently - show placeholder instead
+                        e.target.onerror = null; // Prevent infinite loop
+                        e.target.src = '/placeholder-product.png';
                       }}
                     />
                     <button
@@ -579,7 +603,12 @@ export default function ProductsPage() {
       const productsList = res.products || [];
       setProducts(productsList);
     } catch (error) {
-      console.error('Failed to load products', error);
+      const errorDetails = {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      };
+      console.error('Failed to load products:', errorDetails);
       alert('Failed to load products: ' + (error.message || 'Unknown error'));
     } finally {
       setLoading(false);
@@ -622,7 +651,13 @@ export default function ProductsPage() {
       setEditingProduct(null);
       fetchProducts();
     } catch (error) {
-      console.error(error);
+      const errorDetails = {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        operation: editingProduct ? 'update' : 'create'
+      };
+      console.error('Failed to save product:', errorDetails);
       alert('Failed to save product: ' + (error.response?.data?.message || error.message));
     }
   };
@@ -707,6 +742,11 @@ export default function ProductsPage() {
                             src={product.images?.main || (product.images?.[0]?.url) || product.image || '/placeholder-product.png'}
                             alt={product.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Handle image load error silently - show placeholder instead
+                              e.target.onerror = null; // Prevent infinite loop
+                              e.target.src = '/placeholder-product.png';
+                            }}
                           />
                         </div>
                         <div>
