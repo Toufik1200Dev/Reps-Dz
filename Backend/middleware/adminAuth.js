@@ -42,11 +42,18 @@ const adminAuth = (req, res, next) => {
   
   if (trimmedPassword !== trimmedExpected) {
     console.log('❌ Admin password mismatch in middleware');
+    console.log('   Received password length:', trimmedPassword.length);
+    console.log('   Expected password length:', trimmedExpected.length);
+    console.log('   Received ends with:', trimmedPassword.substring(trimmedPassword.length - 2));
+    console.log('   Expected ends with:', trimmedExpected.substring(trimmedExpected.length - 2));
     return res.status(403).json({
       success: false,
-      message: 'Invalid admin password'
+      message: 'Invalid admin password. The password in your browser does not match the server password. Please log in again.',
+      hint: `Expected password length: ${trimmedExpected.length} characters`
     });
   }
+  
+  console.log('✅ Admin password verified in middleware');
 
   next();
 };

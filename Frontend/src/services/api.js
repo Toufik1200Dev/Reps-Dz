@@ -231,11 +231,17 @@ export const productsAPI = {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
         console.error('❌ Frontend: Upload failed:', errorData);
+        console.error('❌ Response status:', response.status);
+        console.error('❌ Error message:', errorData.message);
         
         if (response.status === 403 || response.status === 401) {
           // Authentication error - clear stored password and prompt re-login
+          console.error('❌ Authentication failed - clearing stored password');
           localStorage.removeItem('adminPassword');
-          throw new Error('Authentication failed. Please log in again with the correct admin password.');
+          
+          // Try to get more info about what went wrong
+          const errorMsg = errorData.message || 'Authentication failed';
+          throw new Error(`${errorMsg}. Your stored password doesn't match the server. Please go to the admin login page and log in again with the correct password from Render environment variables.`);
         }
         
         throw new Error(errorData.message || `Failed to upload image: ${response.status}`);
