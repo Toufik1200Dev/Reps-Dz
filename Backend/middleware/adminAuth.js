@@ -47,8 +47,8 @@ const adminAuth = (req, res, next) => {
     console.log('   Expected ends with:', trimmedExpected.substring(trimmedExpected.length - 2));
     return res.status(403).json({
       success: false,
-      message: 'Invalid admin password. The password in your browser does not match the server password. Please log in again.',
-      hint: `Expected password length: ${trimmedExpected.length} characters`
+      message: 'Invalid admin password',
+      hint: `Expected password length: ${trimmedExpected.length} characters. Please log in again.`
     });
   }
   
