@@ -28,14 +28,14 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
     try {
       // Upload sequentially or parallel
       for (const file of files) {
-        const formData = new FormData();
-        formData.append('image', file);
-        // Assuming productsAPI.uploadImage exists and returns { url: ... }
-        // If not, we might need to fix this assumption. 
-        // Based on previous file, it returns result.data which has url
         const res = await productsAPI.uploadImage(file);
-        const url = res.data?.url || res.url; // Adapt based on actual response
-        if (url) onUpload(url);
+        // Backend returns: { success: true, data: { url: ... } }
+        const url = res.data?.url || res.url;
+        if (url) {
+          onUpload(url);
+        } else {
+          console.error('❌ No URL in upload response:', res);
+        }
       }
     } catch (error) {
       console.error('Upload failed', error);
@@ -58,18 +58,20 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
     }
   };
 
+  const inputId = `upload-${label || 'image'}-${Math.random().toString(36).substr(2, 9)}`;
+
   return (
     <div className="mb-4">
-      <label className="block text-sm font-bold mb-2 text-gray-700">{label}</label>
+      {label && <label className="block text-sm font-bold mb-2 text-gray-700">{label}</label>}
 
-      {/* Preview Area */}
+      {/* Preview Area for Single Image */}
       {showPreview && imageUrl && !multiple && (
         <div className="relative w-32 h-32 mb-3 group">
-          <img src={imageUrl} alt="Preview" className="w-full h-full object-cover rounded-lg border border-gray-200" />
+          <img src={imageUrl} alt="Preview" className="w-full h-full object-cover rounded-lg border-2 border-gray-200 shadow-sm" />
           <button
             type="button"
             onClick={onRemove}
-            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
           >
             <CloseIcon fontSize="small" />
           </button>
@@ -84,12 +86,12 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
           multiple={multiple}
           onChange={handleFileChange}
           className="hidden"
-          id={`param-${label}`}
+          id={inputId}
           disabled={uploading}
         />
         <label
-          htmlFor={`param-${label}`}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${uploading ? 'bg-gray-100 border-gray-300' : 'bg-gray-50 border-gray-300 hover:border-secondary hover:bg-secondary/10'}`}
+          htmlFor={inputId}
+          className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed cursor-pointer transition-colors min-h-[100px] ${uploading ? 'bg-gray-100 border-gray-300 cursor-not-allowed' : 'bg-gray-50 border-gray-300 hover:border-secondary hover:bg-secondary/10'}`}
         >
           <CloudUploadIcon className={uploading ? 'text-gray-400' : 'text-secondary'} />
           <span className="text-sm font-medium text-gray-600">{uploading ? 'Uploading...' : 'Click to Upload'}</span>
@@ -468,26 +470,27 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
             </div>
 
             <div className="border-t border-gray-100 pt-6">
-              <label className="block text-sm font-bold mb-2 text-gray-700">Gallery Images</label>
+              <label className="block text-sm font-bold mb-4 text-gray-700">Gallery Images</label>
               <div className="grid grid-cols-3 gap-4 mb-4">
-                {formData.images.gallery && formData.images.gallery.map((url, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group border-2 border-gray-200">
-                    <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
+                {formData.images.gallery && formData.images.gallery.length > 0 && formData.images.gallery.map((url, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group border-2 border-gray-200 shadow-sm">
+                    <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => {
                         const newGallery = formData.images.gallery.filter((_, i) => i !== idx);
                         handleChange('images.gallery', newGallery);
                       }}
-                      className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
                     >
                       <CloseIcon fontSize="small" />
                     </button>
                   </div>
                 ))}
-                <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-dashed border-gray-300">
+                <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors">
                   <ImageUploader
                     label=""
+                    showPreview={false}
                     multiple={true}
                     onUpload={(url) => {
                       const currentGallery = formData.images.gallery || [];
