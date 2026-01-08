@@ -22,7 +22,17 @@ api.interceptors.request.use(
     // Add admin password header if available (for admin routes)
     const adminPassword = localStorage.getItem('adminPassword');
     if (adminPassword) {
-      config.headers['x-admin-password'] = adminPassword.trim();
+      const trimmedPassword = adminPassword.trim();
+      config.headers['x-admin-password'] = trimmedPassword;
+      console.log('🔐 [INTERCEPTOR] Added x-admin-password header:', {
+        url: config.url,
+        method: config.method,
+        passwordLength: trimmedPassword.length,
+        passwordPreview: trimmedPassword.substring(0, 2) + '***' + trimmedPassword.substring(trimmedPassword.length - 2),
+        allHeaders: Object.keys(config.headers)
+      });
+    } else {
+      console.log('⚠️ [INTERCEPTOR] No admin password in localStorage for:', config.url);
     }
     
     return config;
