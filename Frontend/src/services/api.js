@@ -135,7 +135,12 @@ export const productsAPI = {
     }
     
     try {
-      const response = await api.post('/products', productData);
+      // Explicitly set header in config so browser includes it in CORS preflight
+      const response = await api.post('/products', productData, {
+        headers: {
+          'x-admin-password': adminPassword.trim()
+        }
+      });
       return response.data;
     } catch (error) {
       if (error.response?.status === 403 || error.response?.status === 401) {
@@ -149,11 +154,35 @@ export const productsAPI = {
 
   // Update existing product
   update: async (id, productData) => {
+    const adminPassword = localStorage.getItem('adminPassword');
+    if (!adminPassword) {
+      throw new Error('Admin authentication required. Please log in again.');
+    }
+    
     // Check if productData is FormData
     const isFormData = productData instanceof FormData;
-    const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
-    const response = await api.put(`/products/${id}`, productData, config);
-    return response.data;
+    const config = {
+      headers: {
+        'x-admin-password': adminPassword.trim()
+      }
+    };
+    
+    // For FormData, let axios set Content-Type automatically
+    if (!isFormData) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+    
+    try {
+      const response = await api.put(`/products/${id}`, productData, config);
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 403 || error.response?.status === 401) {
+        localStorage.removeItem('adminPassword');
+        throw new Error('Invalid admin password. Please log in again.');
+      }
+      console.error('Failed to update product:', error);
+      throw error;
+    }
   },
 
   // Delete product
