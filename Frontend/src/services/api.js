@@ -168,29 +168,45 @@ export const productsAPI = {
         }
       };
       
+      console.log('🔐 Sending product creation request with password:', {
+        passwordPreview: `${trimmedPassword.substring(0, 2)}***${trimmedPassword.substring(trimmedPassword.length - 1)}`,
+        passwordLength: trimmedPassword.length
+      });
+      
       const response = await api.post('/products', productData, config);
+      console.log('✅ Product created successfully');
       return response.data;
     } catch (error) {
       // Log detailed error for debugging
       if (error.response) {
-        console.error('Failed to create product:', {
+        console.error('❌ Failed to create product:', {
           status: error.response.status,
+          statusText: error.response.statusText,
           data: error.response.data,
           requestUrl: error.config?.url,
-          requestMethod: error.config?.method,
+          requestMethod: error.config?.method?.toUpperCase(),
           sentHeaders: {
             'x-admin-password': error.config?.headers?.['x-admin-password'] ? 
               `${error.config.headers['x-admin-password'].substring(0, 2)}*** (length: ${error.config.headers['x-admin-password'].length})` : 
-              'NOT SET'
-          }
+              'NOT SET',
+            'content-type': error.config?.headers?.['content-type'] || 'NOT SET'
+          },
+          allHeaders: Object.keys(error.config?.headers || {})
         });
         
         if (error.response.status === 403) {
-          console.error('Admin auth failed. Check backend logs for password comparison.');
+          console.error('🔐 Admin auth failed. Password in localStorage:', {
+            exists: !!localStorage.getItem('adminPassword'),
+            value: localStorage.getItem('adminPassword')?.substring(0, 2) + '***',
+            length: localStorage.getItem('adminPassword')?.length
+          });
+          console.error('💡 Check Render backend logs for: "Admin authentication failed: Password mismatch"');
+          console.error('💡 Compare received vs expected password lengths and characters in backend logs');
           localStorage.removeItem('adminPassword');
         }
       } else {
-        console.error('Failed to create product (no response):', error.message);
+        console.error('❌ Failed to create product (no response):', error.message);
+        console.error('This might be a CORS or network issue');
       }
       handleAdminAuthError(error);
       throw error;
