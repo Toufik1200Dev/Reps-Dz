@@ -130,16 +130,25 @@ export const productsAPI = {
     return response.json();
   },
 
-  // Admin routes - use axios (interceptor handles x-admin-password automatically)
+  // Admin routes - explicitly set x-admin-password header for CORS preflight
   create: async (productData) => {
     const adminPassword = localStorage.getItem('adminPassword');
     if (!adminPassword) {
       throw new Error('Admin authentication required. Please log in again.');
     }
     
+    const trimmedPassword = adminPassword.trim();
+    if (!trimmedPassword) {
+      throw new Error('Invalid admin password. Please log in again.');
+    }
+    
     try {
-      // Interceptor automatically adds x-admin-password header
-      const response = await api.post('/products', productData);
+      // Explicitly set header in config for CORS preflight
+      const response = await api.post('/products', productData, {
+        headers: {
+          'x-admin-password': trimmedPassword
+        }
+      });
       return response.data;
     } catch (error) {
       handleAdminAuthError(error);
@@ -154,10 +163,19 @@ export const productsAPI = {
       throw new Error('Admin authentication required. Please log in again.');
     }
     
+    const trimmedPassword = adminPassword.trim();
+    if (!trimmedPassword) {
+      throw new Error('Invalid admin password. Please log in again.');
+    }
+    
     try {
-      // For FormData, axios automatically sets Content-Type to multipart/form-data
-      // Interceptor automatically adds x-admin-password header
-      const response = await api.put(`/products/${id}`, productData);
+      // Explicitly set header in config for CORS preflight
+      // For FormData, axios automatically sets Content-Type - don't set it manually
+      const response = await api.put(`/products/${id}`, productData, {
+        headers: {
+          'x-admin-password': trimmedPassword
+        }
+      });
       return response.data;
     } catch (error) {
       handleAdminAuthError(error);
@@ -172,9 +190,18 @@ export const productsAPI = {
       throw new Error('Admin authentication required. Please log in again.');
     }
     
+    const trimmedPassword = adminPassword.trim();
+    if (!trimmedPassword) {
+      throw new Error('Invalid admin password. Please log in again.');
+    }
+    
     try {
-      // Interceptor automatically adds x-admin-password header
-      const response = await api.delete(`/products/${id}`);
+      // Explicitly set header in config for CORS preflight
+      const response = await api.delete(`/products/${id}`, {
+        headers: {
+          'x-admin-password': trimmedPassword
+        }
+      });
       return response.data;
     } catch (error) {
       handleAdminAuthError(error);
@@ -192,13 +219,24 @@ export const productsAPI = {
       throw new Error('Admin authentication required. Please log in to the admin panel first.');
     }
     
+    const trimmedPassword = adminPassword.trim();
+    if (!trimmedPassword) {
+      alert('🔐 Invalid admin password. Please log in again.');
+      localStorage.removeItem('adminPassword');
+      throw new Error('Invalid admin password. Please log in again.');
+    }
+    
     const formData = new FormData();
     formData.append('image', file);
 
     try {
-      // Axios automatically sets Content-Type to multipart/form-data for FormData
-      // Interceptor automatically adds x-admin-password header
-      const response = await api.post('/upload/image', formData);
+      // Explicitly set header in config for CORS preflight
+      // Axios automatically sets Content-Type to multipart/form-data for FormData - don't set it manually
+      const response = await api.post('/upload/image', formData, {
+        headers: {
+          'x-admin-password': trimmedPassword
+        }
+      });
       return response.data;
     } catch (error) {
       if (error.response?.status === 403 || error.response?.status === 401) {
@@ -217,10 +255,19 @@ export const adminAPI = {
   // Admin Authentication - Verify password with backend
   login: async (password) => {
     try {
-      const response = await api.post('/admin/login', { password });
+      // Trim password before sending
+      const trimmedPassword = (password || '').trim();
+      
+      if (!trimmedPassword) {
+        localStorage.removeItem('adminPassword');
+        return { success: false, message: 'Password cannot be empty' };
+      }
+      
+      const response = await api.post('/admin/login', { password: trimmedPassword });
       
       if (response.data && response.data.success) {
-        localStorage.setItem('adminPassword', password);
+        // Store trimmed password
+        localStorage.setItem('adminPassword', trimmedPassword);
         return { success: true, message: 'Admin logged in successfully' };
       }
       

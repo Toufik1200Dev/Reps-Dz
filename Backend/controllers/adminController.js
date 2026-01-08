@@ -27,39 +27,17 @@ const verifyAdminPassword = async (req, res) => {
       });
     }
 
-    // Debug logging (be careful not to log actual passwords in production)
-    console.log('🔐 Admin login attempt received');
-    console.log('   Received password length:', password?.length || 0);
-    console.log('   Expected password length:', expectedPassword?.length || 0);
-    console.log('   Received password starts with:', password?.substring(0, 2) || 'empty');
-    console.log('   Expected password starts with:', expectedPassword?.substring(0, 2) || 'empty');
-    console.log('   Received password ends with:', password?.substring(password.length - 2) || 'empty');
-    console.log('   Expected password ends with:', expectedPassword?.substring(expectedPassword.length - 2) || 'empty');
-    
     // Check for whitespace issues - trim both for comparison
     const trimmedPassword = password?.trim();
     const trimmedExpected = expectedPassword?.trim();
     
     // Compare trimmed versions to handle whitespace issues
     if (trimmedPassword !== trimmedExpected) {
-      console.log('❌ Admin password mismatch - REJECTED');
-      console.log('   Comparison: trimmed received vs trimmed expected =', trimmedPassword === trimmedExpected);
-      console.log('   Received (trimmed) length:', trimmedPassword?.length || 0);
-      console.log('   Expected (trimmed) length:', trimmedExpected?.length || 0);
-      
       return res.status(403).json({
         success: false,
-        message: 'Invalid admin password. Please check for typos or extra spaces.',
-        hint: expectedPassword?.length ? `Expected password length: ${expectedPassword.length} characters` : 'Password not configured'
+        message: 'Invalid admin password. Please check for typos or extra spaces.'
       });
     }
-    
-    // If we get here, trimmed passwords match - accept it
-    if (password !== expectedPassword) {
-      console.log('⚠️ Password accepted after trimming whitespace');
-    }
-
-    console.log('✅ Admin password verified successfully - APPROVED');
 
     // Password is correct
     res.status(200).json({
