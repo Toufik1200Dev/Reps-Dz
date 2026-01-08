@@ -178,6 +178,13 @@ export const productsAPI = {
       throw new Error('Admin authentication required. Please log in to the admin panel first.');
     }
     
+    // DEBUG: Log what password we have stored
+    console.log('🔐 [DEBUG] Password from localStorage:', {
+      length: adminPassword.length,
+      preview: adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2),
+      fullPassword: adminPassword // TEMPORARY - Remove after debugging
+    });
+    
     // Verify password is still valid before uploading - THIS IS MANDATORY
     console.log('🔐 STEP 1: Verifying admin password before upload...');
     console.log('   Password length:', adminPassword.length);

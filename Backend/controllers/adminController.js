@@ -106,6 +106,9 @@ const getAdminStatus = async (req, res) => {
         : 'ADMIN_PASSWORD is NOT set in environment variables',
       warning: (hasLeadingSpace || hasTrailingSpace) 
         ? '⚠️ WARNING: Password has leading/trailing spaces! Remove them in Render environment variables.' 
+        : null,
+      hint: hasPassword 
+        ? `Expected password: ${passwordStartsWith}***${passwordEndsWith} (${passwordLength} chars)` 
         : null
     });
   } catch (error) {
