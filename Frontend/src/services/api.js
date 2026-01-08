@@ -174,13 +174,16 @@ export const productsAPI = {
     
     if (!adminPassword) {
       console.error('❌ No admin password found in localStorage!');
+      alert('❌ Admin authentication required.\n\nPlease log in to the admin panel first.');
       throw new Error('Admin authentication required. Please log in to the admin panel first.');
     }
     
     // Verify password is still valid before uploading - THIS IS MANDATORY
-    console.log('🔐 Verifying admin password before upload...');
+    console.log('🔐 STEP 1: Verifying admin password before upload...');
     console.log('   Password length:', adminPassword.length);
     console.log('   Password ends with:', adminPassword.substring(adminPassword.length - 2));
+    
+    let verificationPassed = false;
     
     try {
       const verifyResponse = await fetch(`${API_BASE_URL}/admin/login`, {
@@ -189,28 +192,33 @@ export const productsAPI = {
         body: JSON.stringify({ password: adminPassword })
       });
       
-      if (!verifyResponse.ok) {
-        const errorData = await verifyResponse.json().catch(() => ({}));
-        console.error('❌ Password verification failed with status:', verifyResponse.status);
-        console.error('❌ Error data:', errorData);
-        localStorage.removeItem('adminPassword');
-        throw new Error(`Password verification failed: ${errorData.message || 'Invalid password'}. Please log in again with the correct password.`);
-      }
-      
       const verifyData = await verifyResponse.json();
       console.log('🔐 Verification response:', verifyData);
       
-      if (!verifyData.success) {
-        console.error('❌ Stored password is invalid! Clearing localStorage...');
+      if (!verifyResponse.ok || !verifyData.success) {
+        console.error('❌ Password verification FAILED!');
+        console.error('   Status:', verifyResponse.status);
+        console.error('   Response:', verifyData);
         localStorage.removeItem('adminPassword');
-        throw new Error('Your admin session has expired or the password changed. Please log in again.');
+        
+        const errorMsg = verifyData.message || 'Invalid password';
+        const hint = verifyData.hint || '';
+        alert(`❌ Authentication Failed\n\n${errorMsg}\n${hint}\n\nYour stored password doesn't match the server.\n\nPlease:\n1. Go to the admin login page\n2. Log in with the correct password from Render\n3. Try uploading again.`);
+        
+        throw new Error(`${errorMsg}. ${hint} Please log in again with the correct password.`);
       }
       
-      console.log('✅ Admin password verified, proceeding with upload...');
+      verificationPassed = true;
+      console.log('✅ STEP 1 PASSED: Admin password verified, proceeding with upload...');
     } catch (verifyError) {
-      console.error('❌ Password verification failed - BLOCKING upload:', verifyError);
+      console.error('❌ STEP 1 FAILED: Password verification failed - BLOCKING upload:', verifyError);
       // ALWAYS throw - don't proceed with upload if password is invalid
       throw verifyError;
+    }
+    
+    // Only proceed if verification passed
+    if (!verificationPassed) {
+      throw new Error('Password verification failed. Cannot proceed with upload.');
     }
     
     const formData = new FormData();
