@@ -154,10 +154,14 @@ app.use('*', (req, res) => {
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
+  const apiUrl = process.env.NODE_ENV === 'production' 
+    ? `https://reps-dz.onrender.com`
+    : `http://localhost:${PORT}`;
+  
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-  console.log(`🔗 API URL: http://localhost:${PORT}`);
-  console.log(`📸 Images served from: http://localhost:${PORT}/uploads`);
+  console.log(`🔗 API URL: ${apiUrl}`);
+  console.log(`📸 Images served from: ${apiUrl}/uploads`);
   console.log(`🗄️  Database: MongoDB connected`);
 });
 
