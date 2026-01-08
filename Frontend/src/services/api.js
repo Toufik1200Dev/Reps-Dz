@@ -72,7 +72,6 @@ export const productsAPI = {
       const response = await fetch(`${API_BASE_URL}/products?${queryString}`);
 
       if (!response.ok) {
-        const errorText = await response.text();
         throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`);
       }
       
