@@ -29,12 +29,18 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
       // Upload sequentially or parallel
       for (const file of files) {
         const res = await productsAPI.uploadImage(file);
+        console.log('📸 Upload response:', res);
+        
         // Backend returns: { success: true, data: { url: ... } }
-        const url = res.data?.url || res.url;
+        const url = res.data?.url || res.url || (res.data && res.data);
+        console.log('🔗 Extracted URL:', url);
+        
         if (url) {
+          console.log('✅ Calling onUpload with URL:', url);
           onUpload(url);
         } else {
           console.error('❌ No URL in upload response:', res);
+          alert('Image uploaded but URL not found. Response: ' + JSON.stringify(res));
         }
       }
     } catch (error) {
@@ -66,12 +72,20 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
 
       {/* Preview Area for Single Image */}
       {showPreview && imageUrl && !multiple && (
-        <div className="relative w-32 h-32 mb-3 group">
-          <img src={imageUrl} alt="Preview" className="w-full h-full object-cover rounded-lg border-2 border-gray-200 shadow-sm" />
+        <div className="relative w-40 h-40 mb-3 group">
+          <img 
+            src={imageUrl} 
+            alt="Preview" 
+            className="w-full h-full object-cover rounded-lg border-2 border-gray-200 shadow-sm"
+            onError={(e) => {
+              console.error('❌ Image load error:', imageUrl);
+              e.target.style.display = 'none';
+            }}
+          />
           <button
             type="button"
             onClick={onRemove}
-            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
           >
             <CloseIcon fontSize="small" />
           </button>
@@ -143,13 +157,24 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
   const handleChange = (path, value) => {
     setFormData(prev => {
       const newData = { ...prev };
-      // Handle simplified nested updates
+      // Handle nested paths like 'images.main' or 'images.gallery'
       if (path.includes('.')) {
-        const [parent, child] = path.split('.');
-        newData[parent] = { ...newData[parent], [child]: value };
+        const parts = path.split('.');
+        if (parts.length === 2) {
+          const [parent, child] = parts;
+          newData[parent] = { ...newData[parent], [child]: value };
+        } else if (parts.length === 3) {
+          // Handle deeper nesting like 'variants.sizes'
+          const [parent, child, grandchild] = parts;
+          newData[parent] = { 
+            ...newData[parent], 
+            [child]: { ...newData[parent]?.[child], [grandchild]: value }
+          };
+        }
       } else {
         newData[path] = value;
       }
+      console.log('🔄 handleChange:', { path, value, newData });
       return newData;
     });
   };
@@ -472,16 +497,24 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
             <div className="border-t border-gray-100 pt-6">
               <label className="block text-sm font-bold mb-4 text-gray-700">Gallery Images</label>
               <div className="grid grid-cols-3 gap-4 mb-4">
-                {formData.images.gallery && formData.images.gallery.length > 0 && formData.images.gallery.map((url, idx) => (
+                {formData.images?.gallery && formData.images.gallery.length > 0 && formData.images.gallery.map((url, idx) => (
                   <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group border-2 border-gray-200 shadow-sm">
-                    <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                    <img 
+                      src={url} 
+                      alt={`Gallery ${idx + 1}`} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('❌ Gallery image load error:', url);
+                        e.target.style.display = 'none';
+                      }}
+                    />
                     <button
                       type="button"
                       onClick={() => {
                         const newGallery = formData.images.gallery.filter((_, i) => i !== idx);
                         handleChange('images.gallery', newGallery);
                       }}
-                      className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
+                      className="absolute top-1 right-1 bg-red-600 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10 hover:bg-red-700"
                     >
                       <CloseIcon fontSize="small" />
                     </button>
