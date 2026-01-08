@@ -68,14 +68,6 @@ api.interceptors.response.use(
   }
 );
 
-// Helper function to handle admin auth errors
-const handleAdminAuthError = (error) => {
-  if (error.response?.status === 403 || error.response?.status === 401) {
-    localStorage.removeItem('adminPassword');
-    throw new Error('Invalid admin password. Please log in again.');
-  }
-  throw error;
-};
 
 // Auth API
 export const authAPI = {
