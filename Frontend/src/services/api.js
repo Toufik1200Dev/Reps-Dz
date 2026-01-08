@@ -162,21 +162,9 @@ export const productsAPI = {
     formData.append('image', file);
 
     try {
-      // Get admin password and explicitly set header to ensure correct case
-      const adminPassword = localStorage.getItem('adminPassword');
-      const config = {
-        headers: {
-          // Let axios set Content-Type automatically for FormData (it will set multipart/form-data with boundary)
-        }
-      };
-      
-      // Explicitly set x-admin-password header (Axios interceptor will also add it, but being explicit here)
-      if (adminPassword) {
-        config.headers['x-admin-password'] = adminPassword.trim();
-      }
-      
-      // Axios automatically sets Content-Type to multipart/form-data for FormData
-      const response = await api.post('/upload/image', formData, config);
+      // The axios interceptor will automatically add x-admin-password header
+      // For FormData, we must NOT set Content-Type - let axios set it automatically with boundary
+      const response = await api.post('/upload/image', formData);
       return response.data;
     } catch (error) {
       console.error('Image upload error:', error);
