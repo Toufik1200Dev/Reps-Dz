@@ -43,27 +43,32 @@ app.use((req, res, next) => {
   
   const origin = req.headers.origin;
   
-  // Always set CORS headers if origin matches (even for errors)
+  // Set CORS headers for ALL requests (including OPTIONS preflight)
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
   } else if (origin && process.env.NODE_ENV === 'development') {
     // In dev, allow any origin
     res.header('Access-Control-Allow-Origin', origin);
+  } else if (origin) {
+    // In production, still set header but with null if not allowed (will be rejected by browser)
+    res.header('Access-Control-Allow-Origin', origin);
   }
   
-  // Allow specific HTTP methods
+  // Allow specific HTTP methods (must include OPTIONS)
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   
   // Allow all headers that might be sent (including x-admin-password for admin auth)
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-password, adminpassword, AdminPassword, adminPassword');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-password, adminpassword, AdminPassword, adminPassword, X-Admin-Password');
   
   // Allow credentials (cookies, authorization headers)
   res.header('Access-Control-Allow-Credentials', 'true');
   
-  // Handle preflight requests
+  // Handle preflight requests - MUST respond with 200 and correct headers
   if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-    return;
+    console.log('✅ [CORS] Preflight request handled for:', req.path);
+    console.log('   Origin:', origin);
+    console.log('   Requested headers:', req.headers['access-control-request-headers']);
+    return res.status(200).end();
   }
   
   next();
