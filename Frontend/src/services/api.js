@@ -212,7 +212,7 @@ export const productsAPI = {
         const hint = verifyData.hint || '';
         alert(`❌ Authentication Failed\n\n${errorMsg}\n${hint}\n\nYour stored password doesn't match the server.\n\nPlease:\n1. Go to the admin login page\n2. Log in with the correct password from Render\n3. Try uploading again.`);
         
-        throw new Error(`${errorMsg}. ${hint} Please log in again with the correct password.`);
+        throw new Error(`Invalid admin password. ${hint} Please log in again with the correct password: toUfik99T@`);
       }
       
       verificationPassed = true;
