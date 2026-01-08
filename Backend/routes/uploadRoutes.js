@@ -20,10 +20,51 @@ const upload = multer({
 });
 
 // Upload single image to Cloudinary (no auth check - dashboard access is sufficient)
-router.post('/image', upload.single('image'), async (req, res) => {
+router.post('/image', (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      // Handle multer errors
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({
+            success: false,
+            message: 'File too large. Maximum size is 5MB.'
+          });
+        }
+        return res.status(400).json({
+          success: false,
+          message: 'File upload error: ' + err.message
+        });
+      }
+      // Handle file filter errors (e.g., wrong file type)
+      if (err.message && err.message.includes('Only image files')) {
+        return res.status(400).json({
+          success: false,
+          message: err.message
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'File upload error: ' + (err.message || 'Unknown error')
+      });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: 'No image file provided' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'No image file provided. Please select an image file.' 
+      });
+    }
+    
+    // Verify file was parsed correctly
+    if (!req.file.buffer || req.file.buffer.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid file: File appears to be empty.'
+      });
     }
     
     // Upload to Cloudinary
