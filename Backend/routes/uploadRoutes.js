@@ -43,26 +43,22 @@ router.post('/image', adminAuth, upload.single('image'), async (req, res) => {
     console.log('✅ File received, uploading to Cloudinary...');
     
     // Upload to Cloudinary
-    const result = await CloudinaryService.uploadImage(req.file.buffer, {
-      folder: 'titoubarz/products',
-      transformation: [
-        { width: 800, height: 800, crop: 'limit' },
-        { quality: 'auto:good' }
-      ]
-    });
+    // uploadImage(file, folder) - folder is a string, not an options object
+    const result = await CloudinaryService.uploadImage(req.file.buffer, 'titoubarz/products');
 
-    console.log('✅ Image uploaded successfully:', result.secure_url);
+    console.log('✅ Image uploaded successfully:', result.url);
+    console.log('✅ Full result object:', JSON.stringify(result, null, 2));
     
     res.json({
       success: true,
       message: 'Image uploaded successfully',
       data: {
-        url: result.secure_url,
-        publicId: result.public_id,
+        url: result.url,  // CloudinaryService returns 'url', not 'secure_url'
+        publicId: result.publicId,
         width: result.width,
         height: result.height,
         format: result.format,
-        size: result.bytes
+        size: result.size
       }
     });
 
