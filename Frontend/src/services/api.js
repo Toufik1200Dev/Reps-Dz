@@ -167,8 +167,19 @@ export const productsAPI = {
       const response = await api.post('/upload/image', formData);
       return response.data;
     } catch (error) {
-      console.error('Image upload error:', error);
-      throw error;
+      // Extract detailed error message from response
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Unknown error';
+      console.error('Image upload error:', {
+        message: errorMessage,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      
+      // Create a more descriptive error
+      const enhancedError = new Error(errorMessage);
+      enhancedError.status = error.response?.status;
+      enhancedError.data = error.response?.data;
+      throw enhancedError;
     }
   }
 };

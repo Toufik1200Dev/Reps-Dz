@@ -10,65 +10,122 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
   fileFilter: (req, file, cb) => {
+    // Log file details
+    console.log('📎 Multer file filter:', {
+      fieldname: file.fieldname,
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      encoding: file.encoding
+    });
+    
     // Check if file is an image
-    if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype && file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
+      console.error('❌ Invalid file type:', file.mimetype);
       cb(new Error('Only image files are allowed!'), false);
     }
   },
 });
 
-// Upload single image to Cloudinary (no auth check - dashboard access is sufficient)
-router.post('/image', (req, res, next) => {
-  upload.single('image')(req, res, (err) => {
-    if (err) {
-      // Handle multer errors
-      if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({
-            success: false,
-            message: 'File too large. Maximum size is 5MB.'
-          });
-        }
+// Error handling middleware for multer
+const handleMulterError = (err, req, res, next) => {
+  if (err) {
+    console.error('❌ Multer error:', {
+      name: err.name,
+      code: err.code,
+      message: err.message,
+      field: err.field
+    });
+    
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({
           success: false,
-          message: 'File upload error: ' + err.message
+          message: 'File too large. Maximum size is 5MB.'
         });
       }
-      // Handle file filter errors (e.g., wrong file type)
-      if (err.message && err.message.includes('Only image files')) {
+      if (err.code === 'LIMIT_FILE_COUNT') {
         return res.status(400).json({
           success: false,
-          message: err.message
+          message: 'Too many files. Maximum is 1 file.'
+        });
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({
+          success: false,
+          message: `Unexpected file field: ${err.field}. Expected field name: "image".`
         });
       }
       return res.status(400).json({
         success: false,
-        message: 'File upload error: ' + (err.message || 'Unknown error')
+        message: 'File upload error: ' + err.message,
+        code: err.code
       });
     }
-    next();
-  });
-}, async (req, res) => {
+    // Handle file filter errors
+    if (err.message && err.message.includes('Only image files')) {
+      return res.status(400).json({
+        success: false,
+        message: err.message
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: 'File upload error: ' + (err.message || 'Unknown error')
+    });
+  }
+  next();
+};
+
+// Upload single image to Cloudinary (no auth check - dashboard access is sufficient)
+router.post('/image', upload.single('image'), handleMulterError, async (req, res) => {
   try {
+    // Log request details for debugging
+    console.log('📤 Image upload request received:', {
+      hasFile: !!req.file,
+      fileField: req.file?.fieldname,
+      fileName: req.file?.originalname,
+      fileSize: req.file?.size,
+      fileMimeType: req.file?.mimetype,
+      bufferLength: req.file?.buffer?.length,
+      contentType: req.headers['content-type'],
+      contentLength: req.headers['content-length']
+    });
+
     if (!req.file) {
+      // Check if multer error occurred (it would be in req.fileError)
+      console.error('❌ No file received in request');
+      console.error('Request body keys:', Object.keys(req.body));
+      console.error('Request files:', req.files);
       return res.status(400).json({ 
         success: false,
-        message: 'No image file provided. Please select an image file.' 
+        message: 'No image file provided. Please ensure you are uploading a valid image file with the field name "image".' 
       });
     }
     
     // Verify file was parsed correctly
     if (!req.file.buffer || req.file.buffer.length === 0) {
+      console.error('❌ File buffer is empty');
       return res.status(400).json({
         success: false,
         message: 'Invalid file: File appears to be empty.'
       });
     }
+
+    // Verify mimetype
+    if (!req.file.mimetype || !req.file.mimetype.startsWith('image/')) {
+      console.error('❌ Invalid file type:', req.file.mimetype);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid file type. Only image files are allowed.'
+      });
+    }
     
     // Upload to Cloudinary
     const result = await CloudinaryService.uploadImage(req.file.buffer, 'titoubarz/products');
+    
+    console.log('✅ Image uploaded successfully:', result.url);
     
     res.json({
       success: true,
@@ -84,7 +141,7 @@ router.post('/image', (req, res, next) => {
     });
 
   } catch (error) {
-    console.error('Image upload error:', error);
+    console.error('❌ Image upload error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to upload image',
