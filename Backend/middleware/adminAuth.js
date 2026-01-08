@@ -1,32 +1,35 @@
+/**
+ * Admin Authentication Middleware
+ * Validates admin password from x-admin-password header
+ * Compares against process.env.ADMIN_PASSWORD
+ */
 const adminAuth = (req, res, next) => {
-  // Read admin password from x-admin-password header (Express normalizes to lowercase)
-  // Also check legacy header names for backward compatibility
-  const adminPassword = req.headers['x-admin-password'] || 
-                       req.headers['x-admin-password'] ||
-                       req.headers.adminpassword || 
-                       req.headers['adminpassword'] || 
-                       req.headers['admin-password'];
+  // Read password from x-admin-password header (Express normalizes headers to lowercase)
+  const password = req.headers['x-admin-password'] || 
+                   req.headers.adminpassword; // Legacy support
   
-  // Debug logging
-  console.log('🔐 Admin auth check:', {
+  // TEMPORARY DEBUG LOGS - Remove after fix
+  const expectedPassword = process.env.ADMIN_PASSWORD;
+  console.log('🔐 [DEBUG] Admin auth check:', {
     path: req.path,
     method: req.method,
-    hasAdminPassword: !!adminPassword,
-    adminPasswordLength: adminPassword?.length || 0,
-    headerKeys: Object.keys(req.headers).filter(h => h.toLowerCase().includes('admin') || h.toLowerCase().includes('x-admin'))
+    hasPassword: !!password,
+    receivedLength: password?.length || 0,
+    expectedLength: expectedPassword?.length || 0,
+    receivedEndsWith: password ? password.substring(password.length - 2) : 'none',
+    expectedEndsWith: expectedPassword ? expectedPassword.substring(expectedPassword.length - 2) : 'none'
   });
   
-  if (!adminPassword) {
-    console.log('❌ Admin auth failed: No password header found');
-    console.log('   All header keys:', Object.keys(req.headers));
-    return res.status(401).json({
+  // Validate password exists
+  if (!password) {
+    console.log('❌ [DEBUG] No password header found');
+    return res.status(403).json({
       success: false,
-      message: 'Admin password required'
+      message: 'Admin session expired. Please log in again.'
     });
   }
 
-  const expectedPassword = process.env.ADMIN_PASSWORD;
-  
+  // Validate ADMIN_PASSWORD is set
   if (!expectedPassword) {
     console.error('❌ ADMIN_PASSWORD environment variable not set');
     return res.status(500).json({
@@ -36,24 +39,33 @@ const adminAuth = (req, res, next) => {
   }
 
   // Trim both for comparison (handle whitespace issues)
-  const trimmedPassword = adminPassword.trim();
+  const trimmedPassword = password.trim();
   const trimmedExpected = expectedPassword.trim();
   
+  // TEMPORARY DEBUG - Remove after fix
+  console.log('🔐 [DEBUG] Password comparison:', {
+    received: trimmedPassword.substring(0, 2) + '***' + trimmedPassword.substring(trimmedPassword.length - 2),
+    expected: trimmedExpected.substring(0, 2) + '***' + trimmedExpected.substring(trimmedExpected.length - 2),
+    receivedLength: trimmedPassword.length,
+    expectedLength: trimmedExpected.length,
+    match: trimmedPassword === trimmedExpected
+  });
+  
+  // Validate exact match
   if (trimmedPassword !== trimmedExpected) {
-    console.log('❌ Admin password mismatch in middleware');
-    console.log('   Received password length:', trimmedPassword.length);
-    console.log('   Expected password length:', trimmedExpected.length);
-    console.log('   Received ends with:', trimmedPassword.substring(trimmedPassword.length - 2));
-    console.log('   Expected ends with:', trimmedExpected.substring(trimmedExpected.length - 2));
+    console.log('❌ [DEBUG] Password mismatch');
     return res.status(403).json({
       success: false,
-      message: 'Invalid admin password',
-      hint: `Expected password length: ${trimmedExpected.length} characters. Please log in again.`
+      message: 'Admin session expired. Please log in again.'
     });
   }
   
-  console.log('✅ Admin password verified in middleware');
+  // Validate length (should be 10 characters)
+  if (trimmedExpected.length !== 10) {
+    console.warn('⚠️ [DEBUG] Expected password length is not 10:', trimmedExpected.length);
+  }
 
+  console.log('✅ [DEBUG] Admin password verified');
   next();
 };
 
