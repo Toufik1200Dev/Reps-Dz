@@ -168,32 +168,53 @@ export const productsAPI = {
       type: file.type,
       size: file.size
     });
-    console.log('🚀 Frontend: API URL:', `${API_BASE_URL}/upload/image`);
-    console.log('🚀 Frontend: Auth headers:', getAuthHeaders());
+    
+    // Get admin password from localStorage
+    const adminPassword = localStorage.getItem('adminPassword');
+    
+    if (!adminPassword) {
+      console.error('❌ No admin password found in localStorage!');
+      throw new Error('Admin authentication required. Please log in to the admin panel first.');
+    }
+    
+    // Verify password is still valid before uploading
+    try {
+      console.log('🔐 Verifying admin password before upload...');
+      const verifyResponse = await fetch(`${API_BASE_URL}/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: adminPassword })
+      });
+      
+      const verifyData = await verifyResponse.json();
+      
+      if (!verifyData.success) {
+        console.error('❌ Stored password is invalid! Clearing localStorage...');
+        localStorage.removeItem('adminPassword');
+        throw new Error('Your admin session has expired or the password changed. Please log in again.');
+      }
+      
+      console.log('✅ Admin password verified, proceeding with upload...');
+    } catch (verifyError) {
+      if (verifyError.message.includes('session has expired')) {
+        throw verifyError;
+      }
+      console.warn('⚠️ Could not verify password, proceeding anyway...', verifyError);
+    }
     
     const formData = new FormData();
     formData.append('image', file);
 
     try {
-      console.log('🚀 Frontend: Sending request...');
+      console.log('🚀 Frontend: Sending upload request...');
       
-      // Get auth headers (admin password)
-      const authHeaders = getAuthHeaders();
-      console.log('🚀 Frontend: Auth headers:', authHeaders);
-      
-      if (!authHeaders.adminpassword && !authHeaders.AdminPassword && !authHeaders.adminPassword) {
-        console.error('❌ No admin password in headers! User must be logged in.');
-        throw new Error('Admin authentication required. Please log in first.');
-      }
-      
-      // Don't set Content-Type for FormData - browser will set it automatically with boundary
-      // But we MUST include our custom headers
+      // Use Headers API to properly set custom headers with FormData
       const headers = new Headers();
-      if (authHeaders.adminpassword) headers.append('adminpassword', authHeaders.adminpassword);
-      if (authHeaders.AdminPassword) headers.append('AdminPassword', authHeaders.AdminPassword);
-      if (authHeaders.adminPassword) headers.append('adminPassword', authHeaders.adminPassword);
+      headers.append('adminpassword', adminPassword);
+      headers.append('AdminPassword', adminPassword);
+      headers.append('adminPassword', adminPassword);
       
-      console.log('🚀 Frontend: Final headers being sent:', Object.fromEntries(headers.entries()));
+      console.log('🚀 Frontend: Upload headers prepared');
       
       const response = await fetch(`${API_BASE_URL}/upload/image`, {
         method: 'POST',
