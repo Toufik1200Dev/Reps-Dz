@@ -57,8 +57,8 @@ app.use((req, res, next) => {
   // Allow specific HTTP methods (must include OPTIONS)
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   
-  // Allow headers (standardized to x-admin-password only)
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-password');
+  // Allow headers (standardized to x-admin-password, but also allow legacy adminpassword for compatibility)
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-password, adminpassword, X-Admin-Password, AdminPassword');
   
   // Allow credentials (cookies, authorization headers)
   res.header('Access-Control-Allow-Credentials', 'true');
