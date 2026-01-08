@@ -170,6 +170,7 @@ export const productsAPI = {
     });
     
     // Get admin password from localStorage
+    // If user is already logged into admin dashboard, trust that authentication
     const adminPassword = localStorage.getItem('adminPassword');
     
     if (!adminPassword) {
@@ -178,55 +179,8 @@ export const productsAPI = {
       throw new Error('Admin authentication required. Please log in to the admin panel first.');
     }
     
-    // DEBUG: Log what password we have stored
-    console.log('🔐 [DEBUG] Password from localStorage:', {
-      length: adminPassword.length,
-      preview: adminPassword.substring(0, 2) + '***' + adminPassword.substring(adminPassword.length - 2),
-      fullPassword: adminPassword // TEMPORARY - Remove after debugging
-    });
-    
-    // Verify password is still valid before uploading - THIS IS MANDATORY
-    console.log('🔐 STEP 1: Verifying admin password before upload...');
-    console.log('   Password length:', adminPassword.length);
-    console.log('   Password ends with:', adminPassword.substring(adminPassword.length - 2));
-    
-    let verificationPassed = false;
-    
-    try {
-      const verifyResponse = await fetch(`${API_BASE_URL}/admin/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: adminPassword })
-      });
-      
-      const verifyData = await verifyResponse.json();
-      console.log('🔐 Verification response:', verifyData);
-      
-      if (!verifyResponse.ok || !verifyData.success) {
-        console.error('❌ Password verification FAILED!');
-        console.error('   Status:', verifyResponse.status);
-        console.error('   Response:', verifyData);
-        localStorage.removeItem('adminPassword');
-        
-        const errorMsg = verifyData.message || 'Invalid password';
-        const hint = verifyData.hint || '';
-        alert(`❌ Authentication Failed\n\n${errorMsg}\n${hint}\n\nYour stored password doesn't match the server.\n\nPlease:\n1. Go to the admin login page\n2. Log in with the correct password from Render\n3. Try uploading again.`);
-        
-        throw new Error(`Invalid admin password. ${hint} Please log in again with the correct password: toUfik99T@`);
-      }
-      
-      verificationPassed = true;
-      console.log('✅ STEP 1 PASSED: Admin password verified, proceeding with upload...');
-    } catch (verifyError) {
-      console.error('❌ STEP 1 FAILED: Password verification failed - BLOCKING upload:', verifyError);
-      // ALWAYS throw - don't proceed with upload if password is invalid
-      throw verifyError;
-    }
-    
-    // Only proceed if verification passed
-    if (!verificationPassed) {
-      throw new Error('Password verification failed. Cannot proceed with upload.');
-    }
+    // No need to verify again - if they're in the admin dashboard, they're authenticated
+    console.log('🚀 Using stored admin password for upload');
     
     const formData = new FormData();
     formData.append('image', file);
