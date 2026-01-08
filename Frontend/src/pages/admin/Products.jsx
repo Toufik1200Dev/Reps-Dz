@@ -26,15 +26,17 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
 
     setUploading(true);
     try {
-      // Upload sequentially or parallel
-      for (const file of files) {
-        const res = await productsAPI.uploadImage(file);
-        console.log('📸 Upload response:', res);
-        console.log('📸 Response type:', typeof res);
-        console.log('📸 Response keys:', Object.keys(res || {}));
+      // Upload all files and collect URLs
+      const uploadPromises = files.map(file => productsAPI.uploadImage(file));
+      const results = await Promise.all(uploadPromises);
+      
+      console.log('📸 All upload responses:', results);
+      
+      // Process each result and call onUpload for each URL
+      results.forEach((res, index) => {
+        console.log(`📸 Upload response ${index + 1}:`, res);
         
         // Backend returns: { success: true, data: { url: ... } }
-        // Try multiple possible response structures
         let url = null;
         if (res && typeof res === 'object') {
           // Try res.data.url (most likely)
@@ -47,17 +49,18 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
           if (!url) url = res.secure_url;
         }
         
-        console.log('🔗 Extracted URL:', url);
-        console.log('🔗 URL type:', typeof url);
+        console.log(`🔗 Extracted URL ${index + 1}:`, url);
         
         if (url && typeof url === 'string' && url.length > 0) {
-          console.log('✅ Calling onUpload with URL:', url);
+          console.log(`✅ Calling onUpload with URL ${index + 1}:`, url);
           onUpload(url);
         } else {
-          console.error('❌ No valid URL in upload response:', res);
-          alert('Image uploaded but URL not found. Check console for details.');
+          console.error(`❌ No valid URL in upload response ${index + 1}:`, res);
         }
-      }
+      });
+      
+      // Reset file input to allow re-uploading the same files
+      e.target.value = '';
     } catch (error) {
       console.error('Upload failed', error);
       

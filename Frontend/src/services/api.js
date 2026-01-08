@@ -272,37 +272,81 @@ export const adminAPI = {
   
   // Products Management
   createProduct: async (productData) => {
+    const adminPassword = localStorage.getItem('adminPassword');
+    if (!adminPassword) {
+      throw new Error('Admin authentication required. Please log in again.');
+    }
+    
+    const headers = new Headers();
+    headers.append('Content-Type', 'application/json');
+    headers.append('x-admin-password', adminPassword.trim());
+    
     const response = await fetch(`${API_BASE_URL}/products`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders()
-      },
+      headers: headers,
       body: JSON.stringify(productData)
     });
-    if (!response.ok) throw new Error('Failed to create product');
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to create product' }));
+      if (response.status === 403 || response.status === 401) {
+        localStorage.removeItem('adminPassword');
+        throw new Error('Invalid admin password. Please log in again.');
+      }
+      throw new Error(errorData.message || 'Failed to create product');
+    }
     return response.json();
   },
 
   updateProduct: async (id, productData) => {
+    const adminPassword = localStorage.getItem('adminPassword');
+    if (!adminPassword) {
+      throw new Error('Admin authentication required. Please log in again.');
+    }
+    
+    const headers = new Headers();
+    headers.append('Content-Type', 'application/json');
+    headers.append('x-admin-password', adminPassword.trim());
+    
     const response = await fetch(`${API_BASE_URL}/products/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders()
-      },
+      headers: headers,
       body: JSON.stringify(productData)
     });
-    if (!response.ok) throw new Error('Failed to update product');
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to update product' }));
+      if (response.status === 403 || response.status === 401) {
+        localStorage.removeItem('adminPassword');
+        throw new Error('Invalid admin password. Please log in again.');
+      }
+      throw new Error(errorData.message || 'Failed to update product');
+    }
     return response.json();
   },
 
   deleteProduct: async (id) => {
+    const adminPassword = localStorage.getItem('adminPassword');
+    if (!adminPassword) {
+      throw new Error('Admin authentication required. Please log in again.');
+    }
+    
+    const headers = new Headers();
+    headers.append('x-admin-password', adminPassword.trim());
+    
     const response = await fetch(`${API_BASE_URL}/products/${id}`, {
       method: 'DELETE',
-      headers: getAuthHeaders()
+      headers: headers
     });
-    if (!response.ok) throw new Error('Failed to delete product');
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to delete product' }));
+      if (response.status === 403 || response.status === 401) {
+        localStorage.removeItem('adminPassword');
+        throw new Error('Invalid admin password. Please log in again.');
+      }
+      throw new Error(errorData.message || 'Failed to delete product');
+    }
     return response.json();
   },
 
