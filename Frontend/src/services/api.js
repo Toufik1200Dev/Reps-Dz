@@ -176,9 +176,20 @@ export const productsAPI = {
 
     try {
       console.log('🚀 Frontend: Sending request...');
+      
+      // Get auth headers (admin password)
+      const authHeaders = getAuthHeaders();
+      console.log('🚀 Frontend: Auth headers:', authHeaders);
+      
+      // Don't set Content-Type for FormData - browser will set it automatically with boundary
+      const headers = {
+        ...authHeaders
+        // Note: We intentionally DON'T set Content-Type - browser sets it automatically for FormData
+      };
+      
       const response = await fetch(`${API_BASE_URL}/upload/image`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: headers,
         body: formData
       });
 
@@ -429,7 +440,7 @@ export const apiUtils = {
     const total = subtotal + deliveryFee;
 
     return {
-      items,
+      items: products,
       shippingAddress: {
         firstName: shippingInfo.firstName,
         lastName: shippingInfo.lastName,

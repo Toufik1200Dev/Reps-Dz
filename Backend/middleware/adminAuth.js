@@ -1,13 +1,17 @@
 const adminAuth = (req, res, next) => {
-  const adminPassword = req.headers.adminpassword;
+  // Check for admin password in multiple header formats (headers are case-insensitive in Express)
+  // Express normalizes headers to lowercase, but check multiple variants just in case
+  const adminPassword = req.headers.adminpassword || req.headers['adminpassword'] || req.headers['admin-password'] || req.headers['AdminPassword'] || req.headers['Admin-Password'];
   
   if (!adminPassword) {
+    console.log('❌ Admin auth failed: No password header found');
+    console.log('   Request headers keys:', Object.keys(req.headers).filter(h => h.toLowerCase().includes('admin')));
     return res.status(401).json({
       success: false,
       message: 'Admin password required'
     });
   }
-  
+
   const expectedPassword = process.env.ADMIN_PASSWORD;
   
   if (!expectedPassword) {
@@ -17,14 +21,19 @@ const adminAuth = (req, res, next) => {
       message: 'Server configuration error: ADMIN_PASSWORD not set'
     });
   }
+
+  // Trim both for comparison (handle whitespace issues)
+  const trimmedPassword = adminPassword.trim();
+  const trimmedExpected = expectedPassword.trim();
   
-  if (adminPassword !== expectedPassword) {
+  if (trimmedPassword !== trimmedExpected) {
+    console.log('❌ Admin password mismatch in middleware');
     return res.status(403).json({
       success: false,
       message: 'Invalid admin password'
     });
   }
-  
+
   next();
 };
 
