@@ -39,7 +39,20 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
       }
     } catch (error) {
       console.error('Upload failed', error);
-      alert('Image upload failed');
+      
+      // Show detailed error message
+      let errorMessage = 'Image upload failed';
+      
+      if (error.message) {
+        errorMessage = error.message;
+        
+        // If it's an authentication error, make it more prominent
+        if (error.message.includes('password') || error.message.includes('Authentication')) {
+          errorMessage = `🔐 Authentication Error\n\n${error.message}\n\nPlease log out and log back in with the correct admin password.`;
+        }
+      }
+      
+      alert(errorMessage);
     } finally {
       setUploading(false);
     }
