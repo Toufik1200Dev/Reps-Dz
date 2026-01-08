@@ -572,7 +572,8 @@ export default function ProductsPage() {
       setLoading(true);
       const res = await productsAPI.getAllProducts();
       // getAllProducts uses fetch, so res is the JSON object directly (not wrapped in data)
-      setProducts(res.products || []);
+      const productsList = res.products || [];
+      setProducts(productsList);
     } catch (error) {
       console.error('Failed to load products', error);
       alert('Failed to load products: ' + (error.message || 'Unknown error'));
@@ -623,8 +624,20 @@ export default function ProductsPage() {
   };
 
   const filteredProducts = useMemo(() => {
-    const q = search.toLowerCase();
-    return products.filter(p => p.name.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q));
+    if (!products || products.length === 0) {
+      return [];
+    }
+    
+    if (!search || search.trim() === '') {
+      return products;
+    }
+    
+    const q = search.toLowerCase().trim();
+    return products.filter(p => {
+      const name = p?.name?.toLowerCase() || '';
+      const category = p?.category?.toLowerCase() || '';
+      return name.includes(q) || category.includes(q);
+    });
   }, [products, search]);
 
   return (
@@ -705,10 +718,10 @@ export default function ProductsPage() {
                     </td>
                     <td className="p-4">
                       <div className="font-bold text-gray-900 font-mono">
-                        {product.finalPrice ? product.finalPrice.toLocaleString() : product.price?.toLocaleString()} DA
+                        {product.finalPrice ? product.finalPrice.toLocaleString() : (product.price ? product.price.toLocaleString() : '0')} DA
                       </div>
-                      <div className={`text-xs font-bold ${product.stock > 10 ? 'text-green-600' : 'text-orange-500'}`}>
-                        {product.stock} items left
+                      <div className={`text-xs font-bold ${(product.stock || 0) > 10 ? 'text-green-600' : 'text-orange-500'}`}>
+                        {product.stock || 0} items left
                       </div>
                     </td>
                     <td className="p-4">
