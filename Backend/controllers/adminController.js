@@ -27,18 +27,22 @@ const verifyAdminPassword = async (req, res) => {
       });
     }
 
-    // Debug logging (remove in production if needed)
-    console.log('🔐 Admin login attempt - Password length:', password?.length, 'Expected length:', expectedPassword?.length);
+    // Debug logging
+    console.log('🔐 Admin login attempt received');
+    console.log('   Received password length:', password?.length || 0);
+    console.log('   Expected password length:', expectedPassword?.length || 0);
+    console.log('   Passwords match:', password === expectedPassword);
     
+    // Strict comparison - no fallback
     if (password !== expectedPassword) {
-      console.log('❌ Admin password mismatch');
+      console.log('❌ Admin password mismatch - REJECTED');
       return res.status(403).json({
         success: false,
         message: 'Invalid admin password'
       });
     }
 
-    console.log('✅ Admin password verified successfully');
+    console.log('✅ Admin password verified successfully - APPROVED');
 
     // Password is correct
     res.status(200).json({

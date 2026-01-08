@@ -206,24 +206,35 @@ export const productsAPI = {
 
 // Admin API (comprehensive admin functions)
 export const adminAPI = {
-  // Admin Authentication - Verify password with backend
+  // Admin Authentication - Verify password with backend (NO FALLBACK)
   login: async (password) => {
     try {
-      console.log('🔐 Attempting admin login...');
+      console.log('🔐 Attempting admin login with backend...');
+      console.log('   Password provided:', password ? `***${password.substring(password.length - 2)}` : 'empty');
+      
       const response = await api.post('/admin/login', { password });
       console.log('📡 Admin login response:', response.data);
       
       if (response.data && response.data.success) {
         // Store admin password in localStorage for future requests
         localStorage.setItem('adminPassword', password);
-        console.log('✅ Admin login successful');
+        console.log('✅ Admin login successful - password stored');
         return { success: true, message: 'Admin logged in successfully' };
       }
+      
       console.log('❌ Admin login failed:', response.data?.message);
+      // Clear any old password on failure
+      localStorage.removeItem('adminPassword');
       return { success: false, message: response.data?.message || 'Invalid password' };
     } catch (error) {
-      console.error('❌ Admin login error:', error);
-      const message = error.response?.data?.message || error.message || 'Error verifying admin password';
+      console.error('❌ Admin login API error:', error);
+      console.error('   Error response:', error.response?.data);
+      console.error('   Error status:', error.response?.status);
+      
+      // Clear password on API error (don't allow old passwords)
+      localStorage.removeItem('adminPassword');
+      
+      const message = error.response?.data?.message || error.message || 'Error verifying admin password. Please check your connection.';
       return { success: false, message };
     }
   },

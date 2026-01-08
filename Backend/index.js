@@ -42,15 +42,20 @@ app.use((req, res, next) => {
     : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'];
   
   const origin = req.headers.origin;
+  
+  // Always set CORS headers if origin matches (even for errors)
   if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else if (origin && process.env.NODE_ENV === 'development') {
+    // In dev, allow any origin
     res.header('Access-Control-Allow-Origin', origin);
   }
   
   // Allow specific HTTP methods
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   
-  // Allow all headers that might be sent
-  res.header('Access-Control-Allow-Headers', '*');
+  // Allow all headers that might be sent (including adminpassword)
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, adminpassword, AdminPassword, adminPassword');
   
   // Allow credentials (cookies, authorization headers)
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -120,9 +125,21 @@ app.use('/api/calories', calorieRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/orders', adminAuth, orderRoutes);
 
-// Error handling middleware
+// Error handling middleware (must set CORS headers)
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err.stack);
+  
+  // Set CORS headers even on error
+  const allowedOrigins = process.env.NODE_ENV === 'production' 
+    ? ['https://reps-dz.web.app', 'https://reps-dz.firebaseapp.com']
+    : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
   res.status(500).json({ 
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
