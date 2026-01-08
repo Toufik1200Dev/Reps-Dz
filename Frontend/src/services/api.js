@@ -11,13 +11,20 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and admin password
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Add admin password header if available (for admin routes)
+    const adminPassword = localStorage.getItem('adminPassword');
+    if (adminPassword) {
+      config.headers['x-admin-password'] = adminPassword.trim();
+    }
+    
     return config;
   },
   (error) => {
