@@ -280,7 +280,7 @@ export const productsAPI = {
           
           // Show user-friendly error message
           const hint = errorData.hint ? `\n${errorData.hint}` : '';
-          const userMessage = `Admin session expired. Please log in again.${hint}`;
+          const userMessage = `Invalid admin password. Please log in again.${hint}`;
           
           // Show alert to user
           alert(`🔐 ${userMessage}`);

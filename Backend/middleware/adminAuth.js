@@ -54,7 +54,7 @@ const adminAuth = (req, res, next) => {
     console.log('❌ [DEBUG] No password header found');
     return res.status(403).json({
       success: false,
-      message: 'Admin session expired. Please log in again.'
+      message: 'Invalid admin password. Please log in again.'
     });
   }
 
@@ -85,7 +85,7 @@ const adminAuth = (req, res, next) => {
     console.log('❌ [DEBUG] Password mismatch');
     return res.status(403).json({
       success: false,
-      message: 'Admin session expired. Please log in again.'
+      message: 'Invalid admin password. Please log in again.'
     });
   }
   
