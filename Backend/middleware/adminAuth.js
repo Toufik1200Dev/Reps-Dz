@@ -14,7 +14,7 @@ const adminAuth = (req, res, next) => {
   }
 
   // Trim password if it exists
-  if (password) {
+  if (password && typeof password === 'string') {
     password = password.trim();
   }
 
@@ -22,7 +22,15 @@ const adminAuth = (req, res, next) => {
 
   if (!password) {
     console.error('Admin authentication failed: Missing x-admin-password header');
-    console.error('Request headers:', Object.keys(req.headers).filter(h => h.includes('admin') || h.includes('password') || h.includes('x-')));
+    console.error('Request method:', req.method);
+    console.error('Request path:', req.path);
+    console.error('Available headers containing "x-", "admin", or "password":', 
+      Object.keys(req.headers).filter(h => 
+        h.toLowerCase().includes('admin') || 
+        h.toLowerCase().includes('password') || 
+        h.toLowerCase().startsWith('x-')
+      )
+    );
     return res.status(403).json({
       success: false,
       message: 'Invalid admin password. Please log in again.'
@@ -31,7 +39,12 @@ const adminAuth = (req, res, next) => {
 
   if (password !== expectedPassword) {
     console.error('Admin authentication failed: Password mismatch');
-    console.error('Received length:', password.length, 'Expected length:', expectedPassword.length);
+    console.error('Received password length:', password.length);
+    console.error('Expected password length:', expectedPassword.length);
+    console.error('Received starts with:', password.substring(0, 2));
+    console.error('Expected starts with:', expectedPassword.substring(0, 2));
+    console.error('Received ends with:', password.substring(password.length - 2));
+    console.error('Expected ends with:', expectedPassword.substring(expectedPassword.length - 2));
     return res.status(403).json({
       success: false,
       message: 'Invalid admin password. Please log in again.'

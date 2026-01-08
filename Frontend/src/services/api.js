@@ -21,9 +21,12 @@ api.interceptors.request.use(
     }
     
     // Add admin password header if available (standardized to x-admin-password only)
-    const adminPassword = localStorage.getItem('adminPassword');
-    if (adminPassword) {
-      config.headers['x-admin-password'] = adminPassword.trim();
+    // Only if not already set explicitly in config (for admin routes that set it explicitly)
+    if (!config.headers['x-admin-password']) {
+      const adminPassword = localStorage.getItem('adminPassword');
+      if (adminPassword) {
+        config.headers['x-admin-password'] = adminPassword.trim();
+      }
     }
     
     return config;
@@ -139,16 +142,20 @@ export const productsAPI = {
     
     const trimmedPassword = adminPassword.trim();
     if (!trimmedPassword) {
+      localStorage.removeItem('adminPassword');
       throw new Error('Invalid admin password. Please log in again.');
     }
     
     try {
       // Explicitly set header in config for CORS preflight
-      const response = await api.post('/products', productData, {
+      // Content-Type will be set automatically by axios for JSON data
+      const config = {
         headers: {
           'x-admin-password': trimmedPassword
         }
-      });
+      };
+      
+      const response = await api.post('/products', productData, config);
       return response.data;
     } catch (error) {
       // Log detailed error for debugging
@@ -156,10 +163,21 @@ export const productsAPI = {
         console.error('Failed to create product:', {
           status: error.response.status,
           data: error.response.data,
-          headers: error.response.headers
+          requestUrl: error.config?.url,
+          requestMethod: error.config?.method,
+          sentHeaders: {
+            'x-admin-password': error.config?.headers?.['x-admin-password'] ? 
+              `${error.config.headers['x-admin-password'].substring(0, 2)}*** (length: ${error.config.headers['x-admin-password'].length})` : 
+              'NOT SET'
+          }
         });
+        
+        if (error.response.status === 403) {
+          console.error('Admin auth failed. Check backend logs for password comparison.');
+          localStorage.removeItem('adminPassword');
+        }
       } else {
-        console.error('Failed to create product:', error.message);
+        console.error('Failed to create product (no response):', error.message);
       }
       handleAdminAuthError(error);
       throw error;
