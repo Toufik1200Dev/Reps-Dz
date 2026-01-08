@@ -78,10 +78,12 @@ const adminAuth = (req, res, next) => {
     });
   }
   
-  // Validate length (should be 10 characters)
-  if (trimmedExpected.length !== 10) {
-    console.warn('⚠️ [DEBUG] Expected password length is not 10:', trimmedExpected.length);
-  }
+  // Validate length (log actual length for debugging)
+  console.log('🔐 [DEBUG] Password length check:', {
+    receivedLength: trimmedPassword.length,
+    expectedLength: trimmedExpected.length,
+    note: 'Password length can vary, this is just for debugging'
+  });
 
   console.log('✅ [DEBUG] Admin password verified');
   next();
