@@ -18,7 +18,6 @@ class CloudinaryService {
     try {
       // Check if Cloudinary is configured
       if (!this.hasCloudinaryConfig) {
-        console.log('⚠️ Cloudinary not configured, using local fallback');
         // Return a mock response for development/testing
         return {
           url: 'https://via.placeholder.com/800x600/cccccc/666666?text=Image+Upload+Disabled',
@@ -46,12 +45,6 @@ class CloudinaryService {
       const base64Image = buffer.toString('base64');
       const dataURI = `data:${mimetype};base64,${base64Image}`;
 
-      console.log('📤 Uploading to Cloudinary...', {
-        folder,
-        mimetype,
-        size: buffer.length
-      });
-
       // Upload to Cloudinary
       const result = await cloudinary.uploader.upload(dataURI, {
         folder: folder,
@@ -62,8 +55,6 @@ class CloudinaryService {
           { fetch_format: 'auto' }  // Auto-format (WebP for modern browsers)
         ]
       });
-
-      console.log('✅ Cloudinary upload successful:', result.secure_url);
 
       return {
         url: result.secure_url,
@@ -78,7 +69,6 @@ class CloudinaryService {
       
       // If Cloudinary fails, return a fallback
       if (this.hasCloudinaryConfig) {
-        console.log('🔄 Falling back to placeholder image due to Cloudinary error');
         return {
           url: 'https://via.placeholder.com/800x600/ffcccc/cc0000?text=Upload+Failed',
           publicId: `error-${Date.now()}`,
@@ -96,7 +86,9 @@ class CloudinaryService {
   // Upload multiple images
   async uploadMultipleImages(files, folder = 'products') {
     try {
-      const uploadPromises = files.map(file => this.uploadImage(file, folder));
+      // Ensure folder is a string, not an object
+      const folderPath = typeof folder === 'string' ? folder : 'products';
+      const uploadPromises = files.map(file => this.uploadImage(file, folderPath));
       const results = await Promise.all(uploadPromises);
       return results;
     } catch (error) {
@@ -109,7 +101,6 @@ class CloudinaryService {
   async deleteImage(publicId) {
     try {
       if (!this.hasCloudinaryConfig) {
-        console.log('⚠️ Cloudinary not configured, skipping deletion');
         return { result: 'ok' };
       }
 

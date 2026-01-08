@@ -29,19 +29,6 @@ api.interceptors.request.use(
       }
     }
     
-    // Debug logging for admin routes
-    if (config.url?.includes('/products') && (config.method === 'post' || config.method === 'put' || config.method === 'delete')) {
-      console.log('🔐 Admin request intercepted:', {
-        url: config.url,
-        method: config.method,
-        hasAdminPassword: !!config.headers['x-admin-password'],
-        passwordLength: config.headers['x-admin-password']?.length || 0,
-        passwordPreview: config.headers['x-admin-password'] ? 
-          `${config.headers['x-admin-password'].substring(0, 2)}***${config.headers['x-admin-password'].substring(config.headers['x-admin-password'].length - 1)}` : 
-          'N/A'
-      });
-    }
-    
     return config;
   },
   (error) => {

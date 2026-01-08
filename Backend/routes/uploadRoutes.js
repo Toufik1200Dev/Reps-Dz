@@ -60,13 +60,7 @@ router.post('/images', upload.array('images', 10), async (req, res) => {
     }
 
     const uploadPromises = req.files.map(file => 
-      CloudinaryService.uploadImage(file.buffer, {
-        folder: 'titoubarz/products',
-        transformation: [
-          { width: 800, height: 800, crop: 'limit' },
-          { quality: 'auto:good' }
-        ]
-      })
+      CloudinaryService.uploadImage(file.buffer, 'titoubarz/products')
     );
 
     const results = await Promise.all(uploadPromises);

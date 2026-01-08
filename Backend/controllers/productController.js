@@ -95,56 +95,6 @@ exports.getFeaturedProducts = async (req, res) => {
   }
 };
 
-// Get best offers (products with discounts or special badges)
-exports.getBestOffers = async (req, res) => {
-  try {
-    const limit = parseInt(req.query.limit) || 12;
-    
-    // Find all products first, then filter
-    // ideally filter at database level for performance: { $or: [{ discount: { $gt: 0 } }, { isFeatured: true }] }
-    const products = await Product.find({ 
-        $and: [
-            { inStock: { $ne: false } }, // approximation for inStock check if field missing, or just ignore
-            { $or: [{ discount: { $gt: 0 } }, { isFeatured: true }] }
-        ]
-    })
-    .sort({ discount: -1 })
-    .limit(limit)
-    .lean();
-    
-    // Add logic to populate 'discountPercentage' if needed by frontend, though frontend usually calculates it.
-    // Frontend Home.jsx uses originalPrice to show strike-through. 
-    // Backend Schema lacks originalPrice. It calculates finalPrice.
-    // We should send `price` (base) and `finalPrice` (discounted).
-    // But Frontend expects `price` to be current and `originalPrice` to be old?
-    // Let's check Frontend Home.jsx: 
-    // <span className="font-display font-bold text-xl">{parseFloat(product.price).toLocaleString()} DA</span>
-    // {product.originalPrice && ... line-through ...}
-    
-    // Schema has `price` (Base) and `discount` (%).
-    // So `finalPrice` is the actual selling price?
-    // Wait, Schema:
-    // price: Number (required)
-    // discount: Number (%)
-    // finalPrice: Number (calculated)
-    
-    // If I want to match Frontend expectation:
-    // frontend `price` should be `finalPrice`.
-    // frontend `originalPrice` should be `price`.
-    
-    const mappedProducts = products.map(p => ({
-        ...p,
-        price: p.finalPrice || p.price,
-        originalPrice: p.discount > 0 ? p.price : null,
-        badge: p.discount > 0 ? 'sale' : (p.isFeatured ? 'featured' : '')
-    }));
-    
-    res.json(mappedProducts);
-  } catch (error) {
-    console.error('Error fetching best offers:', error);
-    res.status(500).json({ message: 'Error fetching best offers', error: error.message });
-  }
-};
 
 // @desc    Get single product
 // @route   GET /api/products/:id
@@ -184,8 +134,17 @@ exports.getProductById = getProductById; // Exporting the function
 // Create new product
 exports.createProduct = async (req, res) => {
   try {
-    console.log('🚀 Creating product with data:', req.body);
-    
+    // Validate required fields
+    if (!req.body.name || !req.body.category || !req.body.shortDescription || !req.body.description) {
+      return res.status(400).json({ 
+        message: 'Missing required fields: name, category, shortDescription, and description are required' 
+      });
+    }
+
+    if (req.body.price === undefined || req.body.price === null || req.body.price === '') {
+      return res.status(400).json({ message: 'Price is required' });
+    }
+
     // Parse complex fields if they are strings (JSON)
     let { variants, specifications, tags } = req.body;
     
@@ -202,17 +161,10 @@ exports.createProduct = async (req, res) => {
     
     // Handle image uploads
     if (req.files && req.files.length > 0) {
-       // Separate main image and gallery images if identified by fieldname, 
-       // but typically multer sends array. We will assume first image is main if not specified,
-       // OR frontend sends them with specific field names. 
-       // *Assuming simple array upload for now based on existing multer setup*
-       // Refined logic: Check if frontend can separate them. 
-       // For now, let's assume the first uploaded file is main, others are gallery.
-       
        const uploadedUrls = [];
        
        if (process.env.NODE_ENV === 'production') {
-         const results = await cloudinaryService.uploadMultipleImages(req.files, 'products');
+         const results = await cloudinaryService.uploadMultipleImages(req.files, 'titoubarz/products');
          results.forEach(r => uploadedUrls.push(r.url));
        } else {
          req.files.forEach(f => uploadedUrls.push(`/uploads/${f.filename}`));
@@ -242,20 +194,25 @@ exports.createProduct = async (req, res) => {
         }
       }
     }
+
+    // Validate that main image exists
+    if (!mainImage) {
+      return res.status(400).json({ message: 'Main product image is required' });
+    }
     
     const productData = {
       ...req.body,
-      variants,
-      specifications,
-      tags,
+      variants: variants || { sizes: [], colors: [] },
+      specifications: specifications || {},
+      tags: tags || [],
       images: {
         main: mainImage,
-        gallery: galleryImages
+        gallery: galleryImages || []
       },
       // Ensure numeric fields are numbers
       price: Number(req.body.price),
       discount: Number(req.body.discount || 0),
-      stock: Number(req.body.stock)
+      stock: Number(req.body.stock || 0)
     };
 
     const product = new Product(productData);
@@ -264,6 +221,24 @@ exports.createProduct = async (req, res) => {
     res.status(201).json(savedProduct);
   } catch (error) {
     console.error('❌ Error creating product:', error);
+    
+    // Handle duplicate key error (slug)
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        message: 'Product with similar name already exists. Please use a different name.',
+        error: 'Duplicate slug' 
+      });
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        errors 
+      });
+    }
+    
     res.status(400).json({ message: 'Error creating product', error: error.message });
   }
 };
@@ -343,8 +318,20 @@ exports.updateProduct = async (req, res) => {
       stock: req.body.stock !== undefined ? Number(req.body.stock) : existingProduct.stock
     };
 
-    const product = await Product.findByIdAndUpdate(productId, updateData, { new: true, runValidators: true });
-    res.json(product);
+    // Use findById + save() instead of findByIdAndUpdate to trigger pre-save hooks
+    // This ensures slug uniqueness and finalPrice recalculation
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Update product fields
+    Object.assign(product, updateData);
+    
+    // Save to trigger pre-save hooks (slug uniqueness, finalPrice calculation)
+    const updatedProduct = await product.save();
+    
+    res.json(updatedProduct);
 
   } catch (error) {
     console.error('❌ Error updating product:', error);
@@ -402,7 +389,7 @@ exports.searchProducts = async (req, res) => {
 // Get product categories
 exports.getProductCategories = async (req, res) => {
   try {
-    const categories = await Product.distinct('category').lean();
+    const categories = await Product.distinct('category');
     res.json(categories);
   } catch (error) {
     console.error('Error fetching categories:', error);

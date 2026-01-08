@@ -178,7 +178,6 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
       } else {
         newData[path] = value;
       }
-      console.log('🔄 handleChange:', { path, value, newData });
       return newData;
     });
   };
@@ -254,7 +253,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
                 >
                   <option value="">Select Category</option>
                   <option value="pull up bar">Pull Up Bar</option>
-                  <option value="paralleles">Paralleles</option>
+                  <option value="paralelle">Paralelle</option>
                   <option value="supplements">Supplements</option>
                   <option value="gym">Gym</option>
                   <option value="accessoire">Accessoire</option>

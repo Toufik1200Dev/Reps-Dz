@@ -113,12 +113,22 @@ productSchema.pre('save', async function(next) {
   try {
     // Generate Slug - ensure uniqueness
     if (this.isModified('name') || !this.slug) {
+      if (!this.name || !this.name.trim()) {
+        return next(new Error('Product name is required to generate slug'));
+      }
+      
       let baseSlug = slugify(this.name, { lower: true, strict: true });
+      if (!baseSlug) {
+        // If slugify returns empty (special characters only), use timestamp
+        baseSlug = `product-${Date.now()}`;
+      }
+      
       let slug = baseSlug;
       let counter = 1;
       
-      // Check if slug exists and make it unique
-      while (true) {
+      // Check if slug exists and make it unique (max 100 attempts to prevent infinite loop)
+      let attempts = 0;
+      while (attempts < 100) {
         const existingProduct = await this.constructor.findOne({ slug });
         
         // If no existing product or it's the same product (for updates), use this slug
@@ -129,6 +139,12 @@ productSchema.pre('save', async function(next) {
         // Slug exists for a different product, append counter
         slug = `${baseSlug}-${counter}`;
         counter++;
+        attempts++;
+      }
+      
+      if (attempts >= 100) {
+        // Fallback to timestamp-based slug if too many collisions
+        slug = `${baseSlug}-${Date.now()}`;
       }
       
       this.slug = slug;
