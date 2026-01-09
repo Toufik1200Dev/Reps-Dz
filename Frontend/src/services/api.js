@@ -14,18 +14,22 @@ const api = axios.create({
 // Request interceptor to add auth token and admin password
 api.interceptors.request.use(
   (config) => {
-    // IMPORTANT: For FormData, delete Content-Type to let Axios/browser set it automatically with boundary
-    // Check both config.data and the data passed to transformRequest
-    const isFormData = config.data instanceof FormData || 
-                       (config.transformRequest && config.data instanceof FormData);
+    // CRITICAL: Check for FormData FIRST before any other header manipulation
+    const isFormData = config.data instanceof FormData;
     
     if (isFormData) {
-      // Explicitly remove Content-Type for FormData - let browser set it with boundary
+      // For FormData, NEVER set Content-Type - let browser/Axios set it with boundary
+      // Remove both variations of Content-Type header
       delete config.headers['Content-Type'];
       delete config.headers['content-type'];
-    } else if (!config.headers['Content-Type'] && !config.headers['content-type']) {
-      // Set default Content-Type for non-FormData requests if not already set
-      config.headers['Content-Type'] = 'application/json';
+      delete config.headers.common['Content-Type'];
+      delete config.headers.common['content-type'];
+    } else {
+      // Only set Content-Type for non-FormData requests
+      // Check if it's already set or if we should set default
+      if (!config.headers['Content-Type'] && !config.headers['content-type']) {
+        config.headers['Content-Type'] = 'application/json';
+      }
     }
     
     // Add user auth token if available
@@ -181,31 +185,28 @@ export const productsAPI = {
     formData.append('image', file);
 
     try {
-      // Explicitly ensure FormData is sent as multipart/form-data
-      // Set Content-Type to undefined to let Axios/browser set it automatically with boundary
-      const response = await api.post('/upload/image', formData, {
+      // Get admin password for header
+      const adminPassword = localStorage.getItem('adminPassword');
+      
+      // CRITICAL: Use native fetch API instead of axios for FormData uploads
+      // This ensures FormData is sent correctly without any serialization issues
+      const API_BASE_URL = api.defaults.baseURL;
+      const response = await fetch(`${API_BASE_URL}/upload/image`, {
+        method: 'POST',
+        body: formData,
+        // DO NOT set Content-Type - browser will set it automatically with boundary
         headers: {
-          'Content-Type': undefined // Explicitly remove Content-Type so Axios sets multipart/form-data
-        },
-        // Increase timeout for large files
-        timeout: 60000,
-        // Ensure FormData is sent correctly
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        // Transform request to ensure FormData is not serialized
-        transformRequest: [(data, headers) => {
-          // If data is FormData, don't transform it and remove Content-Type
-          if (data instanceof FormData) {
-            // Remove Content-Type header to let browser/Axios set it with boundary
-            delete headers['Content-Type'];
-            delete headers['content-type'];
-            return data; // Return FormData as-is
-          }
-          // For other data types, use default transformation
-          return data;
-        }]
+          'x-admin-password': adminPassword ? adminPassword.trim() : ''
+        }
       });
-      return response.data;
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Upload failed' }));
+        throw new Error(errorData.message || `Upload failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
     } catch (error) {
       // Extract detailed error message from response
       const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Unknown error';
