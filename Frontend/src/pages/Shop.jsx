@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Slider,
   Pagination,
@@ -24,6 +24,7 @@ import { productsAPI } from '../services/api';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PLACEHOLDER_IMAGE } from '../assets/placeholders';
 
 // Mock data fallback if API fails
 import { featuredProducts } from '../data/products';
@@ -63,7 +64,7 @@ export default function Shop() {
           name: p.name || '',
           price: p.price,
           originalPrice: p.originalPrice,
-          image: p.images?.main || (Array.isArray(p.images) && p.images.length > 0 ? p.images[0].url || p.images[0] : (p.image || '/placeholder.jpg')),
+          image: p.images?.main || (Array.isArray(p.images) && p.images.length > 0 ? p.images[0].url || p.images[0] : (p.image || PLACEHOLDER_IMAGE)),
           description: p.description || '',
           rating: p.rating || { average: 4.8, count: 0 },
           inStock: p.stockQuantity > 0,

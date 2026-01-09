@@ -156,9 +156,14 @@ productSchema.pre('save', async function(next) {
       this.finalPrice = Math.round((this.price - discountAmount) * 100) / 100;
     }
 
-    // Auto update status if stock is 0
-    if (this.stock === 0 && this.status !== 'Draft' && this.status !== 'Hidden') {
-      this.status = 'Out of stock';
+    // Auto update status based on stock
+    if (this.status !== 'Draft' && this.status !== 'Hidden') {
+      if (this.stock === 0) {
+        this.status = 'Out of stock';
+      } else if (this.status === 'Out of stock' && this.stock > 0) {
+        // If stock was updated from 0 to > 0, set status back to Active
+        this.status = 'Active';
+      }
     }
 
     next();

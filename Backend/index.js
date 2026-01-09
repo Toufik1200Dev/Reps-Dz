@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -177,7 +177,7 @@ app.use('/api/admin/orders', adminAuth, orderRoutes);
 
 // Error handling middleware (must set CORS headers)
 app.use((err, req, res, next) => {
-  console.error('âŒ Error:', err.stack);
+  console.error('❌ Error:', err.stack);
   
   // Set CORS headers even on error
   const allowedOrigins = process.env.NODE_ENV === 'production' 

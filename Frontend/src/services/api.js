@@ -208,26 +208,9 @@ export const productsAPI = {
       const data = await response.json();
       return data;
     } catch (error) {
-      // Extract detailed error message from response
-      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Unknown error';
-      const errorDetails = {
-        message: errorMessage,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers ? Object.keys(error.config.headers) : []
-        }
-      };
-      console.error('Image upload error:', errorDetails);
-      
-      // Create a more descriptive error
-      const enhancedError = new Error(errorMessage);
-      enhancedError.status = error.response?.status;
-      enhancedError.data = error.response?.data;
-      throw enhancedError;
+      const errorMessage = error?.message || 'Image upload failed';
+      console.error('Image upload error:', errorMessage);
+      throw new Error(errorMessage);
     }
   }
 };

@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import { Close, LocalShipping, CheckCircle } from '@mui/icons-material';
 import { ordersAPI, apiUtils } from '../services/api';
+import { PLACEHOLDER_IMAGE } from '../assets/placeholders';
 
 const OrderModal = ({ open, onClose, product, quantity = 1, size, color }) => {
     const [loading, setLoading] = useState(false);
@@ -163,7 +164,7 @@ const OrderModal = ({ open, onClose, product, quantity = 1, size, color }) => {
                             <Grid size={{ xs: 12, md: 5 }}>
                                 <Box p={2} border="1px solid #eee" borderRadius={2} mb={3}>
                                     <img
-                                        src={product.images?.main || product.image || "/placeholder.jpg"}
+                                        src={product.images?.main || product.image || PLACEHOLDER_IMAGE}
                                         alt={product.name}
                                         style={{ width: '100%', borderRadius: 8, marginBottom: 16 }}
                                     />

@@ -1,4 +1,4 @@
-﻿// Calisthenics Endurance Program Generator
+// Calisthenics Endurance Program Generator
 // Competition-style training based on real endurance methods
 // Professional Calisthenics Coach + MERN Engineer
 
@@ -185,7 +185,7 @@ const generateWeekDays = (week, level, maxReps, settings, seed, usedMethods) => 
 // ============================================================================
 // DAY 1: PULL DAY
 // Pull-ups, Chin-ups, Australian rows, Isometric holds
-// Muscle-ups: âŒ Beginner: NOT allowed, âœ” Intermediate/Advanced: controlled/endurance volume
+// Muscle-ups: ❌ Beginner: NOT allowed, ✔ Intermediate/Advanced: controlled/endurance volume
 // ============================================================================
 const generateDay1_Pull = (week, level, maxReps, settings, seed, usedMethods) => {
   const exercises = [];
@@ -193,7 +193,7 @@ const generateDay1_Pull = (week, level, maxReps, settings, seed, usedMethods) =>
   const pullMax = maxReps.pullUps;
   const levelMult = { beginner: 0.85, intermediate: 1.0, advanced: 1.15 }[level];
   
-  // Beginner constraint: pull-ups â‰¤ 60% max
+  // Beginner constraint: pull-ups ≤ 60% max
   const pullPercentage = level === 'beginner' ? 0.60 : 0.75;
   
   // WARM-UP
@@ -385,13 +385,13 @@ const method3_SeparatedVolume = (muMax, pullMax, pullPercentage) => {
     const mu80 = Math.max(1, Math.round(muMax * 0.80));
     const mu60 = Math.max(1, Math.round(muMax * 0.60));
     const mu50 = Math.max(1, Math.round(muMax * 0.50));
-    setsDesc += `Muscle-ups:\n4 sets Ã— ${mu80} reps\n5 sets Ã— ${mu60} reps\n6 sets Ã— ${mu50} reps\n\n`;
+    setsDesc += `Muscle-ups:\n4 sets × ${mu80} reps\n5 sets × ${mu60} reps\n6 sets × ${mu50} reps\n\n`;
   }
   
   const pull80 = Math.max(1, Math.round(pullMax * 0.80 * pullPercentage));
   const pull60 = Math.max(1, Math.round(pullMax * 0.60 * pullPercentage));
   const pull50 = Math.max(1, Math.round(pullMax * 0.50 * pullPercentage));
-  setsDesc += `Pull-ups:\n4 sets Ã— ${pull80} reps\n5 sets Ã— ${pull60} reps\n6 sets Ã— ${pull50} reps`;
+  setsDesc += `Pull-ups:\n4 sets × ${pull80} reps\n5 sets × ${pull60} reps\n6 sets × ${pull50} reps`;
   
   return {
     name: "Separated Volume",
@@ -407,11 +407,11 @@ const method3_SeparatedVolume = (muMax, pullMax, pullPercentage) => {
 // METHOD 4: Pyramids
 const method4_Pyramids = (pullMax, muMax, pullPercentage) => {
   const topPull = Math.max(1, Math.round(pullMax * 0.70 * pullPercentage));
-  let setsDesc = `Pull-ups: 1 â†’ ${topPull} â†’ 1\nIncrease by 2-3 reps per step\n`;
+  let setsDesc = `Pull-ups: 1 → ${topPull} → 1\nIncrease by 2-3 reps per step\n`;
   
   if (muMax > 0) {
     const topMU = Math.max(1, Math.round(muMax * 0.60));
-    setsDesc += `\nMuscle-ups: 1 â†’ ${topMU} â†’ 1\nIncrease by 1 rep per step`;
+    setsDesc += `\nMuscle-ups: 1 → ${topMU} → 1\nIncrease by 1 rep per step`;
   }
   
   return {
@@ -436,7 +436,7 @@ const method5_SupersetPull = (pullMax, muMax, level) => {
     const muReps = Math.min(5, Math.max(2, Math.round(muMax * 0.5)));
     setsDesc += `\n${muReps} muscle-ups`;
   }
-  setsDesc += `\nÃ— 4 rounds`;
+  setsDesc += `\n× 4 rounds`;
   
   return {
     name: "Superset Pull",
@@ -476,7 +476,7 @@ const method7_IsometricLadder = (pullMax, level) => {
   const holdTimes = level === 'beginner' ? [5, 7, 10] : level === 'intermediate' ? [7, 10, 12] : [10, 12, 15];
   const pullReps = Math.max(5, Math.round(pullMax * 0.3));
   
-  const setsDesc = `Hold at top ${holdTimes[0]}s â†’ Hold in middle ${holdTimes[1]}s â†’ Dead hang ${holdTimes[2]}s â†’ ${pullReps} pull-ups\nÃ— 3-4 rounds`;
+  const setsDesc = `Hold at top ${holdTimes[0]}s → Hold in middle ${holdTimes[1]}s → Dead hang ${holdTimes[2]}s → ${pullReps} pull-ups\n× 3-4 rounds`;
   
   return {
     name: "Isometric Ladder",
@@ -495,7 +495,7 @@ const getDay1Finisher = (week, level, muMax, pullMax, pullPercentage, settings, 
     // Finisher 1: Australian Pull-Up (MANDATORY for beginners)
     {
       name: "Finisher: Australian Pull-Up",
-      sets: `10 sets Ã— ${Math.max(12, Math.min(25, Math.round(pullMax * 0.8 * pullPercentage)))} reps`,
+      sets: `10 sets × ${Math.max(12, Math.min(25, Math.round(pullMax * 0.8 * pullPercentage)))} reps`,
       rest: "30s between sets",
       note: "Horizontal pull-ups. Keep body straight.",
       exercise: "australian-pull-up"
@@ -503,7 +503,7 @@ const getDay1Finisher = (week, level, muMax, pullMax, pullPercentage, settings, 
     // Finisher 2: Isometric Hold + Max Pull
     {
       name: "Finisher: Isometric Hold + Max Pull",
-      sets: "Hold at top 10s â†’ Hold in middle 10s â†’ Dead hang 10s â†’ Max pull-ups\nÃ— 3 rounds",
+      sets: "Hold at top 10s → Hold in middle 10s → Dead hang 10s → Max pull-ups\n× 3 rounds",
       rest: "5 min between rounds",
       note: "Do not let go of the bar until max pull-ups are complete.",
       exercise: "isometric-hold, pull-up"
@@ -645,7 +645,7 @@ const methodPush1_DensityCircuit = (dipsMax, pushUpsMax) => {
     name: "Density Circuit",
     format: "Density",
     duration: "5 rounds",
-    sets: `${x} dips\n${pushReps} push-ups\n${barDips} bar dips\nÃ— 5 rounds`,
+    sets: `${x} dips\n${pushReps} push-ups\n${barDips} bar dips\n× 5 rounds`,
     rest: "90s between rounds",
     note: "Complete each round without stopping. Rest fully between rounds.",
     exercise: "dip, push-up, bar-dip"
@@ -701,7 +701,7 @@ const methodPush4_SeparatedVolumePush = (dipsMax, pushUpsMax) => {
     name: "Separated Volume",
     format: "Volume Sets",
     duration: "15 sets total",
-    sets: `5 sets Ã— ${dips80} dips\n5 sets Ã— ${push80} push-ups\n5 sets Ã— ${barDips80} bar dips`,
+    sets: `5 sets × ${dips80} dips\n5 sets × ${push80} push-ups\n5 sets × ${barDips80} bar dips`,
     rest: "90s between sets",
     note: "Complete all sets for each exercise before moving to next.",
     exercise: "dip, push-up, bar-dip"
@@ -717,7 +717,7 @@ const methodPush5_PyramidsPush = (dipsMax, pushUpsMax) => {
     name: "Pyramids",
     format: "Pyramid",
     duration: "Variable",
-    sets: `Dips: 1 â†’ ${topDips} â†’ 1 (increase by 3 per step)\nPush-ups: 1 â†’ ${topPush} â†’ 1 (increase by 3 per step)`,
+    sets: `Dips: 1 → ${topDips} → 1 (increase by 3 per step)\nPush-ups: 1 → ${topPush} → 1 (increase by 3 per step)`,
     rest: "30s between sets",
     note: "Work up to top, come back down to 1. Increase by 3 reps per step.",
     exercise: "dip, push-up"
@@ -733,7 +733,7 @@ const methodPush6_NoStopSets = (dipsMax, pushUpsMax) => {
     name: "No-Stop Sets",
     format: "No-stop",
     duration: "4 rounds",
-    sets: `${dipReps} dips + ${pushReps} push-ups (no rest between)\nÃ— 4 rounds`,
+    sets: `${dipReps} dips + ${pushReps} push-ups (no rest between)\n× 4 rounds`,
     rest: "2-3 min between rounds",
     note: "Complete dips then immediately push-ups without stopping. Rest fully between rounds.",
     exercise: "dip, push-up"
@@ -746,9 +746,9 @@ const getDay2Finisher = (week, level, dipsMax, pushUpsMax, settings, levelMult) 
   
   return {
     name: "Finisher: Isometric Push Hold",
-    sets: `EMOM 10 min:\n10s 90Â° push-up hold\n${pushReps} push-ups`,
+    sets: `EMOM 10 min:\n10s 90° push-up hold\n${pushReps} push-ups`,
     rest: "Rest for the remainder of each minute",
-    note: "Hold at 90Â° for 10 seconds, then complete push-ups. Repeat every minute for 10 minutes.",
+    note: "Hold at 90° for 10 seconds, then complete push-ups. Repeat every minute for 10 minutes.",
     exercise: "isometric-hold, push-up"
   };
 };
@@ -792,7 +792,7 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings, seed) => {
     const reps = Math.max(1, Math.round(squatsMax * squatsVolumeMult));
     exercises.push({
       name: "Squats",
-      sets: `${reps} reps Ã— 4 sets`,
+      sets: `${reps} reps × 4 sets`,
       rest: "60s between sets",
       note: "Go all the way down. Control speed.",
       exercise: "squat"
@@ -815,7 +815,7 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings, seed) => {
   const jumpSquatReps = Math.max(10, Math.round(squatsMax * 0.4));
   exercises.push({
     name: "Jump Squats",
-    sets: `${jumpSquatReps} reps Ã— ${week <= 2 ? 3 : 4} sets`,
+    sets: `${jumpSquatReps} reps × ${week <= 2 ? 3 : 4} sets`,
     rest: "60s between sets",
     note: "Explosive jumps. Land softly.",
     exercise: "jump-squat"
@@ -825,7 +825,7 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings, seed) => {
   const burpeeCount = week <= 2 ? 15 : week === 3 ? 18 : 22;
   exercises.push({
     name: "Burpees",
-    sets: `${burpeeCount} reps Ã— ${week <= 2 ? 4 : week === 3 ? 5 : 6} sets`,
+    sets: `${burpeeCount} reps × ${week <= 2 ? 4 : week === 3 ? 5 : 6} sets`,
     rest: "60-90s between sets",
     note: "Full burpee: push-up then jump. Keep steady pace.",
     exercise: "burpee"
@@ -835,7 +835,7 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings, seed) => {
   const legRaiseReps = Math.max(5, Math.round(legRaisesMax * legRaisesVolumeMult));
   exercises.push({
     name: "Leg Raises",
-    sets: `${legRaiseReps} reps Ã— ${week <= 2 ? 4 : 5} sets`,
+    sets: `${legRaiseReps} reps × ${week <= 2 ? 4 : 5} sets`,
     rest: "60s between sets",
     note: "Control going down. Don't swing.",
     exercise: "leg-raise"
@@ -844,7 +844,7 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings, seed) => {
   // PLANK HOLD
   exercises.push({
     name: "Plank Hold",
-    sets: `${week <= 2 ? 60 : week === 3 ? 75 : 90} seconds Ã— ${week <= 2 ? 3 : 4} sets`,
+    sets: `${week <= 2 ? 60 : week === 3 ? 75 : 90} seconds × ${week <= 2 ? 3 : 4} sets`,
     rest: "60s between sets",
     note: "Keep body straight. Don't sag or lift hips.",
     exercise: "plank"
@@ -862,8 +862,8 @@ const generateDay3_LegsCardioCore = (week, level, maxReps, settings, seed) => {
 // ============================================================================
 // DAY 4: ENDURANCE INTEGRATION DAY (CRITICAL - FIXED STRUCTURE)
 // 
-// ðŸŽ¯ Purpose: Fatigue management, movement efficiency, mental tolerance, competition simulation
-// âŒ NOT for building new strength
+// 🎯 Purpose: Fatigue management, movement efficiency, mental tolerance, competition simulation
+// ❌ NOT for building new strength
 // 
 // Structure (MANDATORY):
 // PART 1 - Activation (LOW FATIGUE) - 5-8 min
@@ -881,7 +881,7 @@ const generateDay4_EnduranceSets = (week, level, maxReps, settings, seed) => {
   
   const levelMult = { beginner: 0.85, intermediate: 1.0, advanced: 1.15 }[level];
   
-  // Beginner constraint: pull-ups â‰¤ 60% max
+  // Beginner constraint: pull-ups ≤ 60% max
   const pullPercentage = level === 'beginner' ? 0.60 : 0.75;
   
   // Volume caps by week (NOT 100% - CONTROLLED FATIGUE)
@@ -935,9 +935,9 @@ const generateDay4_EnduranceSets = (week, level, maxReps, settings, seed) => {
     if (ex.type !== 'warmup') {
       // Remove PART labels and any remaining emojis, keep the description
       const cleanName = ex.name
-        .replace(/ðŸ§©\s*/g, '')
-        .replace(/ðŸ”¥\s*/g, '')
-        .replace(/âš¡\s*/g, '')
+        .replace(/🧩\s*/g, '')
+        .replace(/🔥\s*/g, '')
+        .replace(/⚡\s*/g, '')
         .replace(/PART\s*1:\s*/i, '')
         .replace(/PART\s*2:\s*/i, '')
         .replace(/PART\s*3:\s*/i, '')
@@ -959,7 +959,7 @@ const generateDay4_EnduranceSets = (week, level, maxReps, settings, seed) => {
   return {
     day: 4,
     focus: "Endurance Integration Day",
-    structure: "3-part: Activation â†’ Main Set â†’ Finisher",
+    structure: "3-part: Activation → Main Set → Finisher",
     methods: methodNames,
     exercises,
     coachingNote: week === 4 
@@ -1004,7 +1004,7 @@ const generateDay4_Activation = (week, level, muMax, pullMax, pullPercentage, di
       name: "Activation - Light Unbroken Bar Flow",
       format: "Unbroken Flow",
       duration: `${duration} min`,
-      sets: `${pullReps} pull-ups\n${dipReps} dips\nÃ— 2-3 rounds (smooth transitions)`,
+      sets: `${pullReps} pull-ups\n${dipReps} dips\n× 2-3 rounds (smooth transitions)`,
       rest: "90s between rounds",
       note: "Smooth, controlled flow. Focus on transitions - NOT speed.",
       exercise: "pull-up, dip",
@@ -1020,7 +1020,7 @@ const generateDay4_Activation = (week, level, muMax, pullMax, pullPercentage, di
       name: "Activation - Submaximal Sets",
       format: "Volume Sets",
       duration: `${duration} min`,
-      sets: `${pullReps} pull-ups\n${dipReps} dips\n${pushReps} push-ups\nÃ— 2 sets`,
+      sets: `${pullReps} pull-ups\n${dipReps} dips\n${pushReps} push-ups\n× 2 sets`,
       rest: "90s between sets",
       note: "Submaximal activation - stop well before failure.",
       exercise: "pull-up, dip, push-up",
@@ -1118,7 +1118,7 @@ const generateDay4_MainSet = (week, level, muMax, pullMax, pullPercentage, dipsM
       name: "PART 2: Main Set - Timed Rounds",
       format: "Timed Rounds",
       duration: `${duration} min`,
-      sets: `${pullReps} pull-ups\n${pushReps} push-ups\n${squatsReps} squats\nÃ— 3-4 rounds (complete as fast as possible, record time)`,
+      sets: `${pullReps} pull-ups\n${pushReps} push-ups\n${squatsReps} squats\n× 3-4 rounds (complete as fast as possible, record time)`,
       rest: "2 min between rounds",
       note: "Controlled pace - NOT max speed. Focus on breathing and efficiency.",
       exercise: "pull-up, push-up, squat",
@@ -1136,7 +1136,7 @@ const generateDay4_MainSet = (week, level, muMax, pullMax, pullPercentage, dipsM
       name: "PART 2: Main Set - Mixed Endurance",
       format: "Mixed Endurance",
       duration: `${duration} min`,
-      sets: `${muCount > 0 ? muCount + ' muscle-ups\n' : ''}${pullReps} pull-ups\n${dipReps} dips\n${pushReps} push-ups\nÃ— 3 rounds`,
+      sets: `${muCount > 0 ? muCount + ' muscle-ups\n' : ''}${pullReps} pull-ups\n${dipReps} dips\n${pushReps} push-ups\n× 3 rounds`,
       rest: "90s between rounds (rest if needed)",
       note: `Controlled transitions (max ${transitions.max}). Focus on breathing between exercises.`,
       exercise: muCount > 0 ? "muscle-up, pull-up, dip, push-up" : "pull-up, dip, push-up",
@@ -1154,7 +1154,7 @@ const generateDay4_MainSet = (week, level, muMax, pullMax, pullPercentage, dipsM
       name: "PART 2: Main Set - FIBO Round of 16 Style",
       format: "FIBO Competition Style",
       duration: `${duration} min`,
-      sets: `${dipReps} dips\n${pullReps} pull-ups\n${pushReps} push-ups\n${muCount} muscle-ups\nÃ— 3 rounds (competition pace)`,
+      sets: `${dipReps} dips\n${pullReps} pull-ups\n${pushReps} push-ups\n${muCount} muscle-ups\n× 3 rounds (competition pace)`,
       rest: "60s between rounds",
       note: "Competition-style sequence. Move smoothly between exercises. Controlled fatigue.",
       exercise: "dip, pull-up, push-up, muscle-up",
@@ -1172,7 +1172,7 @@ const generateDay4_MainSet = (week, level, muMax, pullMax, pullPercentage, dipsM
       name: "PART 2: Main Set - FIBO Quarterfinal Routine",
       format: "FIBO Competition Style",
       duration: `${duration} min`,
-      sets: `1 pull-up + 1 muscle-up Ã— ${rounds} rounds (UNBROKEN)\n${pushReps} push-ups\n${dipReps} dips\n1 pull-up + 1 muscle-up Ã— ${rounds} rounds`,
+      sets: `1 pull-up + 1 muscle-up × ${rounds} rounds (UNBROKEN)\n${pushReps} push-ups\n${dipReps} dips\n1 pull-up + 1 muscle-up × ${rounds} rounds`,
       rest: "2 min rest (30s penalty if rest during unbroken sequence)",
       note: "Competition rule: Controlled unbroken sequences. If you MUST rest, add 30 seconds.",
       exercise: "pull-up, muscle-up, push-up, dip",
@@ -1192,7 +1192,7 @@ const generateDay4_MainSet = (week, level, muMax, pullMax, pullPercentage, dipsM
       name: "PART 2: Main Set - Barbarian Requirement",
       format: "Unbroken Complex",
       duration: `${duration} min`,
-      sets: `${dipReps} weighted dips (${weight} kg)\n${pullReps} weighted pull-ups (${weight} kg)\n${pushReps} push-ups\n${muCount} ${muMax > 0 ? `weighted muscle-ups (${weight} kg)` : 'jump muscle-ups'}\n${squatsReps} weighted squats (${weight} kg)\nÃ— 2 rounds`,
+      sets: `${dipReps} weighted dips (${weight} kg)\n${pullReps} weighted pull-ups (${weight} kg)\n${pushReps} push-ups\n${muCount} ${muMax > 0 ? `weighted muscle-ups (${weight} kg)` : 'jump muscle-ups'}\n${squatsReps} weighted squats (${weight} kg)\n× 2 rounds`,
       rest: "90s between rounds",
       note: "Controlled form under load. Maintain technique - this is endurance, not max strength.",
       exercise: "dip, pull-up, push-up, muscle-up, squat",
@@ -1238,7 +1238,7 @@ const generateDay4_Finisher = (week, level, muMax, pullMax, pullPercentage, dips
       name: "PART 3: Finisher - Isometric Holds",
       format: "Isometric + Reps",
       duration: `${duration} min`,
-      sets: `Hold at top ${holdTimes[0]}s â†’ Hold in middle ${holdTimes[1]}s â†’ Dead hang ${holdTimes[2]}s â†’ ${pullReps} pull-ups\nÃ— 2 rounds`,
+      sets: `Hold at top ${holdTimes[0]}s → Hold in middle ${holdTimes[1]}s → Dead hang ${holdTimes[2]}s → ${pullReps} pull-ups\n× 2 rounds`,
       rest: "3 min between rounds",
       note: "Mental challenge under fatigue. Do not let go until reps complete.",
       exercise: "isometric-hold, pull-up",
@@ -1283,7 +1283,7 @@ const generateDay4_Finisher = (week, level, muMax, pullMax, pullPercentage, dips
       name: "PART 3: Finisher - Max Reps Under Tension",
       format: "Max Reps",
       duration: `${duration} min`,
-      sets: `10s hold at top â†’ ${pullReps} pull-ups â†’ 10s hold at bottom â†’ ${pullReps} pull-ups\nÃ— 2 rounds`,
+      sets: `10s hold at top → ${pullReps} pull-ups → 10s hold at bottom → ${pullReps} pull-ups\n× 2 rounds`,
       rest: "3 min between rounds",
       note: "Mental burn under tension. Control your breathing throughout.",
       exercise: "isometric-hold, pull-up",
@@ -1305,4 +1305,3 @@ module.exports = {
   generateProgram,
   generateBatchPrograms
 };
-

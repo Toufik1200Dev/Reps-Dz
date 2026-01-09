@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ShoppingBag, LocalShipping, CheckCircle, Close } from '@mui/icons-material';
 import { ordersAPI } from '../services/api';
 import { wilayas } from '../data/wilayas';
+import { PLACEHOLDER_IMAGE } from '../assets/placeholders';
 
 // Color name to hex mapping
 const getColorValue = (colorName) => {
@@ -206,7 +207,7 @@ export default function Order() {
                     <div className="flex gap-3 md:gap-4 pb-4 md:pb-6 border-b border-gray-100">
                       <div className="w-20 h-20 md:w-24 md:h-24 rounded-lg md:rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
                         <img
-                          src={initialProduct.images?.main || initialProduct.image || '/placeholder.jpg'}
+                          src={initialProduct.images?.main || initialProduct.image || PLACEHOLDER_IMAGE}
                           alt={initialProduct.name}
                           className="w-full h-full object-cover"
                         />
@@ -479,7 +480,7 @@ export default function Order() {
                 <div className="flex gap-3 md:gap-4 mb-4 md:mb-6 pb-4 md:pb-6 border-b border-gray-100">
                   <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg md:rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
                     <img
-                      src={initialProduct.images?.main || initialProduct.image || '/placeholder.jpg'}
+                      src={initialProduct.images?.main || initialProduct.image || PLACEHOLDER_IMAGE}
                       alt={initialProduct.name}
                       className="w-full h-full object-cover"
                     />

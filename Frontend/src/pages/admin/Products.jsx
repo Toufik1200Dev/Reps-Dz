@@ -12,6 +12,7 @@ import {
   AttachMoney as ActionIcon
 } from '@mui/icons-material';
 import { productsAPI, apiUtils } from '../../services/api';
+import { PLACEHOLDER_PRODUCT } from '../../assets/placeholders';
 
 /**
  * Image Upload Component
@@ -60,7 +61,7 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
             extractedUrl: url,
             isValidUrl: isValidUrl
           };
-          console.error('Image upload error: No valid URL in upload response', errorDetails);
+          console.error('Image upload error: invalid upload response');
           alert('Image upload failed: Invalid response from server. Please try again.');
         }
       });
@@ -68,20 +69,7 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
       // Reset file input to allow re-uploading the same files
       e.target.value = '';
     } catch (error) {
-      // Log detailed error for debugging
-      const errorDetails = {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        code: error.code,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: Object.keys(error.config?.headers || {})
-        }
-      };
-      console.error('Image upload error:', errorDetails);
+      console.error('Image upload error:', error?.message || 'Upload failed');
       
       // Show detailed error message from server
       let errorMessage = 'Image upload failed';
@@ -92,11 +80,6 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
         errorMessage = error.response.data.message;
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
-      }
-      
-      // If it's an authentication error, make it more prominent
-      if (errorMessage.includes('password') || errorMessage.includes('Authentication') || errorMessage.includes('Unauthorized')) {
-        errorMessage = `🔐 Authentication Error\n\n${errorMessage}\n\nPlease log out and log back in with the correct admin password.`;
       }
       
       alert(`Upload failed: ${errorMessage}`);
@@ -564,7 +547,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
                 {formData.images?.gallery && formData.images.gallery.length > 0 && formData.images.gallery.map((url, idx) => (
                   <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group border-2 border-gray-200 shadow-sm">
                     <img 
-                      src={url.includes('via.placeholder') ? '/placeholder-product.png' : url} 
+                      src={url.includes('via.placeholder') ? PLACEHOLDER_PRODUCT : url} 
                       alt={`Gallery ${idx + 1}`} 
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -776,13 +759,13 @@ export default function ProductsPage() {
                       <div className="flex items-center gap-4">
                         <div className="w-16 h-16 rounded-lg bg-gray-100 border border-gray-100 overflow-hidden flex-shrink-0">
                           <img
-                            src={product.images?.main || (product.images?.[0]?.url) || product.image || '/placeholder-product.png'}
+                            src={product.images?.main || (product.images?.[0]?.url) || product.image || PLACEHOLDER_PRODUCT}
                             alt={product.name}
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               // Handle image load error silently - show placeholder instead
                               e.target.onerror = null; // Prevent infinite loop
-                              e.target.src = '/placeholder-product.png';
+                              e.target.src = PLACEHOLDER_PRODUCT;
                             }}
                           />
                         </div>

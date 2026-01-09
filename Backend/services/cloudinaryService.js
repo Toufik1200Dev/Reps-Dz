@@ -1,4 +1,4 @@
-﻿const cloudinary = require('cloudinary').v2;
+const cloudinary = require('cloudinary').v2;
 
 // Configure Cloudinary
 cloudinary.config({
@@ -19,13 +19,13 @@ class CloudinaryService {
       // Check if Cloudinary is configured
       if (!this.hasCloudinaryConfig) {
         const configStatus = this.getConfigStatus();
-        console.error('âŒ Cloudinary not configured! Missing environment variables:', {
+        console.error('❌ Cloudinary not configured! Missing environment variables:', {
           cloudName: configStatus.cloudName,
           apiKey: configStatus.apiKey,
           apiSecret: configStatus.apiSecret,
           isProduction: configStatus.isProduction
         });
-        console.error('âŒ Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your environment variables.');
+        console.error('❌ Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your environment variables.');
         
         // In production, throw an error instead of returning a placeholder
         if (this.isProduction) {
@@ -79,12 +79,13 @@ class CloudinaryService {
         size: result.bytes
       };
     } catch (error) {
-      console.error('âŒ Cloudinary upload error:', error);
+      console.error('Cloudinary upload error:', error.message || error);
       
       // If Cloudinary fails, return a fallback
       if (this.hasCloudinaryConfig) {
         return {
-          url: 'https://via.placeholder.com/800x600/ffcccc/cc0000?text=Upload+Failed',
+          // Data URI fallback (avoid external placeholder domains)
+          url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0iI2ZmZGNkYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNjYzAwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5VcGxvYWQgRmFpbGVkPC90ZXh0Pjwvc3ZnPg==',
           publicId: `error-${Date.now()}`,
           width: 800,
           height: 600,
@@ -234,4 +235,3 @@ class CloudinaryService {
 }
 
 module.exports = new CloudinaryService();
-

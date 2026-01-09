@@ -1,4 +1,4 @@
-﻿const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
@@ -11,7 +11,6 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
-
     
     // Handle connection events
     mongoose.connection.on('error', (err) => {
@@ -30,6 +29,4 @@ const connectDB = async () => {
   }
 };
 
-module.exports = connectDB; 
-
-
+module.exports = connectDB;

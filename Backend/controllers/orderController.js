@@ -113,7 +113,7 @@ exports.getAllOrders = async (req, res) => {
       .sort({ orderDate: -1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .populate('products.productId', 'name image');
+      .populate('products.product', 'name image');
 
     const total = await Order.countDocuments(query);
 
@@ -147,7 +147,7 @@ exports.getOrderById = async (req, res) => {
     const { id } = req.params;
     
     const order = await Order.findById(id)
-      .populate('products.productId', 'name image description');
+      .populate('products.product', 'name image description');
 
     if (!order) {
       return res.status(404).json({
