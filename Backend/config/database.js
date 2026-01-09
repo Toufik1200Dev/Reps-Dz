@@ -17,7 +17,6 @@ const connectDB = async () => {
     mongoose.connection.on('error', (err) => {
       console.error('MongoDB connection error:', err);
     });
-    });
 
     // Graceful shutdown
     process.on('SIGINT', async () => {
@@ -32,4 +31,5 @@ const connectDB = async () => {
 };
 
 module.exports = connectDB; 
+
 
