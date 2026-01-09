@@ -74,8 +74,45 @@ app.use((req, res, next) => {
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve uploaded images
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve uploaded images (for backward compatibility, though we use Cloudinary now)
+// This route handles static file serving and provides a helpful message if directory is empty
+const uploadsStaticPath = path.join(__dirname, 'uploads');
+if (fs.existsSync(uploadsStaticPath)) {
+  app.use('/uploads', express.static(uploadsStaticPath, {
+    index: false, // Don't show directory listing
+    dotfiles: 'deny' // Don't serve dotfiles
+  }));
+  
+  // Handle requests to /uploads/ without a filename
+  app.get('/uploads', (req, res) => {
+    res.status(404).json({ 
+      message: 'No file specified. Images are served from Cloudinary.',
+      hint: 'Use /api/upload/image to upload images to Cloudinary'
+    });
+  });
+  
+  app.get('/uploads/', (req, res) => {
+    res.status(404).json({ 
+      message: 'No file specified. Images are served from Cloudinary.',
+      hint: 'Use /api/upload/image to upload images to Cloudinary'
+    });
+  });
+} else {
+  // If uploads directory doesn't exist, create it and provide handler
+  app.get('/uploads', (req, res) => {
+    res.status(404).json({ 
+      message: 'Uploads directory not available. Images are served from Cloudinary.',
+      hint: 'Use /api/upload/image to upload images to Cloudinary'
+    });
+  });
+  
+  app.get('/uploads/', (req, res) => {
+    res.status(404).json({ 
+      message: 'Uploads directory not available. Images are served from Cloudinary.',
+      hint: 'Use /api/upload/image to upload images to Cloudinary'
+    });
+  });
+}
 
 // Basic route
 app.get('/', (req, res) => {
