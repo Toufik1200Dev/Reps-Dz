@@ -28,14 +28,15 @@ const upload = multer({
   },
 });
 
-// Error handling middleware for multer
+// Error handling middleware for multer - must be after the multer middleware
 const handleMulterError = (err, req, res, next) => {
   if (err) {
-    console.error('❌ Multer error:', {
+    console.error('❌ Multer error caught:', {
       name: err.name,
       code: err.code,
       message: err.message,
-      field: err.field
+      field: err.field,
+      stack: err.stack
     });
     
     if (err instanceof multer.MulterError) {
@@ -55,6 +56,12 @@ const handleMulterError = (err, req, res, next) => {
         return res.status(400).json({
           success: false,
           message: `Unexpected file field: ${err.field}. Expected field name: "image".`
+        });
+      }
+      if (err.code === 'LIMIT_PART_COUNT') {
+        return res.status(400).json({
+          success: false,
+          message: 'Too many parts in the multipart form.'
         });
       }
       return res.status(400).json({
@@ -79,7 +86,18 @@ const handleMulterError = (err, req, res, next) => {
 };
 
 // Upload single image to Cloudinary (no auth check - dashboard access is sufficient)
-router.post('/image', upload.single('image'), handleMulterError, async (req, res) => {
+router.post('/image', (req, res, next) => {
+  // Log incoming request details before Multer processes it
+  console.log('📥 Incoming upload request:', {
+    method: req.method,
+    url: req.url,
+    contentType: req.headers['content-type'],
+    contentLength: req.headers['content-length'],
+    hasBody: !!req.body,
+    bodyKeys: req.body ? Object.keys(req.body) : []
+  });
+  next();
+}, upload.single('image'), handleMulterError, async (req, res) => {
   try {
     // Log request details for debugging
     console.log('📤 Image upload request received:', {
@@ -90,14 +108,31 @@ router.post('/image', upload.single('image'), handleMulterError, async (req, res
       fileMimeType: req.file?.mimetype,
       bufferLength: req.file?.buffer?.length,
       contentType: req.headers['content-type'],
-      contentLength: req.headers['content-length']
+      contentLength: req.headers['content-length'],
+      bodyKeys: Object.keys(req.body || {}),
+      bodyValues: req.body ? Object.values(req.body).map(v => typeof v) : []
     });
 
     if (!req.file) {
-      // Check if multer error occurred (it would be in req.fileError)
+      // Check if multer error occurred - might be in req.body if parsed as text
       console.error('❌ No file received in request');
-      console.error('Request body keys:', Object.keys(req.body));
+      console.error('Request body keys:', Object.keys(req.body || {}));
+      console.error('Request body:', req.body);
       console.error('Request files:', req.files);
+      console.error('Content-Type header:', req.headers['content-type']);
+      
+      // Check if the request was parsed incorrectly
+      if (req.body && Object.keys(req.body).length > 0 && !req.file) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'File upload failed. The request may have been parsed incorrectly. Please ensure the file is sent as multipart/form-data with field name "image".',
+          debug: {
+            contentType: req.headers['content-type'],
+            bodyKeys: Object.keys(req.body)
+          }
+        });
+      }
+      
       return res.status(400).json({ 
         success: false,
         message: 'No image file provided. Please ensure you are uploading a valid image file with the field name "image".' 

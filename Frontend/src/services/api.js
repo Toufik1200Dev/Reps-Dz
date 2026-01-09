@@ -158,22 +158,44 @@ export const productsAPI = {
 
   // Upload image to Cloudinary - use axios with FormData
   uploadImage: async (file) => {
+    // Validate file
+    if (!file || !(file instanceof File || file instanceof Blob)) {
+      throw new Error('Invalid file. Please select a valid image file.');
+    }
+    
     const formData = new FormData();
     formData.append('image', file);
 
     try {
       // The axios interceptor will automatically add x-admin-password header
       // For FormData, we must NOT set Content-Type - let axios set it automatically with boundary
-      const response = await api.post('/upload/image', formData);
+      const response = await api.post('/upload/image', formData, {
+        headers: {
+          // Explicitly let Axios handle Content-Type for FormData
+          'Content-Type': undefined
+        },
+        // Increase timeout for large files
+        timeout: 60000,
+        // Ensure FormData is sent correctly
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
+      });
       return response.data;
     } catch (error) {
       // Extract detailed error message from response
       const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Unknown error';
-      console.error('Image upload error:', {
+      const errorDetails = {
         message: errorMessage,
         status: error.response?.status,
-        data: error.response?.data
-      });
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers ? Object.keys(error.config.headers) : []
+        }
+      };
+      console.error('Image upload error:', errorDetails);
       
       // Create a more descriptive error
       const enhancedError = new Error(errorMessage);
