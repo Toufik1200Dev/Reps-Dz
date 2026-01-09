@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { productsAPI } from '../services/api';
+import { useCart } from '../contexts/CartContext';
 
 // Color name to hex mapping
 const getColorValue = (colorName) => {
@@ -39,6 +40,7 @@ const getColorValue = (colorName) => {
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -123,6 +125,14 @@ const ProductDetail = () => {
   );
 
   if (!product) return null;
+  const basePrice = Number(product.price) || 0;
+  const discountPct = Number(product.discount) || 0;
+  const computedFinalPrice = discountPct > 0 ? basePrice * (1 - discountPct / 100) : basePrice;
+  const finalPrice = Number(product.finalPrice ?? computedFinalPrice) || 0;
+  const hasDiscount = discountPct > 0 && finalPrice > 0 && finalPrice < basePrice;
+
+  const stock = Number(product.stock ?? product.stockQuantity ?? 0) || 0;
+  const isOutOfStock = stock <= 0 || product.status === 'Out of stock';
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 md:pt-24 pb-8 md:pb-12">
@@ -190,7 +200,7 @@ const ProductDetail = () => {
                 ))}
               </div>
               <span className="text-gray-500 text-sm">({product.rating?.count || 0} reviews)</span>
-              {product.stockQuantity > 0 ? (
+              {stock > 0 ? (
                 <span className="text-green-600 text-sm font-medium bg-green-50 px-2 py-1 rounded-full">In Stock</span>
               ) : (
                 <span className="text-red-500 text-sm font-medium bg-red-50 px-2 py-1 rounded-full">Out of Stock</span>
@@ -198,9 +208,9 @@ const ProductDetail = () => {
             </div>
 
             <div className="flex items-baseline gap-3 md:gap-4 mb-6 md:mb-8">
-              <span className="text-3xl md:text-4xl font-bold text-gray-900">{parseFloat(product.price).toLocaleString()} DA</span>
-              {product.originalPrice && (
-                <span className="text-lg md:text-xl text-gray-400 line-through">{parseFloat(product.originalPrice).toLocaleString()} DA</span>
+              <span className="text-3xl md:text-4xl font-bold text-gray-900">{finalPrice.toLocaleString()} DA</span>
+              {hasDiscount && (
+                <span className="text-lg md:text-xl text-gray-400 line-through">{basePrice.toLocaleString()} DA</span>
               )}
             </div>
 
@@ -269,7 +279,7 @@ const ProductDetail = () => {
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   className="px-4 py-3 hover:bg-gray-50 text-gray-600 transition-colors"
                 >
-                  −
+                  âˆ’
                 </button>
                 <span className="w-12 text-center font-medium text-gray-900">{quantity}</span>
                 <button
@@ -280,11 +290,12 @@ const ProductDetail = () => {
                 </button>
               </div>
 
-              <button className="flex-1 bg-yellow-500 text-black font-bold py-3 px-6 md:px-8 rounded-xl hover:bg-yellow-400 transition-all transform active:scale-95 shadow-lg shadow-yellow-500/20 text-base md:text-lg">
+              <button disabled={isOutOfStock} onClick={() => addToCart({ ...product, price: finalPrice }, quantity, selectedSize, selectedColor)} className="flex-1 bg-yellow-500 text-black font-bold py-3 px-6 md:px-8 rounded-xl hover:bg-yellow-400 transition-all transform active:scale-95 shadow-lg shadow-yellow-500/20 text-base md:text-lg">
                 Add to Cart
               </button>
 
               <button
+                disabled={isOutOfStock}
                 onClick={() => navigate('/order', { 
                   state: { 
                     product, 
@@ -346,12 +357,16 @@ const ProductDetail = () => {
 
             {activeTab === 'specifications' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                {product.specifications?.map((spec, i) => (
-                  <div key={i} className="flex justify-between py-3 border-b border-gray-100 last:border-0">
-                    <span className="font-medium text-gray-900">{spec.key}</span>
-                    <span className="text-gray-600">{spec.value}</span>
+                {Object.keys(product.specifications || {}).length > 0 ? (
+                Object.entries(product.specifications || {}).map(([key, value]) => (
+                  <div key={key} className="flex justify-between py-3 border-b border-gray-100 last:border-0">
+                    <span className="font-medium text-gray-900">{key}</span>
+                    <span className="text-gray-600">{Array.isArray(value) ? value.join(', ') : String(value)}</span>
                   </div>
-                )) || <p className="text-gray-500 italic">No specifications available.</p>}
+                ))
+              ) : (
+                <p className="text-gray-500 italic">No specifications available.</p>
+              )}
               </div>
             )}
 
@@ -401,7 +416,7 @@ const ProductDetail = () => {
                 </div>
                 <div className="p-4">
                   <h3 className="font-bold text-gray-900 mb-2 truncate">{related.name}</h3>
-                  <p className="text-yellow-600 font-bold">${related.price}</p>
+                  <p className="text-yellow-600 font-bold">{Number(related.price || 0).toLocaleString()} DA</p>
                 </div>
               </Link>
             ))}
@@ -414,3 +429,9 @@ const ProductDetail = () => {
 };
 
 export default ProductDetail;
+
+
+
+
+
+

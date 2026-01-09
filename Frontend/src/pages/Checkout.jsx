@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Container,
   Typography,
@@ -121,7 +121,6 @@ export default function Checkout() {
       );
 
       const response = await ordersAPI.create(orderData);
-      console.log('Order created:', response.data);
 
       // Clear cart after successful order
       clearCart();

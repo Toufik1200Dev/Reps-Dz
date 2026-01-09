@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Scale,
@@ -175,7 +175,6 @@ export default function CalorieCalculator() {
         });
       } catch (apiError) {
         // Silently fail - calculation works client-side
-        console.log('Backend unavailable, using client-side calculation');
       }
 
       setResults({
@@ -434,8 +433,8 @@ export default function CalorieCalculator() {
                 </div>
                 <div>
                   <div className="font-bold text-gray-900 mb-1">Activity Multipliers</div>
-                  <p>Low: ×1.2 | Moderate: ×1.55 | High: ×1.75</p>
-                  <p className="text-xs mt-1">If not specified, uses ×1.4 (maintenance estimate)</p>
+                  <p>Low: Ã—1.2 | Moderate: Ã—1.55 | High: Ã—1.75</p>
+                  <p className="text-xs mt-1">If not specified, uses Ã—1.4 (maintenance estimate)</p>
                 </div>
                 <div>
                   <div className="font-bold text-gray-900 mb-1">Macronutrients</div>
@@ -473,7 +472,7 @@ export default function CalorieCalculator() {
                     {card.icon}
                   </div>
                   <div className="text-3xl font-bold text-gray-900 mb-1">
-                    {card.value || '—'}
+                    {card.value || 'â€”'}
                   </div>
                   <div className="text-sm font-medium text-gray-600">{card.unit}</div>
                   <div className="text-xs font-bold text-gray-700 mt-2">{card.label}</div>
@@ -492,7 +491,7 @@ export default function CalorieCalculator() {
             {/* Fitness Tips */}
             {fitnessTips.length > 0 && (
               <div className="mt-12">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">💪 Fitness Tips</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">ðŸ’ª Fitness Tips</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {fitnessTips.map((tip, index) => (
                     <motion.div

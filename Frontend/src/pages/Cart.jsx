@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Container,
   Typography,
@@ -66,7 +66,6 @@ export default function Cart() {
   };
 
   const handleCheckout = () => {
-    console.log('Proceeding to checkout...');
     navigate('/checkout');
   };
 
@@ -292,7 +291,7 @@ export default function Cart() {
               ) : (
                 <Alert severity="success" sx={{ mb: 3, backgroundColor: '#e8f5e9', color: '#2e7d32' }}>
                   <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                    🎉 You qualify for free shipping!
+                    ðŸŽ‰ You qualify for free shipping!
                   </Typography>
                 </Alert>
               )}

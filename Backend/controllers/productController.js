@@ -1,4 +1,4 @@
-const Product = require('../models/Product');
+﻿const Product = require('../models/Product');
 const mongoose = require('mongoose');
 const cloudinaryService = require('../services/cloudinaryService');
 const fs = require('fs');
@@ -76,7 +76,7 @@ exports.getAllProducts = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error fetching products:', error);
+    console.error('âŒ Error fetching products:', error);
     res.status(500).json({ 
       message: 'Failed to fetch products',
       error: error.message 
@@ -153,7 +153,6 @@ exports.createProduct = async (req, res) => {
       if (typeof specifications === 'string') specifications = JSON.parse(specifications);
       if (typeof tags === 'string') tags = JSON.parse(tags);
     } catch (e) {
-      console.warn('Error parsing JSON fields', e);
     }
 
     let mainImage = '';
@@ -220,7 +219,7 @@ exports.createProduct = async (req, res) => {
     
     res.status(201).json(savedProduct);
   } catch (error) {
-    console.error('❌ Error creating product:', error);
+    console.error('âŒ Error creating product:', error);
     
     // Handle duplicate key error (slug)
     if (error.code === 11000) {
@@ -253,7 +252,7 @@ exports.updateProduct = async (req, res) => {
       if (typeof variants === 'string') variants = JSON.parse(variants);
       if (typeof specifications === 'string') specifications = JSON.parse(specifications);
       if (typeof tags === 'string') tags = JSON.parse(tags);
-    } catch (e) { console.warn('JSON parse error', e); }
+    } catch (_) {}
 
     // Fetch existing product to merge images if needed
     const existingProduct = await Product.findById(productId);
@@ -334,7 +333,7 @@ exports.updateProduct = async (req, res) => {
     res.json(updatedProduct);
 
   } catch (error) {
-    console.error('❌ Error updating product:', error);
+    console.error('âŒ Error updating product:', error);
     res.status(400).json({ message: 'Error updating product', error: error.message });
   }
 };
@@ -428,3 +427,4 @@ exports.getBestOffers = async (req, res) => {
     res.status(500).json({ message: 'Error fetching best offers', error: error.message });
   }
 }; 
+

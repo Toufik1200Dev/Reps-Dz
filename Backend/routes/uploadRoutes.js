@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const multer = require('multer');
 const router = express.Router();
 const CloudinaryService = require('../services/cloudinaryService');
@@ -11,7 +11,6 @@ const upload = multer({
   },
   fileFilter: (req, file, cb) => {
     // Log file details
-    console.log('📎 Multer file filter:', {
       fieldname: file.fieldname,
       originalname: file.originalname,
       mimetype: file.mimetype,
@@ -22,7 +21,7 @@ const upload = multer({
     if (file.mimetype && file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      console.error('❌ Invalid file type:', file.mimetype);
+      console.error('âŒ Invalid file type:', file.mimetype);
       cb(new Error('Only image files are allowed!'), false);
     }
   },
@@ -31,7 +30,7 @@ const upload = multer({
 // Error handling middleware for multer - must be after the multer middleware
 const handleMulterError = (err, req, res, next) => {
   if (err) {
-    console.error('❌ Multer error caught:', {
+    console.error('âŒ Multer error caught:', {
       name: err.name,
       code: err.code,
       message: err.message,
@@ -99,7 +98,6 @@ const uploadMiddleware = (req, res, next) => {
 
 router.post('/image', (req, res, next) => {
   // Log incoming request details before Multer processes it
-  console.log('📥 Incoming upload request:', {
     method: req.method,
     url: req.url,
     contentType: req.headers['content-type'],
@@ -111,7 +109,6 @@ router.post('/image', (req, res, next) => {
 }, uploadMiddleware, async (req, res) => {
   try {
     // Log request details for debugging
-    console.log('📤 Image upload request received:', {
       hasFile: !!req.file,
       fileField: req.file?.fieldname,
       fileName: req.file?.originalname,
@@ -126,7 +123,7 @@ router.post('/image', (req, res, next) => {
 
     if (!req.file) {
       // Check if multer error occurred - might be in req.body if parsed as text
-      console.error('❌ No file received in request');
+      console.error('âŒ No file received in request');
       console.error('Request body keys:', Object.keys(req.body || {}));
       console.error('Request body:', req.body);
       console.error('Request files:', req.files);
@@ -152,7 +149,7 @@ router.post('/image', (req, res, next) => {
     
     // Verify file was parsed correctly
     if (!req.file.buffer || req.file.buffer.length === 0) {
-      console.error('❌ File buffer is empty');
+      console.error('âŒ File buffer is empty');
       return res.status(400).json({
         success: false,
         message: 'Invalid file: File appears to be empty.'
@@ -161,7 +158,7 @@ router.post('/image', (req, res, next) => {
 
     // Verify mimetype
     if (!req.file.mimetype || !req.file.mimetype.startsWith('image/')) {
-      console.error('❌ Invalid file type:', req.file.mimetype);
+      console.error('âŒ Invalid file type:', req.file.mimetype);
       return res.status(400).json({
         success: false,
         message: 'Invalid file type. Only image files are allowed.'
@@ -171,7 +168,7 @@ router.post('/image', (req, res, next) => {
     // Check Cloudinary configuration before attempting upload
     const cloudinaryStatus = CloudinaryService.getConfigStatus();
     if (!CloudinaryService.isAvailable()) {
-      console.error('❌ Cloudinary is not configured!', cloudinaryStatus);
+      console.error('âŒ Cloudinary is not configured!', cloudinaryStatus);
       return res.status(500).json({
         success: false,
         message: 'Image upload service is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.',
@@ -184,7 +181,7 @@ router.post('/image', (req, res, next) => {
     
     // Validate the result URL is not a placeholder
     if (result.url && (result.url.includes('via.placeholder') || result.url.startsWith('data:image'))) {
-      console.error('❌ Cloudinary upload returned placeholder URL. Configuration may be incorrect.');
+      console.error('âŒ Cloudinary upload returned placeholder URL. Configuration may be incorrect.');
       return res.status(500).json({
         success: false,
         message: 'Image upload failed: Cloudinary configuration error. The service returned a placeholder instead of a real image URL.',
@@ -192,7 +189,6 @@ router.post('/image', (req, res, next) => {
       });
     }
     
-    console.log('✅ Image uploaded successfully:', result.url);
     
     res.json({
       success: true,
@@ -208,7 +204,7 @@ router.post('/image', (req, res, next) => {
     });
 
   } catch (error) {
-    console.error('❌ Image upload error:', error);
+    console.error('âŒ Image upload error:', error);
     const errorMessage = error.message || 'Failed to upload image';
     
     // Check if it's a Cloudinary configuration error

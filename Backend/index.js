@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -177,7 +177,7 @@ app.use('/api/admin/orders', adminAuth, orderRoutes);
 
 // Error handling middleware (must set CORS headers)
 app.use((err, req, res, next) => {
-  console.error('❌ Error:', err.stack);
+  console.error('âŒ Error:', err.stack);
   
   // Set CORS headers even on error
   const allowedOrigins = process.env.NODE_ENV === 'production' 
@@ -204,15 +204,7 @@ app.use('*', (req, res) => {
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
-  const apiUrl = process.env.NODE_ENV === 'production' 
-    ? `https://reps-dz.onrender.com`
-    : `http://localhost:${PORT}`;
-  
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-  console.log(`🔗 API URL: ${apiUrl}`);
-  console.log(`📸 Images served from: ${apiUrl}/uploads`);
-  console.log(`🗄️  Database: MongoDB connected`);
+  // Intentionally no startup logs (keep console output to essential errors only)
 });
 
 module.exports = app;

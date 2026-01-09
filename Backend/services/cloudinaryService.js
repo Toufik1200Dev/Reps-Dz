@@ -1,4 +1,4 @@
-const cloudinary = require('cloudinary').v2;
+﻿const cloudinary = require('cloudinary').v2;
 
 // Configure Cloudinary
 cloudinary.config({
@@ -19,13 +19,13 @@ class CloudinaryService {
       // Check if Cloudinary is configured
       if (!this.hasCloudinaryConfig) {
         const configStatus = this.getConfigStatus();
-        console.error('❌ Cloudinary not configured! Missing environment variables:', {
+        console.error('âŒ Cloudinary not configured! Missing environment variables:', {
           cloudName: configStatus.cloudName,
           apiKey: configStatus.apiKey,
           apiSecret: configStatus.apiSecret,
           isProduction: configStatus.isProduction
         });
-        console.error('❌ Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your environment variables.');
+        console.error('âŒ Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your environment variables.');
         
         // In production, throw an error instead of returning a placeholder
         if (this.isProduction) {
@@ -33,7 +33,6 @@ class CloudinaryService {
         }
         
         // In development, return a mock response with a warning
-        console.warn('⚠️ Running in development mode without Cloudinary. Returning placeholder URL.');
         return {
           url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0iI2U1ZTdlYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5DbG91ZGluYXJ5IE5vdCBDb25maWd1cmVkPC90ZXh0Pjwvc3ZnPg==',
           publicId: `mock-${Date.now()}`,
@@ -80,7 +79,7 @@ class CloudinaryService {
         size: result.bytes
       };
     } catch (error) {
-      console.error('❌ Cloudinary upload error:', error);
+      console.error('âŒ Cloudinary upload error:', error);
       
       // If Cloudinary fails, return a fallback
       if (this.hasCloudinaryConfig) {
@@ -235,3 +234,4 @@ class CloudinaryService {
 }
 
 module.exports = new CloudinaryService();
+

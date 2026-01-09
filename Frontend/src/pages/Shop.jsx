@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Slider,
   Pagination,
@@ -76,7 +76,6 @@ export default function Shop() {
         setCategories(uniqueCats);
         setFilteredProducts(normalized);
       } catch (e) {
-        console.warn('Using fallback products');
         setProducts(featuredProducts);
         setCategories([...new Set(featuredProducts.map(p => p.category))]);
         setFilteredProducts(featuredProducts);

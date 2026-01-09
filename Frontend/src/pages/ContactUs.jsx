@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Phone,
   Email,
@@ -20,7 +20,6 @@ export default function ContactUs() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Contact form submitted:', formData);
     alert('Thank you for your message! We will get back to you soon.');
     setFormData({ name: '', email: '', subject: '', message: '' });
   };
