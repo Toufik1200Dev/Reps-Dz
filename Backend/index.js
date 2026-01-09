@@ -71,8 +71,19 @@ app.use((req, res, next) => {
   next();
 });
 
+// Configure body parser - but exclude multipart/form-data (handled by Multer)
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+
+// Middleware to prevent bodyParser from parsing multipart/form-data
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  // Skip body parsing for multipart/form-data (let Multer handle it)
+  if (contentType.includes('multipart/form-data')) {
+    return next();
+  }
+  next();
+});
 
 // Serve uploaded images (for backward compatibility, though we use Cloudinary now)
 // This route handles static file serving and provides a helpful message if directory is empty

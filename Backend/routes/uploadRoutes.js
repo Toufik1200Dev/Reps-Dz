@@ -86,6 +86,17 @@ const handleMulterError = (err, req, res, next) => {
 };
 
 // Upload single image to Cloudinary (no auth check - dashboard access is sufficient)
+// Wrap Multer in a try-catch to handle errors properly
+const uploadMiddleware = (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      // Handle Multer errors immediately
+      return handleMulterError(err, req, res, next);
+    }
+    next();
+  });
+};
+
 router.post('/image', (req, res, next) => {
   // Log incoming request details before Multer processes it
   console.log('📥 Incoming upload request:', {
@@ -97,7 +108,7 @@ router.post('/image', (req, res, next) => {
     bodyKeys: req.body ? Object.keys(req.body) : []
   });
   next();
-}, upload.single('image'), handleMulterError, async (req, res) => {
+}, uploadMiddleware, async (req, res) => {
   try {
     // Log request details for debugging
     console.log('📤 Image upload request received:', {
