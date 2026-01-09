@@ -104,13 +104,16 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
       {showPreview && imageUrl && !multiple && (
         <div className="relative w-40 h-40 mb-3 group">
           <img 
-            src={imageUrl} 
+            src={imageUrl && !imageUrl.includes('via.placeholder') ? imageUrl : '/placeholder-product.png'} 
             alt="Preview" 
             className="w-full h-full object-cover rounded-lg border-2 border-gray-200 shadow-sm"
             onError={(e) => {
-              // Handle image load error silently - show placeholder instead
+              // Handle image load error silently - use data URI fallback
               e.target.onerror = null; // Prevent infinite loop
-              e.target.src = '/placeholder-product.png';
+              if (!e.target.src.includes('data:image')) {
+                // Simple gray placeholder as data URI
+                e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgZmlsbD0iI2U1ZTdlYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5QcmV2aWV3PC90ZXh0Pjwvc3ZnPg==';
+              }
             }}
           />
           <button
@@ -530,13 +533,16 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
                 {formData.images?.gallery && formData.images.gallery.length > 0 && formData.images.gallery.map((url, idx) => (
                   <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group border-2 border-gray-200 shadow-sm">
                     <img 
-                      src={url} 
+                      src={url && !url.includes('via.placeholder') ? url : '/placeholder-product.png'} 
                       alt={`Gallery ${idx + 1}`} 
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        // Handle image load error silently - show placeholder instead
+                        // Handle image load error silently - use data URI fallback
                         e.target.onerror = null; // Prevent infinite loop
-                        e.target.src = '/placeholder-product.png';
+                        if (!e.target.src.includes('data:image')) {
+                          // Simple gray placeholder as data URI
+                          e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2U1ZTdlYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5HYWxsZXJ5PC90ZXh0Pjwvc3ZnPg==';
+                        }
                       }}
                     />
                     <button

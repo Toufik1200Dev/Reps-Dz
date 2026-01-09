@@ -145,8 +145,16 @@ const ProductDetail = () => {
               className="aspect-square bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative group"
             >
               <img
-                src={product.imagesList[selectedImage] || 'https://via.placeholder.com/600'}
+                src={product.imagesList[selectedImage] || '/placeholder.jpg'}
                 alt={product.name}
+                onError={(e) => {
+                  // Handle image load error silently - use data URI fallback
+                  e.target.onerror = null; // Prevent infinite loop
+                  if (!e.target.src.includes('data:image')) {
+                    // Simple gray placeholder as data URI
+                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0iI2U1ZTdlYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZSBOb3QgQXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
+                  }
+                }}
                 className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
               />
             </motion.div>

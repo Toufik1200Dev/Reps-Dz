@@ -196,9 +196,17 @@ export default function Home() {
                 >
                   <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100 mb-4">
                     <img
-                      src={product.images?.main || product.image || product.images?.[0]?.url || 'https://via.placeholder.com/400'}
+                      src={product.images?.main || product.image || product.images?.[0]?.url || '/placeholder.jpg'}
                       alt={product.name}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      onError={(e) => {
+                        // Handle image load error silently - use data URI fallback
+                        e.target.onerror = null; // Prevent infinite loop
+                        if (!e.target.src.includes('data:image')) {
+                          // Simple gray placeholder as data URI
+                          e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2U1ZTdlYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZSBOb3QgQXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
+                        }
+                      }}
                     />
                     {product.originalPrice && product.price < product.originalPrice && (
                       <span className="absolute top-4 left-4 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
