@@ -182,7 +182,7 @@ export const productsAPI = {
 
     try {
       // Explicitly ensure FormData is sent as multipart/form-data
-      // Set Content-Type to undefined to let Axios set it automatically with boundary
+      // Set Content-Type to undefined to let Axios/browser set it automatically with boundary
       const response = await api.post('/upload/image', formData, {
         headers: {
           'Content-Type': undefined // Explicitly remove Content-Type so Axios sets multipart/form-data
@@ -192,17 +192,18 @@ export const productsAPI = {
         // Ensure FormData is sent correctly
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
-        // Disable automatic serialization
-        transformRequest: (data, headers) => {
-          // If data is FormData, don't transform it
+        // Transform request to ensure FormData is not serialized
+        transformRequest: [(data, headers) => {
+          // If data is FormData, don't transform it and remove Content-Type
           if (data instanceof FormData) {
-            // Remove Content-Type header to let browser set it with boundary
+            // Remove Content-Type header to let browser/Axios set it with boundary
             delete headers['Content-Type'];
-            return data;
+            delete headers['content-type'];
+            return data; // Return FormData as-is
           }
           // For other data types, use default transformation
           return data;
-        }
+        }]
       });
       return response.data;
     } catch (error) {
