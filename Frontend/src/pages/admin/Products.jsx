@@ -38,7 +38,7 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
           url = res.data?.url || res.url || (typeof res.data === 'string' ? res.data : null) || res.secure_url;
         }
         
-        if (url && typeof url === 'string' && url.length > 0) {
+        if (url && typeof url === 'string' && url.length > 0 && !url.includes('via.placeholder')) {
           onUpload(url);
         } else {
           // Invalid URL in upload response - log error details
@@ -47,7 +47,8 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
             hasData: !!res?.data,
             dataType: typeof res?.data,
             urlInData: !!res?.data?.url,
-            urlType: typeof res?.data?.url
+            urlType: typeof res?.data?.url,
+            extractedUrl: url
           };
           console.error('Image upload error: No valid URL in upload response', errorDetails);
           alert('Image upload failed: Invalid response from server. Please try again.');
@@ -104,7 +105,7 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
       {showPreview && imageUrl && !multiple && (
         <div className="relative w-40 h-40 mb-3 group">
           <img 
-            src={imageUrl && !imageUrl.includes('via.placeholder') ? imageUrl : '/placeholder-product.png'} 
+            src={imageUrl.includes('via.placeholder') ? '/placeholder-product.png' : imageUrl} 
             alt="Preview" 
             className="w-full h-full object-cover rounded-lg border-2 border-gray-200 shadow-sm"
             onError={(e) => {
@@ -533,7 +534,7 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
                 {formData.images?.gallery && formData.images.gallery.length > 0 && formData.images.gallery.map((url, idx) => (
                   <div key={idx} className="relative aspect-square rounded-lg overflow-hidden group border-2 border-gray-200 shadow-sm">
                     <img 
-                      src={url && !url.includes('via.placeholder') ? url : '/placeholder-product.png'} 
+                      src={url.includes('via.placeholder') ? '/placeholder-product.png' : url} 
                       alt={`Gallery ${idx + 1}`} 
                       className="w-full h-full object-cover"
                       onError={(e) => {
