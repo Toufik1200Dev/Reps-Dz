@@ -14,6 +14,14 @@ const api = axios.create({
 // Request interceptor to add auth token and admin password
 api.interceptors.request.use(
   (config) => {
+    // IMPORTANT: For FormData, delete Content-Type to let Axios set it automatically with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    } else if (!config.headers['Content-Type']) {
+      // Set default Content-Type for non-FormData requests if not already set
+      config.headers['Content-Type'] = 'application/json';
+    }
+    
     // Add user auth token if available
     const token = localStorage.getItem('token');
     if (token) {
@@ -167,13 +175,9 @@ export const productsAPI = {
     formData.append('image', file);
 
     try {
-      // The axios interceptor will automatically add x-admin-password header
-      // For FormData, we must NOT set Content-Type - let axios set it automatically with boundary
+      // The axios interceptor will automatically add x-admin-password header and handle FormData Content-Type
+      // No need to set Content-Type - the interceptor will handle it
       const response = await api.post('/upload/image', formData, {
-        headers: {
-          // Explicitly let Axios handle Content-Type for FormData
-          'Content-Type': undefined
-        },
         // Increase timeout for large files
         timeout: 60000,
         // Ensure FormData is sent correctly
