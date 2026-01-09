@@ -243,7 +243,27 @@ const ProductForm = ({ initialData, onSubmit, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    // Clean up form data: filter out via.placeholder URLs and empty strings
+    const cleanedData = {
+      ...formData,
+      images: {
+        main: formData.images?.main && !formData.images.main.includes('via.placeholder') 
+          ? formData.images.main.trim() 
+          : '',
+        gallery: (formData.images?.gallery || [])
+          .filter(url => url && typeof url === 'string' && url.trim().length > 0 && !url.includes('via.placeholder'))
+          .map(url => url.trim())
+      }
+    };
+    
+    // Validate: main image is required
+    if (!cleanedData.images.main || cleanedData.images.main.length === 0) {
+      alert('Please upload a main product image.');
+      return;
+    }
+    
+    onSubmit(cleanedData);
   };
 
   const tabs = [
