@@ -122,8 +122,29 @@ router.post('/image', upload.single('image'), handleMulterError, async (req, res
       });
     }
     
+    // Check Cloudinary configuration before attempting upload
+    const cloudinaryStatus = CloudinaryService.getConfigStatus();
+    if (!CloudinaryService.isAvailable()) {
+      console.error('❌ Cloudinary is not configured!', cloudinaryStatus);
+      return res.status(500).json({
+        success: false,
+        message: 'Image upload service is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.',
+        configStatus: cloudinaryStatus
+      });
+    }
+    
     // Upload to Cloudinary
     const result = await CloudinaryService.uploadImage(req.file.buffer, 'titoubarz/products');
+    
+    // Validate the result URL is not a placeholder
+    if (result.url && (result.url.includes('via.placeholder') || result.url.startsWith('data:image'))) {
+      console.error('❌ Cloudinary upload returned placeholder URL. Configuration may be incorrect.');
+      return res.status(500).json({
+        success: false,
+        message: 'Image upload failed: Cloudinary configuration error. The service returned a placeholder instead of a real image URL.',
+        configStatus: cloudinaryStatus
+      });
+    }
     
     console.log('✅ Image uploaded successfully:', result.url);
     
@@ -142,10 +163,21 @@ router.post('/image', upload.single('image'), handleMulterError, async (req, res
 
   } catch (error) {
     console.error('❌ Image upload error:', error);
+    const errorMessage = error.message || 'Failed to upload image';
+    
+    // Check if it's a Cloudinary configuration error
+    if (errorMessage.includes('Cloudinary is not configured')) {
+      return res.status(500).json({
+        success: false,
+        message: errorMessage,
+        configStatus: CloudinaryService.getConfigStatus()
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Failed to upload image',
-      error: error.message
+      error: errorMessage
     });
   }
 });

@@ -18,9 +18,24 @@ class CloudinaryService {
     try {
       // Check if Cloudinary is configured
       if (!this.hasCloudinaryConfig) {
-        // Return a mock response for development/testing
+        const configStatus = this.getConfigStatus();
+        console.error('❌ Cloudinary not configured! Missing environment variables:', {
+          cloudName: configStatus.cloudName,
+          apiKey: configStatus.apiKey,
+          apiSecret: configStatus.apiSecret,
+          isProduction: configStatus.isProduction
+        });
+        console.error('❌ Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your environment variables.');
+        
+        // In production, throw an error instead of returning a placeholder
+        if (this.isProduction) {
+          throw new Error('Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.');
+        }
+        
+        // In development, return a mock response with a warning
+        console.warn('⚠️ Running in development mode without Cloudinary. Returning placeholder URL.');
         return {
-          url: 'https://via.placeholder.com/800x600/cccccc/666666?text=Image+Upload+Disabled',
+          url: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0iI2U1ZTdlYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5DbG91ZGluYXJ5IE5vdCBDb25maWd1cmVkPC90ZXh0Pjwvc3ZnPg==',
           publicId: `mock-${Date.now()}`,
           width: 800,
           height: 600,
