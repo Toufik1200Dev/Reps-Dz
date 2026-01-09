@@ -72,17 +72,17 @@ app.use((req, res, next) => {
 });
 
 // Configure body parser - but exclude multipart/form-data (handled by Multer)
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
-
-// Middleware to prevent bodyParser from parsing multipart/form-data
+// Configure body parser - exclude upload routes (handled by Multer)
+// This ensures bodyParser doesn't interfere with multipart/form-data
 app.use((req, res, next) => {
-  const contentType = req.headers['content-type'] || '';
-  // Skip body parsing for multipart/form-data (let Multer handle it)
-  if (contentType.includes('multipart/form-data')) {
+  // Skip body parsing for upload routes (Multer handles multipart/form-data)
+  if (req.path.startsWith('/api/upload')) {
     return next();
   }
-  next();
+  // Apply bodyParser for other routes
+  bodyParser.json({ limit: '50mb' })(req, res, () => {
+    bodyParser.urlencoded({ extended: true, limit: '50mb' })(req, res, next);
+  });
 });
 
 // Serve uploaded images (for backward compatibility, though we use Cloudinary now)
