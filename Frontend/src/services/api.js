@@ -175,14 +175,28 @@ export const productsAPI = {
     formData.append('image', file);
 
     try {
-      // The axios interceptor will automatically add x-admin-password header and handle FormData Content-Type
-      // No need to set Content-Type - the interceptor will handle it
+      // Explicitly ensure FormData is sent as multipart/form-data
+      // Set Content-Type to undefined to let Axios set it automatically with boundary
       const response = await api.post('/upload/image', formData, {
+        headers: {
+          'Content-Type': undefined // Explicitly remove Content-Type so Axios sets multipart/form-data
+        },
         // Increase timeout for large files
         timeout: 60000,
         // Ensure FormData is sent correctly
         maxContentLength: Infinity,
-        maxBodyLength: Infinity
+        maxBodyLength: Infinity,
+        // Disable automatic serialization
+        transformRequest: (data, headers) => {
+          // If data is FormData, don't transform it
+          if (data instanceof FormData) {
+            // Remove Content-Type header to let browser set it with boundary
+            delete headers['Content-Type'];
+            return data;
+          }
+          // For other data types, use default transformation
+          return data;
+        }
       });
       return response.data;
     } catch (error) {
