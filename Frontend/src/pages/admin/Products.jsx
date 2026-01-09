@@ -32,13 +32,22 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
       
       // Process each result and call onUpload for each URL
       results.forEach((res) => {
-        // Backend returns: { success: true, data: { url: ... } }
+        // Backend returns: { success: true, message: '...', data: { url: '...', ... } }
+        // api.post returns response.data, so res is already the response object
         let url = null;
         if (res && typeof res === 'object') {
-          url = res.data?.url || res.url || (typeof res.data === 'string' ? res.data : null) || res.secure_url;
+          // Try multiple possible response structures
+          url = res.data?.url || res.url || (typeof res.data === 'string' ? res.data : null) || res.secure_url || res.data?.secure_url;
         }
         
-        if (url && typeof url === 'string' && url.length > 0 && !url.includes('via.placeholder')) {
+        // Validate URL: must be a non-empty string, not a placeholder, and start with http(s)
+        const isValidUrl = url && 
+                          typeof url === 'string' && 
+                          url.length > 0 && 
+                          !url.includes('via.placeholder') &&
+                          (url.startsWith('http://') || url.startsWith('https://'));
+        
+        if (isValidUrl) {
           onUpload(url);
         } else {
           // Invalid URL in upload response - log error details
@@ -48,7 +57,8 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
             dataType: typeof res?.data,
             urlInData: !!res?.data?.url,
             urlType: typeof res?.data?.url,
-            extractedUrl: url
+            extractedUrl: url,
+            isValidUrl: isValidUrl
           };
           console.error('Image upload error: No valid URL in upload response', errorDetails);
           alert('Image upload failed: Invalid response from server. Please try again.');
@@ -102,10 +112,10 @@ const ImageUploader = ({ label, showPreview, imageUrl, onUpload, onRemove, multi
       {label && <label className="block text-sm font-bold mb-2 text-gray-700">{label}</label>}
 
       {/* Preview Area for Single Image */}
-      {showPreview && imageUrl && !multiple && (
+      {showPreview && imageUrl && imageUrl.trim().length > 0 && !multiple && (
         <div className="relative w-40 h-40 mb-3 group">
           <img 
-            src={imageUrl.includes('via.placeholder') ? '/placeholder-product.png' : imageUrl} 
+            src={imageUrl.includes('via.placeholder') ? 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgZmlsbD0iI2U1ZTdlYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5QcmV2aWV3PC90ZXh0Pjwvc3ZnPg==' : imageUrl} 
             alt="Preview" 
             className="w-full h-full object-cover rounded-lg border-2 border-gray-200 shadow-sm"
             onError={(e) => {
