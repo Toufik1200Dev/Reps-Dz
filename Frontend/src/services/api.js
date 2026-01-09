@@ -14,10 +14,16 @@ const api = axios.create({
 // Request interceptor to add auth token and admin password
 api.interceptors.request.use(
   (config) => {
-    // IMPORTANT: For FormData, delete Content-Type to let Axios set it automatically with boundary
-    if (config.data instanceof FormData) {
+    // IMPORTANT: For FormData, delete Content-Type to let Axios/browser set it automatically with boundary
+    // Check both config.data and the data passed to transformRequest
+    const isFormData = config.data instanceof FormData || 
+                       (config.transformRequest && config.data instanceof FormData);
+    
+    if (isFormData) {
+      // Explicitly remove Content-Type for FormData - let browser set it with boundary
       delete config.headers['Content-Type'];
-    } else if (!config.headers['Content-Type']) {
+      delete config.headers['content-type'];
+    } else if (!config.headers['Content-Type'] && !config.headers['content-type']) {
       // Set default Content-Type for non-FormData requests if not already set
       config.headers['Content-Type'] = 'application/json';
     }
