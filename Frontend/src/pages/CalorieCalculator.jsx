@@ -13,6 +13,7 @@ import {
 } from '@mui/icons-material';
 import API_CONFIG from '../config/api';
 import { useLanguage } from '../contexts/LanguageContext';
+import AdSense from '../components/ads/AdSense';
 
 const getOrCreateDeviceId = () => {
   const key = 'calorie_device_id';
@@ -446,6 +447,13 @@ export default function CalorieCalculator() {
             </motion.div>
         </div>
 
+        {/* Ad shown when user clicks Calculate (submit) – between form and results */}
+        {results && (
+          <div className="m-2 flex justify-center">
+            <AdSense slotName="calorieOnSubmit" format="auto" className="w-full max-w-[970px] min-h-[50px]" />
+          </div>
+        )}
+
         {/* Results Section */}
         {results && (
           <motion.div
@@ -455,6 +463,11 @@ export default function CalorieCalculator() {
             transition={{ duration: 0.5 }}
             className="mt-14 max-w-4xl mx-auto"
           >
+            {/* Ad above calorie results – spaced from Calculate button */}
+            <div className="m-2 flex justify-center">
+              <AdSense slotName="calorieAboveResults" format="auto" className="w-full min-h-[50px]" />
+            </div>
+
             {/* Summary card */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
               <div className="bg-gradient-to-br from-orange-500 to-orange-600 px-6 py-5 sm:px-8 sm:py-6">
@@ -529,6 +542,11 @@ export default function CalorieCalculator() {
                 </div>
               </div>
             )}
+
+            {/* Ad below calorie results – spaced from content */}
+            <div className="m-2 flex justify-center">
+              <AdSense slotName="calorieBelowResults" format="auto" className="w-full min-h-[50px]" />
+            </div>
           </motion.div>
         )}
       </div>

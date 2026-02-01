@@ -16,6 +16,7 @@ import Orders from './pages/admin/Orders';
 import Products from './pages/admin/Products';
 import Analytics from './pages/admin/Analytics';
 import GeneratorStats from './pages/admin/GeneratorStats';
+import SavedPrograms from './pages/admin/SavedPrograms';
 import CalorieStats from './pages/admin/CalorieStats';
 import ContactMessages from './pages/admin/ContactMessages';
 import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
@@ -52,63 +53,49 @@ function App() {
               <Route path="/shop" element={
                 <>
                   <Header />
-                  <main>
-                    <Shop />
-                  </main>
+                  <main><Shop /></main>
                   <Footer />
                 </>
               } />
               <Route path="/product/:id" element={
                 <>
                   <Header />
-                  <main>
-                    <ProductDetail />
-                  </main>
+                  <main><ProductDetail /></main>
                   <Footer />
                 </>
               } />
               <Route path="/cart" element={
                 <>
                   <Header />
-                  <main>
-                    <Cart />
-                  </main>
+                  <main><Cart /></main>
                   <Footer />
                 </>
               } />
               <Route path="/order" element={
                 <>
                   <Header />
-                  <main>
-                    <Order />
-                  </main>
+                  <main><Order /></main>
                   <Footer />
                 </>
               } />
               <Route path="/contact" element={
                 <>
                   <Header />
-                  <main>
-                    <ContactUs />
-                  </main>
+                  <main><ContactUs /></main>
                   <Footer />
                 </>
               } />
               <Route path="/programs" element={
                 <>
                   <Header />
-                  <main>
-                    <Programs />
-                  </main>
+                  <main><Programs /></main>
                   <Footer />
                 </>
               } />
               <Route path="/calorie-calculator" element={
                 <>
                   <Header />
-                  <main>
-                    <CalorieCalculator />
-                  </main>
+                  <main><CalorieCalculator /></main>
                   <Footer />
                 </>
               } />
@@ -126,6 +113,7 @@ function App() {
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="contact-messages" element={<ContactMessages />} />
                 <Route path="generator-stats" element={<GeneratorStats />} />
+                <Route path="saved-programs" element={<SavedPrograms />} />
                 <Route path="calorie-stats" element={<CalorieStats />} />
                 <Route path="shipping" element={<div>Shipping Management (Coming Soon)</div>} />
                 <Route path="support" element={<div>Support Management (Coming Soon)</div>} />

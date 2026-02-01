@@ -28,6 +28,7 @@ import logo from "../../assets/logo/logo.png";
 import { motion, AnimatePresence } from "framer-motion";
 import AnnouncementBar from '../layout/AnnouncementBar';
 import LanguageSwitcher from '../LanguageSwitcher';
+import AdSense from '../ads/AdSense';
 
 const navigationItems = [
   { key: "header.home", href: "/" },
@@ -226,6 +227,11 @@ export default function Header() {
           </Toolbar>
         </Container>
       </AppBar>
+
+      {/* Ad below page header (all pages) – responsive, compact */}
+      <div className="bg-gray-50 border-b border-gray-100 min-h-[50px] flex items-center justify-center m-2">
+        <AdSense slotName="belowHeader" format="auto" className="min-h-[50px] w-full max-w-[970px] mx-auto" />
+      </div>
 
       {/* Mobile Drawer Navigation */}
       <Drawer

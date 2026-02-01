@@ -4,6 +4,7 @@ import { FitnessCenter, Download, CheckCircle, Error } from '@mui/icons-material
 import API_CONFIG from '../config/api';
 import jsPDF from 'jspdf';
 import { useLanguage } from '../contexts/LanguageContext';
+import AdSense from '../components/ads/AdSense';
 
 export default function Programs() {
   const { t } = useLanguage();
@@ -29,8 +30,31 @@ export default function Programs() {
     setError(null);
   };
 
+  /** Parse AI response: extract JSON from markdown code block if present */
+  const parseAIProgramResponse = (text) => {
+    let raw = (text || '').trim();
+    const codeMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeMatch) raw = codeMatch[1].trim();
+    const parsed = JSON.parse(raw);
+    const program = parsed.program ?? parsed;
+    const weekList = Array.isArray(program) ? program : [program];
+    return {
+      program: weekList.map((w) => ({
+        week: w.week ?? 1,
+        days: (w.days ?? []).map((d) => ({
+          day: d.day,
+          focus: d.focus ?? '',
+          exercises: (d.exercises ?? []).map((e) => ({
+            name: e.name ?? '',
+            sets: e.sets ?? '',
+            rest: e.rest ?? ''
+          }))
+        }))
+      }))
+    };
+  };
+
   const handleGenerate = async () => {
-    // Validation
     if (maxReps.pullUps === 0 && maxReps.dips === 0 && maxReps.pushUps === 0) {
       setError('Please enter at least one exercise with reps > 0');
       return;
@@ -38,52 +62,79 @@ export default function Programs() {
 
     setLoading(true);
     setError(null);
+    const payloadMaxReps = level === 'beginner' ? { ...maxReps, muscleUp: 0 } : maxReps;
 
-    try {
-      const payloadMaxReps = level === 'beginner' ? { ...maxReps, muscleUp: 0 } : maxReps;
-      const response = await fetch(`${API_CONFIG.getBaseURL()}/programs/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ level, maxReps: payloadMaxReps })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to generate program');
-      }
-
-      setProgram(data.data);
-
+    const saveProgramToBackend = (programData) => {
       const deviceId = (typeof window !== 'undefined' && localStorage.getItem('calorie_device_id')) || undefined;
       const userName = (typeof window !== 'undefined' && localStorage.getItem('calorie_user_name')) ? localStorage.getItem('calorie_user_name').trim() : 'None';
       const nameToSave = (userName && userName !== '') ? userName : 'None';
+      const weeklyProgram = (programData.program || []).slice(0, 1);
+      fetch(`${API_CONFIG.getBaseURL()}/programs/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userName: nameToSave,
+          deviceId,
+          level,
+          maxReps: payloadMaxReps,
+          program: weeklyProgram
+        })
+      }).catch((saveErr) => console.error('Error saving program:', saveErr));
+    };
 
-      try {
-        await fetch(`${API_CONFIG.getBaseURL()}/programs/save`, {
+    try {
+      const puter = typeof window !== 'undefined' && window.puter;
+      if (puter?.ai?.chat) {
+        const repsText = [
+          level !== 'beginner' && payloadMaxReps.muscleUp > 0 ? `Muscle-ups: ${payloadMaxReps.muscleUp}` : null,
+          `Pull-ups: ${payloadMaxReps.pullUps}`,
+          `Dips: ${payloadMaxReps.dips}`,
+          `Push-ups: ${payloadMaxReps.pushUps}`,
+          `Squats: ${payloadMaxReps.squats}`,
+          `Leg raises: ${payloadMaxReps.legRaises}`
+        ].filter(Boolean).join(', ');
+
+        const prompt = `You are a calisthenics coach. Generate a 1-WEEK program that follows this EXACT algorithm and structure (same as our backend generator). Use the user's max reps below to compute rep numbers.
+
+ALGORITHM:
+- Week 1 = volume base: use 60% of max for beginners, 70-75% for intermediate/advanced when prescribing reps per set.
+- Beginners: NO muscle-ups; use Australian pull-ups at 1.5x to 2x the pull-up reps when pull exercises are combined.
+- Intermediate/Advanced: may include muscle-ups at ~30-40% of max when relevant.
+
+STRUCTURE (exactly 4 days per week):
+- Day 1 – Pull Day: Warm-up (5-7 min) first exercise, then 2-3 main exercises. Methods: Degressive sets (reps decrease each round, e.g. "6 pull-ups\\n4 pull-ups\\n2 pull-ups\\n× 3 rounds"), EMOM (e.g. "EMOM 6 min: 4 pull-ups at start of each minute"), Separated volume (e.g. "4 sets × 6 reps\\n5 sets × 5 reps"), Pyramids, or Superset (pull-ups + chin-ups + Australian pull-ups × rounds). Rest: "2-3 min between rounds" or "90s between sets" or "Rest for the remainder of each minute" for EMOM.
+- Day 2 – Push Day: Warm-up first, then 2-3 main exercises. Exercises: Dips, Push-ups, Bar dips; optional muscle-ups for non-beginners. Same rest style. Example sets: "6 dips\\n8 push-ups\\n× 4 rounds" or "EMOM 8 min: 4 dips at start of each minute".
+- Day 3 – Legs + Core + Cardio: Warm-up, then Squats (volume or EMOM), Jump squats, Burpees, Leg raises, Plank. Rest: "60s between sets".
+- Day 4 – Endurance Integration Day: Warm-up, then Activation (easy EMOM or light unbroken, 5-8 min), Main Set (combined pull+push in rounds, e.g. "Round 1: 4 pull-ups, 6 dips, 8 push-ups\\nRound 2: ...\\n× 3 rounds"), Finisher (short AMRAP or isometric holds). Rest: "2-3 min between rounds" for main set.
+
+USER INPUTS:
+- Level: ${level}
+- Max reps: ${repsText}
+
+For each exercise, "sets" must be the prescription only (e.g. "6 pull-ups\\n6 Australian pull-ups\\n× 4 rounds" or "4 sets × 6 reps") with no extra label. "rest" must be one short phrase (e.g. "2-3 min between rounds"). Return ONLY valid JSON in this exact shape, no other text:
+{"program":[{"week":1,"days":[{"day":1,"focus":"Pull Day","exercises":[{"name":"Warm-up (5-7 min)","sets":"Tempo pull-ups x10, arm circles, hang holds","rest":"No rest needed"},{"name":"Exercise 2: ...","sets":"...","rest":"..."}]},{"day":2,"focus":"Push Day",...},{"day":3,"focus":"Legs + Core + Cardio",...},{"day":4,"focus":"Endurance Integration Day",...}]}]}
+Output exactly 4 days (Pull Day, Push Day, Legs + Core + Cardio, Endurance Integration Day) with exercises and sets computed from the user max reps above.`;
+
+        const response = await puter.ai.chat(prompt, { model: 'gemini-3-flash-preview' });
+        const text = typeof response === 'string' ? response : (response?.text ?? String(response));
+        const data = parseAIProgramResponse(text);
+        setProgram(data);
+        saveProgramToBackend(data);
+      } else {
+        const response = await fetch(`${API_CONFIG.getBaseURL()}/programs/generate`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            userName: nameToSave,
-            deviceId,
-            level,
-            maxReps: payloadMaxReps,
-            program: data.data.program
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ level, maxReps: payloadMaxReps })
         });
-      } catch (saveErr) {
-        console.error('Error saving program:', saveErr);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Failed to generate program');
+        setProgram(data.data);
+        saveProgramToBackend(data.data);
       }
-      
-      // Scroll to program
+
       setTimeout(() => {
         document.getElementById('program-display')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
-
     } catch (err) {
       console.error('Error generating program:', err);
       setError(err.message || 'Failed to generate program. Please try again.');
@@ -103,7 +154,7 @@ export default function Programs() {
     // Title
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.text('4-Week Calisthenics Endurance Program', pageWidth / 2, yPos, { align: 'center' });
+    doc.text('1-Week Calisthenics Endurance Program', pageWidth / 2, yPos, { align: 'center' });
     yPos += 10;
 
     doc.setFontSize(14);
@@ -111,8 +162,9 @@ export default function Programs() {
     doc.text(`Level: ${level.charAt(0).toUpperCase() + level.slice(1)}`, pageWidth / 2, yPos, { align: 'center' });
     yPos += 15;
 
-    // Program content
-    program.program.forEach((week, weekIndex) => {
+    // Program content (1 week only)
+    const oneWeek = program.program.slice(0, 1);
+    oneWeek.forEach((week, weekIndex) => {
       // Check if we need a new page
       if (yPos > pageHeight - 60) {
         doc.addPage();
@@ -151,21 +203,28 @@ export default function Programs() {
           yPos += 6;
           
           if (exercise.sets) {
-            // Split sets by newlines for better formatting
-            const setsLines = exercise.sets.split('\n');
-            setsLines.forEach((line, idx) => {
+            const setsLines = exercise.sets.split('\n').filter(Boolean);
+            if (setsLines.length > 0) {
               if (yPos > pageHeight - 30) {
                 doc.addPage();
                 yPos = 20;
               }
-              doc.text(`  ${line}`, 35, yPos);
+              doc.text(`  ${setsLines[0]}`, 35, yPos);
               yPos += 6;
-            });
+              for (let i = 1; i < setsLines.length; i++) {
+                if (yPos > pageHeight - 30) {
+                  doc.addPage();
+                  yPos = 20;
+                }
+                doc.text(`  ${setsLines[i]}`, 35, yPos);
+                yPos += 6;
+              }
+            }
           }
           
           if (exercise.rest) {
             doc.setFont('helvetica', 'italic');
-            doc.text(`  Rest: ${exercise.rest}`, 35, yPos);
+            doc.text(`  Rest between sets: ${exercise.rest}`, 35, yPos);
             doc.setFont('helvetica', 'normal');
             yPos += 6;
           }
@@ -187,7 +246,7 @@ export default function Programs() {
     }
 
     // Download
-    doc.save(`calisthenics-program-${level}-${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`calisthenics-program-1week-${level}-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
@@ -205,10 +264,10 @@ export default function Programs() {
             </div>
           </div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 md:mb-4 px-2">
-            Generate Your <span className="text-yellow-500">4-Week</span> Calisthenics Endurance Program
+            Generate Your <span className="text-yellow-500">1-Week</span> Calisthenics Endurance Program
           </h1>
           <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-2">
-            Enter your max reps for each exercise and get a personalized 4-week endurance program designed to push your limits.
+            Enter your max reps for each exercise and get a personalized 1-week endurance program designed to push your limits.
           </p>
         </motion.div>
 
@@ -386,6 +445,11 @@ export default function Programs() {
           </button>
         </motion.div>
 
+        {/* Ad inside content – after first section (form), before program output */}
+        <div className="m-2 flex justify-center">
+          <AdSense slotName="programsInContent" format="auto" className="w-full max-w-[970px] min-h-[50px]" />
+        </div>
+
         {/* Program Display */}
         {program && (
           <div id="program-display" className="space-y-8">
@@ -401,8 +465,8 @@ export default function Programs() {
               </button>
             </div>
 
-            {/* Program Weeks */}
-            {program.program.map((week, weekIndex) => (
+            {/* Program – 1 week only */}
+            {program.program.slice(0, 1).map((week, weekIndex) => (
               <motion.div
                 key={weekIndex}
                 initial={{ opacity: 0, y: 20 }}
@@ -415,9 +479,6 @@ export default function Programs() {
                   <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-black">Week {week.week}</h3>
                   <p className="text-black/80 mt-1 text-sm sm:text-base">
                     {week.week === 1 && '60% of max'}
-                    {week.week === 2 && '70% of max'}
-                    {week.week === 3 && '80% of max'}
-                    {week.week === 4 && '90% of max - Challenge Week!'}
                   </p>
                 </div>
 
@@ -438,12 +499,12 @@ export default function Programs() {
                                 <h5 className="font-bold text-gray-900 mb-1.5 sm:mb-2 text-sm sm:text-base break-words">{exercise.name}</h5>
                                 {exercise.sets && (
                                   <p className="text-gray-700 mb-1 text-sm sm:text-base whitespace-pre-line break-words">
-                                    <span className="font-semibold">Sets:</span> {exercise.sets}
+                                    {exercise.sets}
                                   </p>
                                 )}
                                 {exercise.rest && (
                                   <p className="text-xs sm:text-sm text-gray-500 break-words">
-                                    <span className="font-semibold">Rest:</span> {exercise.rest}
+                                    <span className="font-semibold">Rest between sets:</span> {exercise.rest}
                                   </p>
                                 )}
                               </div>

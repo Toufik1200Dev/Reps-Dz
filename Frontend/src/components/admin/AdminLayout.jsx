@@ -15,7 +15,8 @@ import {
   Close,
   FitnessCenter,
   Calculate,
-  Email
+  Email,
+  Description
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
@@ -28,6 +29,7 @@ const menuItems = [
   { text: 'Contact Messages', icon: <Email />, path: '/admin/contact-messages' },
   { text: 'Analytics', icon: <Assessment />, path: '/admin/analytics' },
   { text: 'Generator Stats', icon: <FitnessCenter />, path: '/admin/generator-stats' },
+  { text: 'Saved Programs', icon: <Description />, path: '/admin/saved-programs' },
   { text: 'Calorie Stats', icon: <Calculate />, path: '/admin/calorie-stats' },
 ];
 

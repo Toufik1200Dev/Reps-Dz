@@ -27,6 +27,7 @@ import { useCart } from '../contexts/CartContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PLACEHOLDER_IMAGE } from '../assets/placeholders';
+import AdSense from '../components/ads/AdSense';
 
 // Mock data fallback if API fails
 import { featuredProducts } from '../data/products';
@@ -347,85 +348,93 @@ export default function Shop() {
                   <h2 className="font-display font-bold text-2xl uppercase">{t('common.result') || 'Result'}: <span className="text-gray-500">{filteredProducts.length} {t('cart.itemsPlural')}</span></h2>
                 </div>
 
+                {/* Product grid with ad between rows (after every 4 products) – not near Buy buttons */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 md:gap-8">
-                  <AnimatePresence mode='popLayout'>
-                    {currentProducts.map((product) => (
-                      <motion.div
-                        layout
-                        key={product.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.3 }}
-                        className="group flex flex-col bg-white rounded-3xl border border-gray-100 hover:border-secondary/30 shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer overflow-hidden"
-                        onClick={() => navigate(`/product/${product.id}`)}
-                      >
-                        {/* Image Container */}
-                        <div className="relative pt-[110%] bg-gray-50 overflow-hidden">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
-
-                          {/* Badges */}
-                          <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-                            {product.originalPrice && product.price < product.originalPrice && (
-                              <span className="bg-red-600 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-sm shadow-xl">
-                                {product.discount > 0 ? `-${Math.round(product.discount)}%` : 'Sale'}
-                              </span>
-                            )}
-                            {product.isFeatured && (
-                              <span className="bg-secondary text-black text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-sm shadow-xl">
-                                Featured
-                              </span>
-                            )}
+                  <AnimatePresence mode="popLayout">
+                    {currentProducts.map((product, index) => (
+                      <React.Fragment key={product.id}>
+                        {/* Insert ad row between product rows (after every 4 products) */}
+                        {index > 0 && index % 4 === 0 && (
+                          <div className="col-span-full m-2 flex justify-center">
+                            <AdSense slotName="shopBetweenProducts" format="auto" className="w-full max-w-[970px] min-h-[50px]" />
                           </div>
-                          
-                          {/* Quick Add Mobile */}
-                          <button
-                            onClick={(e) => handleAddToCart(product, e)}
-                            disabled={!product.inStock}
-                            className={`absolute bottom-4 right-4 w-12 h-12 flex items-center justify-center rounded-2xl shadow-2xl transition-all duration-300 lg:translate-y-20 lg:group-hover:translate-y-0 active:scale-90 ${!product.inStock
-                              ? 'bg-gray-200 text-gray-400'
-                              : isInCart(product.id)
-                                ? 'bg-green-500 text-white'
-                                : 'bg-black text-secondary hover:bg-secondary hover:text-black'
-                              }`}
-                          >
-                            <ShoppingCart fontSize="small" />
-                          </button>
-                        </div>
+                        )}
+                        <motion.div
+                          layout
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ duration: 0.3 }}
+                          className="group flex flex-col bg-white rounded-3xl border border-gray-100 hover:border-secondary/30 shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer overflow-hidden"
+                          onClick={() => navigate(`/product/${product.id}`)}
+                        >
+                          {/* Image Container */}
+                          <div className="relative pt-[110%] bg-gray-50 overflow-hidden">
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
 
-                        {/* Content */}
-                        <div className="p-5 flex flex-col flex-1">
-                          <div className="mb-1">
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{product.category}</p>
-                            <h3 className="font-bold text-lg leading-tight group-hover:text-secondary transition-colors line-clamp-2 min-h-[1.5em]">{product.name}</h3>
-                          </div>
+                            {/* Badges */}
+                            <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+                              {product.originalPrice && product.price < product.originalPrice && (
+                                <span className="bg-red-600 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-sm shadow-xl">
+                                  {product.discount > 0 ? `-${Math.round(product.discount)}%` : 'Sale'}
+                                </span>
+                              )}
+                              {product.isFeatured && (
+                                <span className="bg-secondary text-black text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-sm shadow-xl">
+                                  Featured
+                                </span>
+                              )}
+                            </div>
 
-                          <div className="flex items-center gap-1 mb-4">
-                            <Rating value={product.rating.average || 5} size="small" readOnly sx={{ color: '#FFD700' }} />
-                            <span className="text-xs font-medium text-gray-400">({product.rating.count})</span>
+                            {/* Quick Add Mobile */}
+                            <button
+                              onClick={(e) => handleAddToCart(product, e)}
+                              disabled={!product.inStock}
+                              className={`absolute bottom-4 right-4 w-12 h-12 flex items-center justify-center rounded-2xl shadow-2xl transition-all duration-300 lg:translate-y-20 lg:group-hover:translate-y-0 active:scale-90 ${!product.inStock
+                                ? 'bg-gray-200 text-gray-400'
+                                : isInCart(product.id)
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-black text-secondary hover:bg-secondary hover:text-black'
+                                }`}
+                            >
+                              <ShoppingCart fontSize="small" />
+                            </button>
                           </div>
 
-                          <div className="mt-auto flex items-center justify-between pt-5 border-t border-gray-50">
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-baseline gap-2 flex-wrap">
-                                <span className="font-display font-black text-2xl text-black">{Number(product.price).toLocaleString()} <span className="text-xs font-bold">DA</span></span>
-                                {product.originalPrice && product.price < product.originalPrice && (
-                                  <span className="text-sm text-gray-400 line-through font-bold">{Number(product.originalPrice).toLocaleString()}</span>
-                                )}
+                          {/* Content */}
+                          <div className="p-5 flex flex-col flex-1">
+                            <div className="mb-1">
+                              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{product.category}</p>
+                              <h3 className="font-bold text-lg leading-tight group-hover:text-secondary transition-colors line-clamp-2 min-h-[1.5em]">{product.name}</h3>
+                            </div>
+
+                            <div className="flex items-center gap-1 mb-4">
+                              <Rating value={product.rating.average || 5} size="small" readOnly sx={{ color: '#FFD700' }} />
+                              <span className="text-xs font-medium text-gray-400">({product.rating.count})</span>
+                            </div>
+
+                            <div className="mt-auto flex items-center justify-between pt-5 border-t border-gray-50">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-baseline gap-2 flex-wrap">
+                                  <span className="font-display font-black text-2xl text-black">{Number(product.price).toLocaleString()} <span className="text-xs font-bold">DA</span></span>
+                                  {product.originalPrice && product.price < product.originalPrice && (
+                                    <span className="text-sm text-gray-400 line-through font-bold">{Number(product.originalPrice).toLocaleString()}</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="hidden lg:flex items-center text-secondary opacity-0 group-hover:opacity-100 transition-opacity">
+                                <ArrowForward fontSize="small" className="text-black" />
                               </div>
                             </div>
-                            
-                            <div className="hidden lg:flex items-center text-secondary opacity-0 group-hover:opacity-100 transition-opacity">
-                               <ArrowForward fontSize="small" className="text-black" />
-                            </div>
                           </div>
-                        </div>
-                      </motion.div>
+                        </motion.div>
+                      </React.Fragment>
                     ))}
                   </AnimatePresence>
                 </div>
