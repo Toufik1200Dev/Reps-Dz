@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 const announcements = [
-    "Free shipping for +3 items",
+    "High quality materials and perfect service",
     "After-Sales Guarantee",
     "Fast Shipping"
 ];

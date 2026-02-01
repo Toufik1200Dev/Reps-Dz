@@ -279,6 +279,8 @@ export const adminAPI = {
   getAnalytics: (params) => api.get('/admin/analytics', { params }),
   getSalesReport: (params) => api.get('/admin/analytics/sales', { params }),
   getCustomerReport: (params) => api.get('/admin/analytics/customers', { params }),
+  getCalorieStats: (params) => api.get('/admin/stats/calories', { params }),
+  getGeneratorStats: (params) => api.get('/admin/stats/generator', { params }),
 };
 
 // Orders API (public routes)

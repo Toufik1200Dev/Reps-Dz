@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react"
-import { ChevronLeft, ChevronRight } from "@mui/icons-material"
+import { ChevronLeft, ChevronRight, ArrowForward } from "@mui/icons-material"
+import { IconButton } from "@mui/material"
 import { motion, AnimatePresence } from "framer-motion"
+import { useLanguage } from "../contexts/LanguageContext"
 import pic1 from "../assets/imgs/pic1.jpg"
 import pic2 from "../assets/imgs/pic2.jpg"
 import pic3 from "../assets/imgs/pic3.jpg"
@@ -38,6 +40,7 @@ const slides = [
 
 export default function HeroSlider() {
   const [currentSlide, setCurrentSlide] = useState(0)
+  const { t } = useLanguage();
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length)
@@ -48,12 +51,12 @@ export default function HeroSlider() {
   }
 
   useEffect(() => {
-    const timer = setInterval(nextSlide, 6000)
+    const timer = setInterval(nextSlide, 8000)
     return () => clearInterval(timer)
   }, [])
 
   return (
-    <div className="relative h-[75vh] md:h-[85vh] w-full overflow-hidden bg-black">
+    <div className="relative h-[80vh] md:h-[90vh] w-full overflow-hidden bg-black">
       <AnimatePresence mode="wait">
         {slides.map((slide, index) => {
           if (index !== currentSlide) return null;
@@ -61,40 +64,51 @@ export default function HeroSlider() {
           return (
             <motion.div
               key={slide.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
+              initial={{ opacity: 0, scale: 1.1 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
               className="absolute inset-0 bg-cover bg-center bg-no-repeat"
               style={{
-                backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.85) 100%), url(${slide.image})`
+                backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.2) 100%), url(${slide.image})`
               }}
             >
-              <div className="h-full w-full max-w-[1400px] mx-auto px-4 md:px-8 flex items-center">
-                <div className="w-full md:w-[65%] lg:w-[55%] text-white z-10 pl-6 md:pl-12">
+              <div className="h-full w-full max-w-[1200px] mx-auto px-5 sm:px-8 md:px-10 flex items-center">
+                <div className="w-full max-w-xl text-white z-10">
                   <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2, duration: 0.6 }}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.25, duration: 0.6 }}
+                    className="space-y-4"
                   >
-                    <div className="inline-block bg-secondary text-black text-xs font-bold px-3 py-1.5 rounded mb-6 uppercase tracking-wider">
+                    <div className="inline-flex items-center gap-2 bg-[#FFD700] text-black text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-widest">
+                      <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
                       {slide.badge}
                     </div>
-                    <p className="text-secondary font-semibold tracking-[0.2em] uppercase mb-4 text-sm md:text-base">
-                      {slide.subtitle}
-                    </p>
-                    <h1 className="font-display font-black text-5xl md:text-7xl lg:text-8xl leading-[0.9] mb-8 tracking-tight">
+                    
+                    <h1 className="font-display font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl leading-[1.15] tracking-tight text-white">
                       {slide.title}
                     </h1>
-                    <p className="text-gray-300 text-lg md:text-xl leading-relaxed mb-10 max-w-xl">
+                    
+                    {slide.subtitle && (
+                      <p className="text-[#FFD700] text-sm sm:text-base md:text-lg font-semibold tracking-tight">
+                        {slide.subtitle}
+                      </p>
+                    )}
+                    
+                    <p className="text-gray-300 text-sm sm:text-base leading-relaxed max-w-md">
                       {slide.description}
                     </p>
-                    <button
-                      onClick={() => window.location.href = '/shop'}
-                      className="bg-secondary hover:bg-accent text-black text-lg font-bold px-10 py-4 rounded-full shadow-lg hover:shadow-gold transition-all duration-300 transform hover:-translate-y-1"
-                    >
-                      {slide.buttonText}
-                    </button>
+                    
+                    <div className="pt-1">
+                      <button
+                        onClick={() => window.location.href = '/shop'}
+                        className="group inline-flex items-center gap-2 bg-[#FFD700] text-black text-sm font-bold px-6 py-3 rounded-full shadow-lg hover:bg-white transition-all duration-200"
+                      >
+                        {t('home.shopNow')}
+                        <ArrowForward className="text-base group-hover:translate-x-0.5 transition-transform" />
+                      </button>
+                    </div>
                   </motion.div>
                 </div>
               </div>
@@ -103,30 +117,27 @@ export default function HeroSlider() {
         })}
       </AnimatePresence>
 
-      {/* Navigation Arrows */}
-      <button
-        onClick={prevSlide}
-        className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 text-white bg-black/40 hover:bg-black/60 backdrop-blur-sm p-3 md:p-4 rounded-full border border-white/20 transition-all hover:border-secondary group"
-      >
-        <ChevronLeft className="text-3xl md:text-4xl group-hover:text-secondary transition-colors" />
-      </button>
-      <button
-        onClick={nextSlide}
-        className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 text-white bg-black/40 hover:bg-black/60 backdrop-blur-sm p-3 md:p-4 rounded-full border border-white/20 transition-all hover:border-secondary group"
-      >
-        <ChevronRight className="text-3xl md:text-4xl group-hover:text-secondary transition-colors" />
-      </button>
-
-      {/* Slide Indicators */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-20">
-        {slides.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentSlide(index)}
-            className={`h-1.5 rounded-full transition-all duration-300 ${index === currentSlide ? 'w-12 bg-secondary' : 'w-3 bg-white/40 hover:bg-white/60'
-              }`}
-          />
-        ))}
+      {/* Modern Controls */}
+      <div className="absolute bottom-10 left-6 md:left-12 flex items-center gap-6 z-30">
+        <div className="flex gap-2">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`h-1.5 rounded-full transition-all duration-500 ${index === currentSlide ? 'w-10 bg-secondary' : 'w-2 bg-white/30 hover:bg-white/60'
+                }`}
+            />
+          ))}
+        </div>
+        <div className="h-10 w-[1px] bg-white/20" />
+        <div className="flex gap-4">
+          <IconButton onClick={prevSlide} sx={{ color: 'white', border: '1px solid rgba(255,255,255,0.2)', '&:hover': { bgcolor: 'white/10', borderColor: 'secondary.main' } }}>
+            <ChevronLeft />
+          </IconButton>
+          <IconButton onClick={nextSlide} sx={{ color: 'white', border: '1px solid rgba(255,255,255,0.2)', '&:hover': { bgcolor: 'white/10', borderColor: 'secondary.main' } }}>
+            <ChevronRight />
+          </IconButton>
+        </div>
       </div>
     </div>
   )

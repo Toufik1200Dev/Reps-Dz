@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import { FitnessCenter, Download, CheckCircle, Error } from '@mui/icons-material';
 import API_CONFIG from '../config/api';
 import jsPDF from 'jspdf';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Programs() {
+  const { t } = useLanguage();
   const [level, setLevel] = useState('intermediate');
   const [maxReps, setMaxReps] = useState({
     muscleUp: 0,
@@ -38,12 +40,13 @@ export default function Programs() {
     setError(null);
 
     try {
+      const payloadMaxReps = level === 'beginner' ? { ...maxReps, muscleUp: 0 } : maxReps;
       const response = await fetch(`${API_CONFIG.getBaseURL()}/programs/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ level, maxReps })
+        body: JSON.stringify({ level, maxReps: payloadMaxReps })
       });
 
       const data = await response.json();
@@ -53,6 +56,28 @@ export default function Programs() {
       }
 
       setProgram(data.data);
+
+      const deviceId = (typeof window !== 'undefined' && localStorage.getItem('calorie_device_id')) || undefined;
+      const userName = (typeof window !== 'undefined' && localStorage.getItem('calorie_user_name')) ? localStorage.getItem('calorie_user_name').trim() : 'None';
+      const nameToSave = (userName && userName !== '') ? userName : 'None';
+
+      try {
+        await fetch(`${API_CONFIG.getBaseURL()}/programs/save`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userName: nameToSave,
+            deviceId,
+            level,
+            maxReps: payloadMaxReps,
+            program: data.data.program
+          })
+        });
+      } catch (saveErr) {
+        console.error('Error saving program:', saveErr);
+      }
       
       // Scroll to program
       setTimeout(() => {
@@ -220,23 +245,27 @@ export default function Programs() {
 
           {/* Exercise Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 md:gap-6 mb-6 md:mb-8">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                Muscle Ups
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={maxReps.muscleUp || ''}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  handleRepChange('muscleUp', val === '' ? 0 : parseInt(val) || 0);
-                }}
-                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                placeholder="0"
-              />
-              <p className="text-xs text-gray-500 mt-1">Enter 0 if you can't do muscle-ups yet</p>
-            </div>
+            {level !== 'beginner' && (
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Muscle Ups
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={maxReps.muscleUp || ''}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    handleRepChange('muscleUp', val === '' ? 0 : parseInt(val) || 0);
+                  }}
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm sm:text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  placeholder="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter 0 if you can&apos;t do muscle-ups yet
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">

@@ -41,7 +41,9 @@ export default function Orders() {
     try {
       setLoading(true);
       const response = await adminAPI.getAllOrders();
-      setOrders(response.data?.orders || []);
+      // Backend returns { success: true, data: { orders: [...], pagination: {...} } }
+      // Axios wraps it, so we need response.data.data.orders
+      setOrders(response.data?.data?.orders || response.data?.orders || []);
     } catch (err) {
       console.error('Error fetching orders:', err);
       setError(err.message || 'Failed to fetch orders');

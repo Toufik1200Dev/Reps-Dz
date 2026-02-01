@@ -12,7 +12,10 @@ import {
   LocalShipping,
   ContactSupport,
   Logout,
-  Close
+  Close,
+  FitnessCenter,
+  Calculate,
+  Email
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
@@ -22,7 +25,10 @@ import logo from '../../assets/logo/logo.png';
 const menuItems = [
   { text: 'Products', icon: <Inventory />, path: '/admin/products' },
   { text: 'Orders', icon: <ShoppingCart />, path: '/admin/orders' },
+  { text: 'Contact Messages', icon: <Email />, path: '/admin/contact-messages' },
   { text: 'Analytics', icon: <Assessment />, path: '/admin/analytics' },
+  { text: 'Generator Stats', icon: <FitnessCenter />, path: '/admin/generator-stats' },
+  { text: 'Calorie Stats', icon: <Calculate />, path: '/admin/calorie-stats' },
 ];
 
 export default function AdminLayout() {

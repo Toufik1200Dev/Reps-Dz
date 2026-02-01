@@ -28,7 +28,9 @@ export default function Analytics() {
 
         // Fetch orders from API using axios (interceptor handles x-admin-password)
         const response = await adminAPI.getAllOrders();
-        const orders = response.data?.orders || [];
+        // Backend returns { success: true, data: { orders: [...], pagination: {...} } }
+        // Axios wraps it, so we need response.data.data.orders
+        const orders = response.data?.data?.orders || response.data?.orders || [];
 
           // Calculate order statistics by product
           const ordersByProduct = {};

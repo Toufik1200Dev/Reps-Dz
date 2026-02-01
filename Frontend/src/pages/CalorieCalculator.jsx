@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Scale,
@@ -9,13 +9,28 @@ import {
   Bedtime,
   FitnessCenter,
   Spa,
-  Calculate,
-  Info
+  Calculate
 } from '@mui/icons-material';
 import API_CONFIG from '../config/api';
+import { useLanguage } from '../contexts/LanguageContext';
+
+const getOrCreateDeviceId = () => {
+  const key = 'calorie_device_id';
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = 'd_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36);
+    localStorage.setItem(key, id);
+  }
+  return id;
+};
+
+const USER_NAME_KEY = 'calorie_user_name';
 
 export default function CalorieCalculator() {
+  const { t } = useLanguage();
+  const deviceId = useMemo(getOrCreateDeviceId, []);
   const [formData, setFormData] = useState({
+    userName: typeof window !== 'undefined' ? (localStorage.getItem(USER_NAME_KEY) || '') : '',
     gender: '',
     height: '',
     weight: '',
@@ -157,24 +172,34 @@ export default function CalorieCalculator() {
       const calories = Math.round(calculateCalories(bmr, formData.activityLevel));
       const macros = calculateMacros(weight, calories);
 
-      // Optionally send to backend for logging/storage
+      const userName = (formData.userName && formData.userName.trim()) ? formData.userName.trim() : 'None';
+      if (userName !== 'None') localStorage.setItem(USER_NAME_KEY, userName);
+
       try {
-        await fetch(`${API_CONFIG.getBaseURL()}/calories/calculate`, {
+        const saveRes = await fetch(`${API_CONFIG.getBaseURL()}/calories/save`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            userName,
+            deviceId,
             gender: formData.gender,
             height,
             weight,
             age: age || 25,
             activityLevel: formData.activityLevel || 'none',
-            bmr,
+            bmr: Math.round(bmr),
             calories,
-            macros
+            protein: macros.protein,
+            carbs: macros.carbs,
+            fat: macros.fat,
+            fiber: macros.fiber
           })
         });
+        if (!saveRes.ok) {
+          console.warn('Calorie save failed (backend may need redeploy):', saveRes.status);
+        }
       } catch (apiError) {
-        // Silently fail - calculation works client-side
+        console.warn('Calorie save request failed:', apiError.message);
       }
 
       setResults({
@@ -268,25 +293,32 @@ export default function CalorieCalculator() {
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
             Calculate your daily caloric needs and macronutrient targets based on your body metrics and activity level
           </p>
-          {!formData.age && (
-            <div className="mt-4 inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-blue-700">
-              <Info className="text-lg" />
-              <span>Age is optional. Default age of 25 years will be used if not provided.</span>
-            </div>
-          )}
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="max-w-2xl mx-auto">
           {/* Input Form */}
-          <div className="lg:col-span-2">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8"
-            >
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8"
+          >
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Information</h2>
               
               <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Your name
+                  </label>
+                  <input
+                    type="text"
+                    name="userName"
+                    value={formData.userName}
+                    onChange={handleChange}
+                    placeholder="e.g. Ahmed"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
                 {/* Gender */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-3">
@@ -352,11 +384,9 @@ export default function CalorieCalculator() {
                   />
                 </div>
 
-                {/* Age (Optional) */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Age (years)
-                    <span className="text-gray-500 text-xs font-normal ml-2">(Optional - defaults to 25)</span>
                   </label>
                   <input
                     type="number"
@@ -370,11 +400,9 @@ export default function CalorieCalculator() {
                   />
                 </div>
 
-                {/* Activity Level (Optional) */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Activity Level
-                    <span className="text-gray-500 text-xs font-normal ml-2">(Optional - defaults to moderate)</span>
                   </label>
                   <select
                     name="activityLevel"
@@ -416,98 +444,84 @@ export default function CalorieCalculator() {
                 </button>
               </div>
             </motion.div>
-          </div>
-
-          {/* Info Sidebar */}
-          <div className="lg:col-span-1">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24"
-            >
-              <h3 className="text-xl font-bold text-gray-900 mb-4">How It Works</h3>
-              <div className="space-y-4 text-sm text-gray-600">
-                <div>
-                  <div className="font-bold text-gray-900 mb-1">BMR Calculation</div>
-                  <p>Uses the Mifflin-St Jeor equation to estimate your Basal Metabolic Rate (calories burned at rest).</p>
-                </div>
-                <div>
-                  <div className="font-bold text-gray-900 mb-1">Activity Multipliers</div>
-                  <p>Low: Ã—1.2 | Moderate: Ã—1.55 | High: Ã—1.75</p>
-                  <p className="text-xs mt-1">If not specified, uses Ã—1.4 (maintenance estimate)</p>
-                </div>
-                <div>
-                  <div className="font-bold text-gray-900 mb-1">Macronutrients</div>
-                  <p>Protein: 2g/kg | Fat: 0.8g/kg | Carbs: Remaining calories</p>
-                </div>
-                <div>
-                  <div className="font-bold text-gray-900 mb-1">Fiber</div>
-                  <p>14g per 1000 kcal (recommended daily intake)</p>
-                </div>
-              </div>
-            </motion.div>
-          </div>
         </div>
 
         {/* Results Section */}
         {results && (
           <motion.div
             id="results"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-12"
+            transition={{ duration: 0.5 }}
+            className="mt-14 max-w-4xl mx-auto"
           >
-            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Your Daily Targets</h2>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-12">
-              {macroCards.map((card, index) => (
+            {/* Summary card */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 px-6 py-5 sm:px-8 sm:py-6">
+                <p className="text-orange-100 text-sm font-semibold uppercase tracking-widest mb-1">Daily caloric target</p>
+                <p className="text-white text-4xl sm:text-5xl font-black tracking-tight">{results.calories.toLocaleString()} <span className="text-orange-200 font-bold text-2xl sm:text-3xl">kcal</span></p>
+                <p className="text-orange-100 text-sm mt-2">Based on your profile and activity level</p>
+              </div>
+              <div className="px-6 py-4 sm:px-8 sm:py-5 bg-gray-50 border-t border-gray-100">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">BMR (at rest)</p>
+                    <p className="text-gray-900 text-xl font-bold">{results.bmr.toLocaleString()} kcal/day</p>
+                  </div>
+                  <p className="text-gray-500 text-sm max-w-xs">Calories your body burns at complete rest (Mifflin-St Jeor)</p>
+                </div>
+              </div>
+            </div>
+
+            <h3 className="text-lg font-bold text-gray-900 mb-4 px-1">Macronutrient targets</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+              {macroCards.filter(c => c.label !== 'Calories').map((card, index) => (
                 <motion.div
                   key={card.label}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  className={`${card.bgColor} ${card.borderColor} border-2 rounded-2xl p-6 text-center`}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + index * 0.06 }}
+                  className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                 >
-                  <div className="flex justify-center mb-3 text-gray-600">
-                    {card.icon}
+                  <div className={`px-5 py-4 ${card.bgColor} border-b border-gray-100`}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-600">{card.icon}</span>
+                      <span className="text-sm font-bold text-gray-700 uppercase tracking-wide">{card.label}</span>
+                    </div>
                   </div>
-                  <div className="text-3xl font-bold text-gray-900 mb-1">
-                    {card.value || 'â€”'}
+                  <div className="px-5 py-5 text-center">
+                    <p className="text-2xl sm:text-3xl font-black text-gray-900 tabular-nums">{card.value ?? '\u2014'}</p>
+                    <p className="text-sm font-medium text-gray-500 mt-0.5">{card.unit}/day</p>
                   </div>
-                  <div className="text-sm font-medium text-gray-600">{card.unit}</div>
-                  <div className="text-xs font-bold text-gray-700 mt-2">{card.label}</div>
                 </motion.div>
               ))}
             </div>
 
-            {/* BMR Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8 max-w-2xl mx-auto text-center">
-              <p className="text-sm text-blue-800">
-                <span className="font-bold">BMR (Basal Metabolic Rate):</span> {results.bmr} kcal/day
-                <span className="text-blue-600 ml-2">(Calories burned at complete rest)</span>
-              </p>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 bg-gray-50 rounded-xl px-4 py-3 mb-10 border border-gray-100">
+              <Spa sx={{ fontSize: 20, color: '#059669' }} />
+              <span><strong className="text-gray-800">Fiber:</strong> {results.fiber} g/day recommended (14g per 1000 kcal)</span>
             </div>
 
             {/* Fitness Tips */}
             {fitnessTips.length > 0 && (
-              <div className="mt-12">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">ðŸ’ª Fitness Tips</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="pt-6 border-t border-gray-200">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 px-1">Fitness tips</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {fitnessTips.map((tip, index) => (
                     <motion.div
                       key={index}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 + index * 0.1 }}
-                      className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm"
+                      transition={{ delay: 0.2 + index * 0.08 }}
+                      className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm"
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0">
+                      <div className="flex gap-4">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
                           {tip.icon}
                         </div>
                         <div>
-                          <h4 className="font-bold text-lg text-gray-900 mb-2">{tip.title}</h4>
-                          <p className="text-gray-600">{tip.tip}</p>
+                          <h4 className="font-bold text-gray-900 mb-1">{tip.title}</h4>
+                          <p className="text-gray-600 text-sm leading-relaxed">{tip.tip}</p>
                         </div>
                       </div>
                     </motion.div>

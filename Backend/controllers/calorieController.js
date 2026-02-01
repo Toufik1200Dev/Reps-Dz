@@ -1,3 +1,6 @@
+const CalorieSubmission = require('../models/CalorieSubmission');
+const ProgramSave = require('../models/ProgramSave');
+
 /**
  * Calorie Calculator Controller
  * Calculates BMR, daily calories, and macronutrients using Mifflin-St Jeor formula
@@ -108,6 +111,64 @@ const calculateCalories = async (req, res) => {
   }
 };
 
+/**
+ * Save calorie calculation (inputs + results) with optional userName and deviceId
+ * If userName is provided and not "None", update any ProgramSave with same deviceId and userName "None"
+ */
+const saveCalorieSubmission = async (req, res) => {
+  try {
+    const {
+      userName,
+      deviceId,
+      gender,
+      height,
+      weight,
+      age,
+      activityLevel,
+      bmr,
+      calories,
+      protein,
+      carbs,
+      fat,
+      fiber
+    } = req.body;
+
+    const name = (userName && String(userName).trim()) ? String(userName).trim() : 'None';
+    const doc = await CalorieSubmission.create({
+      userName: name,
+      deviceId: deviceId || undefined,
+      gender,
+      height: Number(height),
+      weight: Number(weight),
+      age: age != null ? Number(age) : undefined,
+      activityLevel: activityLevel || 'none',
+      bmr: Number(bmr),
+      calories: Number(calories),
+      protein: Number(protein),
+      carbs: Number(carbs),
+      fat: Number(fat),
+      fiber: fiber != null ? Number(fiber) : undefined
+    });
+
+    if (deviceId && name !== 'None') {
+      await ProgramSave.updateMany(
+        { deviceId, userName: 'None' },
+        { $set: { userName: name } }
+      );
+    }
+
+    res.status(201).json({ success: true, data: doc });
+  } catch (error) {
+    console.error('Error saving calorie submission:', error);
+    res.status(400).json({
+      success: false,
+      message: 'Failed to save',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
-  calculateCalories
+  calculateCalories,
+  saveCalorieSubmission
 };

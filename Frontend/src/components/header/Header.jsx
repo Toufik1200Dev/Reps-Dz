@@ -6,35 +6,45 @@ import {
   Box,
   Button,
   IconButton,
-  Menu,
-  MenuItem,
-  useTheme,
-  useMediaQuery,
   Badge,
   Container,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Divider,
 } from "@mui/material";
-import { Menu as MenuIcon, ShoppingCart, Person } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { 
+  Menu as MenuIcon, 
+  ShoppingCart, 
+  Close,
+  ChevronRight
+} from "@mui/icons-material";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "../../contexts/CartContext";
+import { useLanguage } from "../../contexts/LanguageContext";
 import logo from "../../assets/logo/logo.png";
 import { motion, AnimatePresence } from "framer-motion";
 import AnnouncementBar from '../layout/AnnouncementBar';
+import LanguageSwitcher from '../LanguageSwitcher';
 
 const navigationItems = [
-  { label: "Home", href: "/" },
-  { label: "Shop", href: "/shop" },
-  { label: "Programs", href: "/programs" },
-  { label: "Calories", href: "/calorie-calculator" },
-  { label: "Contact", href: "/contact" },
+  { key: "header.home", href: "/" },
+  { key: "header.shop", href: "/shop" },
+  { key: "header.programs", href: "/programs" },
+  { key: "header.calorieCalculator", href: "/calorie-calculator" },
+  { key: "header.contact", href: "/contact" },
 ];
 
 export default function Header() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const [anchorEl, setAnchorEl] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { totalItems } = useCart();
+  const { t, language } = useLanguage();
+  const isRtl = language === 'ar';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -44,17 +54,15 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
   const handleNavClick = (href) => {
     navigate(href);
-    handleMenuClose();
+    setMobileMenuOpen(false);
+  };
+
+  const isActive = (href) => {
+    if (href === '/' && location.pathname === '/') return true;
+    if (href !== '/' && location.pathname.startsWith(href)) return true;
+    return false;
   };
 
   return (
@@ -63,58 +71,101 @@ export default function Header() {
       <AppBar
         position="sticky"
         elevation={0}
-        className={`transition-all duration-300 ${scrolled ? "bg-white/95 backdrop-blur-md shadow-md py-2" : "bg-transparent py-4"
-          }`}
         sx={{
-          backgroundColor: scrolled ? "rgba(255, 255, 255, 0.95)" : "transparent",
-          color: scrolled ? "text.primary" : "text.primary",
-          borderBottom: scrolled ? "1px solid rgba(0,0,0,0.05)" : "none",
+          backgroundColor: scrolled ? "rgba(255, 255, 255, 0.95)" : "rgba(255, 255, 255, 0.8)",
+          backdropFilter: "blur(10px)",
+          color: "text.primary",
+          borderBottom: scrolled ? "1px solid rgba(0,0,0,0.08)" : "1px solid transparent",
+          transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+          py: scrolled ? 0.5 : 1.5,
         }}
       >
         <Container maxWidth="xl">
-          <Toolbar disableGutters className="flex justify-between items-center">
-            {/* Logo */}
-            <div
-              className="flex items-center gap-3 cursor-pointer group"
+          <Toolbar disableGutters sx={{ justifyContent: "space-between" }}>
+            {/* Logo Section */}
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 1.5, cursor: "pointer", textDecoration: "none" }}
               onClick={() => handleNavClick("/")}
             >
-              <div className={`relative overflow-hidden rounded-lg transition-transform duration-300 group-hover:scale-105 ${scrolled ? 'w-10 h-10' : 'w-12 h-12'}`}>
-                <img src={logo} alt="REPS-DZ" className="w-full h-full object-cover" />
-              </div>
-              <Typography
-                variant="h5"
-                className={`font-display font-bold tracking-tight transition-colors duration-300 ${scrolled ? 'text-black' : 'text-black'}`}
+              <Box
+                component="span"
                 sx={{
-                  fontSize: { xs: "1.25rem", md: "1.5rem" },
-                  display: { xs: "none", sm: "block" },
+                  width: { xs: 40, sm: 44, md: 48 },
+                  height: { xs: 40, sm: 44, md: 48 },
+                  flexShrink: 0,
+                  overflow: "hidden",
+                  backgroundColor: "transparent",
+                  transition: "transform 0.2s ease",
+                  "&:hover": { transform: "scale(1.03)" }
                 }}
               >
-                REPS<span className="text-secondary">-DZ</span>
+                <img
+                  src={logo}
+                  alt="REPS-DZ"
+                  style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "transparent" }}
+                />
+              </Box>
+              <Typography
+                variant="h6"
+                component="span"
+                sx={{
+                  fontWeight: 800,
+                  letterSpacing: "-0.03em",
+                  fontSize: { xs: "1.05rem", sm: "1.2rem", md: "1.35rem" },
+                  display: { xs: "none", sm: "block" },
+                  color: "#111",
+                  "& .accent": { color: "#C9A227" }
+                }}
+              >
+                REPS<span className="accent">-DZ</span>
               </Typography>
-            </div>
+            </Box>
 
             {/* Desktop Navigation */}
-            {!isMobile && (
-              <nav className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden md:flex items-center gap-8">
-                {navigationItems.map((item) => (
-                  <button
-                    key={item.label}
-                    onClick={() => handleNavClick(item.href)}
-                    className="relative text-sm font-semibold uppercase tracking-wider text-gray-800 hover:text-black transition-colors duration-200 group py-2"
-                  >
-                    {item.label}
-                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-secondary transition-all duration-300 group-hover:w-full"></span>
-                  </button>
-                ))}
-              </nav>
-            )}
+            <Box sx={{ display: { xs: "none", md: "flex" }, gap: 1 }}>
+              {navigationItems.map((item) => (
+                <Button
+                  key={item.key}
+                  onClick={() => handleNavClick(item.href)}
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    color: isActive(item.href) ? "black" : "gray.600",
+                    position: "relative",
+                    "&:hover": { color: "black", backgroundColor: "transparent" },
+                    "&::after": {
+                      content: '""',
+                      position: "absolute",
+                      bottom: 8,
+                      left: "50%",
+                      width: isActive(item.href) ? "20px" : "0%",
+                      height: "2.5px",
+                      backgroundColor: "#FFD700",
+                      transition: "all 0.3s ease",
+                      transform: "translateX(-50%)",
+                      borderRadius: "2px"
+                    },
+                    "&:hover::after": { width: "20px" }
+                  }}
+                >
+                  {t(item.key)}
+                </Button>
+              ))}
+            </Box>
 
-            {/* Right Side Actions */}
-            <div className="flex items-center gap-2 sm:gap-4">
-              {/* Cart */}
+            {/* Actions */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: { xs: 0.5, sm: 2 } }}>
+              <LanguageSwitcher />
+              
               <IconButton
                 onClick={() => handleNavClick("/cart")}
-                className="relative group transition-transform hover:scale-105"
+                sx={{
+                  color: "black",
+                  backgroundColor: "rgba(0,0,0,0.03)",
+                  "&:hover": { backgroundColor: "rgba(0,0,0,0.06)" }
+                }}
               >
                 <Badge
                   badgeContent={totalItems}
@@ -122,81 +173,148 @@ export default function Header() {
                     "& .MuiBadge-badge": {
                       background: "#FFD700",
                       color: "black",
-                      fontWeight: "bold",
+                      fontWeight: 900,
+                      fontSize: "0.65rem",
+                      minWidth: "18px",
+                      height: "18px",
+                      border: "2px solid white"
                     },
                   }}
                 >
-                  <ShoppingCart className="text-gray-800 group-hover:text-black transition-colors" />
+                  <ShoppingCart sx={{ fontSize: "1.4rem" }} />
                 </Badge>
               </IconButton>
 
-              {/* Desktop Shop Button */}
-              {!isMobile && (
-                <Button
-                  variant="contained"
-                  onClick={() => handleNavClick("/shop")}
-                  className="bg-black hover:bg-gray-900 text-secondary font-bold px-6 py-2 rounded-full shadow-lg hover:shadow-gold transition-all duration-300 transform hover:-translate-y-0.5"
-                  sx={{
-                    background: "black",
-                    color: "#FFD700",
-                    "&:hover": { background: "#1a1a1a" }
-                  }}
-                >
-                  Shop Now
-                </Button>
-              )}
-
-              {/* Mobile Menu Toggle */}
-              {isMobile && (
-                <IconButton
-                  onClick={handleMenuOpen}
-                  className="ml-2 text-black"
-                >
-                  <MenuIcon fontSize="medium" />
-                </IconButton>
-              )}
-
-              {/* Mobile Menu Dropdown */}
-              <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleMenuClose}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
-                PaperProps={{
-                  elevation: 0,
-                  className: "mt-2 rounded-xl shadow-xl border border-gray-100 min-w-[200px]"
+              <Button
+                variant="contained"
+                onClick={() => handleNavClick("/shop")}
+                sx={{
+                  display: { xs: "none", sm: "flex" },
+                  bgcolor: "black",
+                  color: "#FFD700",
+                  fontWeight: 800,
+                  px: 3,
+                  borderRadius: "50px",
+                  textTransform: "none",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  "&:hover": {
+                    bgcolor: "#1a1a1a",
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.2)"
+                  },
+                  transition: "all 0.3s ease"
                 }}
               >
-                {navigationItems.map((item) => (
-                  <MenuItem
-                    key={item.label}
-                    onClick={() => handleNavClick(item.href)}
-                    className="py-3 px-6 hover:bg-gray-50 font-medium"
-                  >
-                    {item.label}
-                  </MenuItem>
-                ))}
-                <div className="p-4">
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={() => handleNavClick("/shop")}
-                    className="bg-black text-secondary font-bold rounded-lg shadow-md"
-                    sx={{
-                      background: "black",
-                      color: "#FFD700",
-                      "&:hover": { background: "#1a1a1a" }
-                    }}
-                  >
-                    Shop Now
-                  </Button>
-                </div>
-              </Menu>
-            </div>
+                {t('home.shopNow')}
+              </Button>
+
+              {/* Mobile Toggle */}
+              <IconButton
+                onClick={() => setMobileMenuOpen(true)}
+                sx={{
+                  display: { xs: "flex", md: "none" },
+                  color: "black",
+                  ml: 0.5,
+                  p: 1.2,
+                  bgcolor: "rgba(0,0,0,0.04)",
+                  "&:hover": { bgcolor: "rgba(0,0,0,0.08)" }
+                }}
+              >
+                <MenuIcon sx={{ fontSize: "1.6rem" }} />
+              </IconButton>
+            </Box>
           </Toolbar>
         </Container>
       </AppBar>
+
+      {/* Mobile Drawer Navigation */}
+      <Drawer
+        anchor={isRtl ? "right" : "left"}
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        PaperProps={{
+          sx: {
+            width: "100%",
+            maxWidth: "320px",
+            bgcolor: "white",
+            backgroundImage: "linear-gradient(to bottom, #fff, #f9fafb)",
+          }
+        }}
+      >
+        <Box sx={{ p: 3, h: "100%", display: "flex", flexDirection: "column" }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 4 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  overflow: "hidden",
+                  flexShrink: 0,
+                  backgroundColor: "transparent"
+                }}
+              >
+                <img src={logo} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "transparent" }} />
+              </Box>
+              <Typography variant="h6" fontWeight={800} color="#111">REPS<span style={{ color: "#C9A227" }}>-DZ</span></Typography>
+            </Box>
+            <IconButton onClick={() => setMobileMenuOpen(false)} sx={{ bgcolor: "rgba(0,0,0,0.05)" }}>
+              <Close />
+            </IconButton>
+          </Box>
+
+          <List sx={{ flex: 1 }}>
+            {navigationItems.map((item) => (
+              <ListItem key={item.key} disablePadding sx={{ mb: 1 }}>
+                <ListItemButton
+                  onClick={() => handleNavClick(item.href)}
+                  sx={{
+                    borderRadius: "12px",
+                    py: 2,
+                    bgcolor: isActive(item.href) ? "rgba(255, 215, 0, 0.1)" : "transparent",
+                    color: isActive(item.href) ? "black" : "text.secondary",
+                    "&:hover": { bgcolor: "rgba(0,0,0,0.03)" }
+                  }}
+                >
+                  <ListItemText
+                    primary={t(item.key)}
+                    primaryTypographyProps={{
+                      fontWeight: isActive(item.href) ? 800 : 600,
+                      fontSize: "1.1rem"
+                    }}
+                  />
+                  <ChevronRight sx={{ opacity: 0.3, transform: isRtl ? "rotate(180deg)" : "none" }} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+
+          <Divider sx={{ my: 3, opacity: 0.6 }} />
+
+          <Box sx={{ mt: "auto", pb: 2 }}>
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={() => handleNavClick("/shop")}
+              sx={{
+                bgcolor: "black",
+                color: "#FFD700",
+                py: 2,
+                borderRadius: "16px",
+                fontWeight: 800,
+                fontSize: "1.1rem",
+                textTransform: "none",
+                boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
+                mb: 2
+              }}
+            >
+              {t('home.shopNow')}
+            </Button>
+            <Typography variant="caption" textAlign="center" display="block" color="text.secondary">
+              © {new Date().getFullYear()} REPS-DZ. {t('footer.rights')}
+            </Typography>
+          </Box>
+        </Box>
+      </Drawer>
     </>
   );
 }
