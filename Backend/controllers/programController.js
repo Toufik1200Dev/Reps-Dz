@@ -26,54 +26,82 @@ function parseAIProgramResponse(text) {
   }));
 }
 
-/** Generate 1-week program using Gemini API (no redirect, server-side). Set GEMINI_API_KEY in .env (get free key at https://aistudio.google.com/apikey) to enable. */
-async function generateProgramWithGemini(level, maxReps) {
-  const { GoogleGenerativeAI } = require('@google/generative-ai');
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not set');
+/** Build the calisthenics program prompt for OpenRouter. Kept explicit for older/smaller models. */
+function buildProgramPrompt(level, maxReps) {
+  const pull = maxReps.pullUps || 0;
+  const dips = maxReps.dips || 0;
+  const push = maxReps.pushUps || 0;
+  const squats = maxReps.squats || 0;
+  const legs = maxReps.legRaises || 0;
+  const muscleUp = level === 'beginner' ? 0 : (maxReps.muscleUp || 0);
 
-  const repsText = [
-    level !== 'beginner' && maxReps.muscleUp > 0 ? `Muscle-ups: ${maxReps.muscleUp}` : null,
-    `Pull-ups: ${maxReps.pullUps}`,
-    `Dips: ${maxReps.dips}`,
-    `Push-ups: ${maxReps.pushUps}`,
-    `Squats: ${maxReps.squats}`,
-    `Leg raises: ${maxReps.legRaises}`
-  ].filter(Boolean).join(', ');
+  const pct = level === 'beginner' ? 0.6 : 0.7;
+  const rep = (n) => Math.max(1, Math.round(n * pct));
+  const rPull = rep(pull);
+  const rDips = rep(dips);
+  const rPush = rep(push);
+  const rSquats = rep(squats);
+  const rLegs = rep(legs);
 
-  const prompt = `You are a calisthenics coach. Generate a 1-WEEK program that follows this EXACT algorithm and structure (same as our backend generator). Use the user's max reps below to compute rep numbers.
+  return `Task: Create a 1-week calisthenics program. Output ONLY one valid JSON object. No markdown, no explanation, no text before or after the JSON.
 
-ALGORITHM:
-- Week 1 = volume base: use 60% of max for beginners, 70-75% for intermediate/advanced when prescribing reps per set.
-- Beginners: NO muscle-ups; use Australian pull-ups at 1.5x to 2x the pull-up reps when pull exercises are combined.
-- Intermediate/Advanced: may include muscle-ups at ~30-40% of max when relevant.
+RULES:
+1. Level: ${level}. Rep prescription: use about ${level === 'beginner' ? '60%' : '70%'} of max reps per set.
+2. Exactly 4 days. Day 1 = Pull Day. Day 2 = Push Day. Day 3 = Legs + Core + Cardio. Day 4 = Endurance Integration Day.
+3. ${level === 'beginner' ? 'No muscle-ups. Use Australian pull-ups at higher reps instead.' : 'Muscle-ups optional at ~30-40% of max.'}
+4. User max reps: Pull-ups ${pull}, Dips ${dips}, Push-ups ${push}, Squats ${squats}, Leg raises ${legs}${muscleUp ? `, Muscle-ups ${muscleUp}` : ''}. So prescribe roughly: pull ${rPull}, dips ${rDips}, push ${rPush}, squats ${rSquats}, leg raises ${rLegs} per set (or rounds).
+5. Each day: first exercise "Warm-up (5-7 min)" with light description, then 2-3 main exercises with "sets" (e.g. "4 sets x 6 reps" or "6 pull-ups, 6 Australian pull-ups x 4 rounds") and "rest" (e.g. "90s between sets" or "2-3 min between rounds").
+6. Day 4 must include: Warm-up, Activation (short), Main Set (combined pull+push in rounds), Finisher (short AMRAP or holds).
 
-STRUCTURE (exactly 4 days per week):
-- Day 1 – Pull Day: Warm-up (5-7 min) first exercise, then 2-3 main exercises. Methods: Degressive sets (reps decrease each round, e.g. "6 pull-ups\\n4 pull-ups\\n2 pull-ups\\n× 3 rounds"), EMOM (e.g. "EMOM 6 min: 4 pull-ups at start of each minute"), Separated volume (e.g. "4 sets × 6 reps\\n5 sets × 5 reps"), Pyramids, or Superset (pull-ups + chin-ups + Australian pull-ups × rounds). Rest: "2-3 min between rounds" or "90s between sets" or "Rest for the remainder of each minute" for EMOM.
-- Day 2 – Push Day: Warm-up first, then 2-3 main exercises. Exercises: Dips, Push-ups, Bar dips; optional muscle-ups for non-beginners. Same rest style. Example sets: "6 dips\\n8 push-ups\\n× 4 rounds" or "EMOM 8 min: 4 dips at start of each minute".
-- Day 3 – Legs + Core + Cardio: Warm-up, then Squats (volume or EMOM), Jump squats, Burpees, Leg raises, Plank. Rest: "60s between sets".
-- Day 4 – Endurance Integration Day: Warm-up, then Activation (easy EMOM or light unbroken, 5-8 min), Main Set (combined pull+push in rounds, e.g. "Round 1: 4 pull-ups, 6 dips, 8 push-ups\\nRound 2: ...\\n× 3 rounds"), Finisher (short AMRAP or isometric holds). Rest: "2-3 min between rounds" for main set.
+REQUIRED JSON SHAPE (use these exact keys):
+{"program":[{"week":1,"days":[
+  {"day":1,"focus":"Pull Day","exercises":[{"name":"...","sets":"...","rest":"..."}]},
+  {"day":2,"focus":"Push Day","exercises":[{"name":"...","sets":"...","rest":"..."}]},
+  {"day":3,"focus":"Legs + Core + Cardio","exercises":[{"name":"...","sets":"...","rest":"..."}]},
+  {"day":4,"focus":"Endurance Integration Day","exercises":[{"name":"...","sets":"...","rest":"..."}]}
+]}]}
 
-USER INPUTS:
-- Level: ${level}
-- Max reps: ${repsText}
+Every exercise must have "name", "sets", and "rest". "sets" = only the prescription (numbers and rounds). "rest" = one short phrase.
+Output ONLY the JSON object.`;
+}
 
-For each exercise, "sets" must be the prescription only (e.g. "6 pull-ups\\n6 Australian pull-ups\\n× 4 rounds" or "4 sets × 6 reps") with no extra label. "rest" must be one short phrase (e.g. "2-3 min between rounds"). Return ONLY valid JSON in this exact shape, no other text:
-{"program":[{"week":1,"days":[{"day":1,"focus":"Pull Day","exercises":[{"name":"Warm-up (5-7 min)","sets":"Tempo pull-ups x10, arm circles, hang holds","rest":"No rest needed"},{"name":"Exercise 2: ...","sets":"...","rest":"..."}]},{"day":2,"focus":"Push Day",...},{"day":3,"focus":"Legs + Core + Cardio",...},{"day":4,"focus":"Endurance Integration Day",...}]}]}
-Output exactly 4 days (Pull Day, Push Day, Legs + Core + Cardio, Endurance Integration Day) with exercises and sets computed from the user max reps above.`;
+/** Generate 1-week program using OpenRouter. Set OPENROUTER_API_KEY in .env. OPENROUTER_MODEL default: openai/gpt-oss-120b:free */
+async function generateProgramWithOpenRouter(level, maxReps) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY not set');
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-  const result = await model.generateContent(prompt);
-  const response = result.response;
-  if (!response || !response.text) throw new Error('Gemini returned no text');
-  const text = response.text();
-  return parseAIProgramResponse(text);
+  const model = process.env.OPENROUTER_MODEL || 'openai/gpt-oss-120b:free';
+  const prompt = buildProgramPrompt(level, maxReps);
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+      'HTTP-Referer': process.env.FRONTEND_URL || 'https://reps-dz.web.app'
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2,
+      max_tokens: 4096
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`OpenRouter API error ${response.status}: ${errText}`);
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content || typeof content !== 'string') throw new Error('OpenRouter returned no content');
+  return parseAIProgramResponse(content);
 }
 
 /**
  * MAIN CONTROLLER
- * Uses Gemini when GEMINI_API_KEY is set (no redirect); otherwise uses algorithm.
+ * Uses OpenRouter (GPT) when OPENROUTER_API_KEY is set, else algorithm.
  */
 const generateProgram = async (req, res) => {
   try {
@@ -131,17 +159,16 @@ const generateProgram = async (req, res) => {
     }
 
     let program;
+    const seed = programId || Date.now();
 
-    if (process.env.GEMINI_API_KEY) {
+    if (process.env.OPENROUTER_API_KEY) {
       try {
-        program = await generateProgramWithGemini(level, payloadMaxReps);
-      } catch (geminiErr) {
-        console.error('Gemini program generation failed, using algorithm:', geminiErr.message);
-        const seed = programId || Date.now();
+        program = await generateProgramWithOpenRouter(level, payloadMaxReps);
+      } catch (openRouterErr) {
+        console.error('OpenRouter program generation failed, using algorithm:', openRouterErr.message);
         program = generate4WeekProgram(level, payloadMaxReps, seed);
       }
     } else {
-      const seed = programId || Date.now();
       program = generate4WeekProgram(level, payloadMaxReps, seed);
     }
 
