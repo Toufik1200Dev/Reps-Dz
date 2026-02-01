@@ -4,9 +4,76 @@
 
 const ProgramSave = require('../models/ProgramSave');
 
+/** Parse AI JSON response (strip markdown code block if present) */
+function parseAIProgramResponse(text) {
+  let raw = (text || '').trim();
+  const codeMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeMatch) raw = codeMatch[1].trim();
+  const parsed = JSON.parse(raw);
+  const program = parsed.program ?? parsed;
+  const weekList = Array.isArray(program) ? program : [program];
+  return weekList.map((w) => ({
+    week: w.week ?? 1,
+    days: (w.days ?? []).map((d) => ({
+      day: d.day,
+      focus: d.focus ?? '',
+      exercises: (d.exercises ?? []).map((e) => ({
+        name: e.name ?? '',
+        sets: e.sets ?? '',
+        rest: e.rest ?? ''
+      }))
+    }))
+  }));
+}
+
+/** Generate 1-week program using Gemini API (no redirect, server-side). Set GEMINI_API_KEY in .env (get free key at https://aistudio.google.com/apikey) to enable. */
+async function generateProgramWithGemini(level, maxReps) {
+  const { GoogleGenerativeAI } = require('@google/generative-ai');
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY not set');
+
+  const repsText = [
+    level !== 'beginner' && maxReps.muscleUp > 0 ? `Muscle-ups: ${maxReps.muscleUp}` : null,
+    `Pull-ups: ${maxReps.pullUps}`,
+    `Dips: ${maxReps.dips}`,
+    `Push-ups: ${maxReps.pushUps}`,
+    `Squats: ${maxReps.squats}`,
+    `Leg raises: ${maxReps.legRaises}`
+  ].filter(Boolean).join(', ');
+
+  const prompt = `You are a calisthenics coach. Generate a 1-WEEK program that follows this EXACT algorithm and structure (same as our backend generator). Use the user's max reps below to compute rep numbers.
+
+ALGORITHM:
+- Week 1 = volume base: use 60% of max for beginners, 70-75% for intermediate/advanced when prescribing reps per set.
+- Beginners: NO muscle-ups; use Australian pull-ups at 1.5x to 2x the pull-up reps when pull exercises are combined.
+- Intermediate/Advanced: may include muscle-ups at ~30-40% of max when relevant.
+
+STRUCTURE (exactly 4 days per week):
+- Day 1 – Pull Day: Warm-up (5-7 min) first exercise, then 2-3 main exercises. Methods: Degressive sets (reps decrease each round, e.g. "6 pull-ups\\n4 pull-ups\\n2 pull-ups\\n× 3 rounds"), EMOM (e.g. "EMOM 6 min: 4 pull-ups at start of each minute"), Separated volume (e.g. "4 sets × 6 reps\\n5 sets × 5 reps"), Pyramids, or Superset (pull-ups + chin-ups + Australian pull-ups × rounds). Rest: "2-3 min between rounds" or "90s between sets" or "Rest for the remainder of each minute" for EMOM.
+- Day 2 – Push Day: Warm-up first, then 2-3 main exercises. Exercises: Dips, Push-ups, Bar dips; optional muscle-ups for non-beginners. Same rest style. Example sets: "6 dips\\n8 push-ups\\n× 4 rounds" or "EMOM 8 min: 4 dips at start of each minute".
+- Day 3 – Legs + Core + Cardio: Warm-up, then Squats (volume or EMOM), Jump squats, Burpees, Leg raises, Plank. Rest: "60s between sets".
+- Day 4 – Endurance Integration Day: Warm-up, then Activation (easy EMOM or light unbroken, 5-8 min), Main Set (combined pull+push in rounds, e.g. "Round 1: 4 pull-ups, 6 dips, 8 push-ups\\nRound 2: ...\\n× 3 rounds"), Finisher (short AMRAP or isometric holds). Rest: "2-3 min between rounds" for main set.
+
+USER INPUTS:
+- Level: ${level}
+- Max reps: ${repsText}
+
+For each exercise, "sets" must be the prescription only (e.g. "6 pull-ups\\n6 Australian pull-ups\\n× 4 rounds" or "4 sets × 6 reps") with no extra label. "rest" must be one short phrase (e.g. "2-3 min between rounds"). Return ONLY valid JSON in this exact shape, no other text:
+{"program":[{"week":1,"days":[{"day":1,"focus":"Pull Day","exercises":[{"name":"Warm-up (5-7 min)","sets":"Tempo pull-ups x10, arm circles, hang holds","rest":"No rest needed"},{"name":"Exercise 2: ...","sets":"...","rest":"..."}]},{"day":2,"focus":"Push Day",...},{"day":3,"focus":"Legs + Core + Cardio",...},{"day":4,"focus":"Endurance Integration Day",...}]}]}
+Output exactly 4 days (Pull Day, Push Day, Legs + Core + Cardio, Endurance Integration Day) with exercises and sets computed from the user max reps above.`;
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const result = await model.generateContent(prompt);
+  const response = result.response;
+  if (!response || !response.text) throw new Error('Gemini returned no text');
+  const text = response.text();
+  return parseAIProgramResponse(text);
+}
+
 /**
  * MAIN CONTROLLER
- * Generates realistic 4-week calisthenics endurance programs using predefined methods
+ * Uses Gemini when GEMINI_API_KEY is set (no redirect); otherwise uses algorithm.
  */
 const generateProgram = async (req, res) => {
   try {
@@ -58,19 +125,31 @@ const generateProgram = async (req, res) => {
     }
 
     // Enforce beginner constraints
+    const payloadMaxReps = { ...maxReps };
     if (level === 'beginner') {
-      maxReps.muscleUp = 0; // NO muscle-ups for beginners
+      payloadMaxReps.muscleUp = 0;
     }
 
-    // Generate 4-week program with unique seed for variation
-    const seed = programId || Date.now();
-    const program = generate4WeekProgram(level, maxReps, seed);
+    let program;
+
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        program = await generateProgramWithGemini(level, payloadMaxReps);
+      } catch (geminiErr) {
+        console.error('Gemini program generation failed, using algorithm:', geminiErr.message);
+        const seed = programId || Date.now();
+        program = generate4WeekProgram(level, payloadMaxReps, seed);
+      }
+    } else {
+      const seed = programId || Date.now();
+      program = generate4WeekProgram(level, payloadMaxReps, seed);
+    }
 
     res.status(200).json({
       success: true,
       data: {
         level,
-        maxReps,
+        maxReps: payloadMaxReps,
         program
       }
     });
@@ -1396,17 +1475,34 @@ const seededRandom = (seed) => {
 
 /**
  * Save generated program with userName and deviceId for admin visibility
+ * Expects: userName (optional), deviceId (optional), level, maxReps (optional), program (array of weeks)
  */
 const saveProgram = async (req, res) => {
   try {
     const { userName, deviceId, level, maxReps, program } = req.body;
+
+    if (!level || !['beginner', 'intermediate', 'advanced'].includes(level)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid level. Must be: beginner, intermediate, or advanced'
+      });
+    }
+
+    const programData = Array.isArray(program) ? program : (program && typeof program === 'object' ? [program] : []);
+    if (programData.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Program must be a non-empty array of weeks (e.g. [{ week: 1, days: [...] }])'
+      });
+    }
+
     const name = (userName && String(userName).trim()) ? String(userName).trim() : 'None';
     const doc = await ProgramSave.create({
       userName: name,
       deviceId: deviceId || undefined,
-      level: level || 'intermediate',
-      maxReps: maxReps || {},
-      program: program || {}
+      level,
+      maxReps: maxReps && typeof maxReps === 'object' ? maxReps : {},
+      program: programData
     });
     res.status(201).json({ success: true, data: doc });
   } catch (error) {

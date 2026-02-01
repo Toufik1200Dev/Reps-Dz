@@ -133,21 +133,53 @@ const saveCalorieSubmission = async (req, res) => {
       fiber
     } = req.body;
 
+    if (!gender || !['male', 'female'].includes(String(gender).toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Gender is required and must be "male" or "female"'
+      });
+    }
+    const numHeight = Number(height);
+    const numWeight = Number(weight);
+    if (isNaN(numHeight) || numHeight <= 0 || numHeight > 250) {
+      return res.status(400).json({
+        success: false,
+        message: 'Height must be a number between 1 and 250'
+      });
+    }
+    if (isNaN(numWeight) || numWeight <= 0 || numWeight > 300) {
+      return res.status(400).json({
+        success: false,
+        message: 'Weight must be a number between 1 and 300'
+      });
+    }
+    const numBmr = Number(bmr);
+    const numCalories = Number(calories);
+    const numProtein = Number(protein);
+    const numCarbs = Number(carbs);
+    const numFat = Number(fat);
+    if (isNaN(numBmr) || isNaN(numCalories) || isNaN(numProtein) || isNaN(numCarbs) || isNaN(numFat)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Results (bmr, calories, protein, carbs, fat) must be valid numbers'
+      });
+    }
+
     const name = (userName && String(userName).trim()) ? String(userName).trim() : 'None';
     const doc = await CalorieSubmission.create({
       userName: name,
       deviceId: deviceId || undefined,
-      gender,
-      height: Number(height),
-      weight: Number(weight),
-      age: age != null ? Number(age) : undefined,
+      gender: String(gender).toLowerCase(),
+      height: numHeight,
+      weight: numWeight,
+      age: age != null && age !== '' ? Number(age) : undefined,
       activityLevel: activityLevel || 'none',
-      bmr: Number(bmr),
-      calories: Number(calories),
-      protein: Number(protein),
-      carbs: Number(carbs),
-      fat: Number(fat),
-      fiber: fiber != null ? Number(fiber) : undefined
+      bmr: numBmr,
+      calories: numCalories,
+      protein: numProtein,
+      carbs: numCarbs,
+      fat: numFat,
+      fiber: fiber != null && fiber !== '' ? Number(fiber) : undefined
     });
 
     if (deviceId && name !== 'None') {
