@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import ReloadLink from '../components/ReloadLink';
 import { motion, AnimatePresence } from 'framer-motion';
 import { productsAPI, ordersAPI } from '../services/api';
 import { PLACEHOLDER_IMAGE } from '../assets/placeholders';
 import { useCart } from '../contexts/CartContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 import { LocalShipping, CheckCircle, Close, ShoppingBag } from '@mui/icons-material';
 import { wilayas } from '../data/wilayas';
+import { trackProductClick } from '../utils/analytics';
 
 // Color name to hex mapping
 const getColorValue = (colorName) => {
@@ -43,7 +45,6 @@ const getColorValue = (colorName) => {
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { addToCart } = useCart();
   const { t } = useLanguage();
   const [product, setProduct] = useState(null);
@@ -154,7 +155,7 @@ const ProductDetail = () => {
 
       // Redirect after 3 seconds
       setTimeout(() => {
-        navigate('/');
+        window.location.href = '/';
       }, 3000);
 
     } catch (err) {
@@ -186,18 +187,7 @@ const ProductDetail = () => {
         setProduct(normalizedProduct);
         setSelectedImage(0);
 
-        // Track product view/click for analytics (best-effort, no noisy logging)
-        try {
-          const analytics = JSON.parse(localStorage.getItem('productClicks') || '[]');
-          analytics.push({
-            productId: normalizedProduct._id || normalizedProduct.id,
-            productName: normalizedProduct.name,
-            timestamp: new Date().toISOString(),
-            date: new Date().toISOString().split('T')[0]
-          });
-          if (analytics.length > 1000) analytics.splice(0, analytics.length - 1000);
-          localStorage.setItem('productClicks', JSON.stringify(analytics));
-        } catch (_) {}
+        trackProductClick(normalizedProduct._id || normalizedProduct.id, normalizedProduct.name);
 
         // Fetch Related Products
         try {
@@ -225,7 +215,7 @@ const ProductDetail = () => {
 
     if (id) fetchProduct();
     window.scrollTo(0, 0);
-  }, [id, navigate]);
+  }, [id]);
 
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -267,9 +257,9 @@ const ProductDetail = () => {
       <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-7xl">
         {/* Breadcrumbs */}
         <nav className="flex text-[10px] xs:text-xs sm:text-sm md:text-sm text-gray-500 mb-3 sm:mb-4 md:mb-8 overflow-x-auto whitespace-nowrap -mx-3 sm:mx-0 px-3 sm:px-0">
-          <Link to="/" className="hover:text-yellow-500 transition-colors py-1">{t('header.home')}</Link>
+          <ReloadLink to="/" className="hover:text-yellow-500 transition-colors py-1">{t('header.home')}</ReloadLink>
           <span className="mx-1 sm:mx-2">/</span>
-          <Link to="/shop" className="hover:text-yellow-500 transition-colors py-1">{t('header.shop')}</Link>
+          <ReloadLink to="/shop" className="hover:text-yellow-500 transition-colors py-1">{t('header.shop')}</ReloadLink>
           <span className="mx-1 sm:mx-2">/</span>
           <span className="text-gray-900 font-medium truncate py-1">{product.name}</span>
         </nav>
@@ -285,9 +275,9 @@ const ProductDetail = () => {
               <img
                 src={product.imagesList[selectedImage] || PLACEHOLDER_IMAGE}
                 alt={product.name}
+                loading="lazy"
                 onError={(e) => {
-                  // Handle image load error silently - use data URI fallback
-                  e.target.onerror = null; // Prevent infinite loop
+                  e.target.onerror = null;
                   e.target.src = PLACEHOLDER_IMAGE;
                 }}
                 className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
@@ -303,7 +293,7 @@ const ProductDetail = () => {
                     className={`flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === idx ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-transparent hover:border-gray-200'
                       }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img src={img} alt="" className="w-full h-full object-cover" loading="lazy" />
                   </button>
                 ))}
               </div>
@@ -667,7 +657,19 @@ const ProductDetail = () => {
             {activeTab === 'description' && (
               <div className="prose max-w-none text-gray-600">
                 <p className="text-lg leading-relaxed">{product.description}</p>
-                {/* Additional descriptive content could go here */}
+                {/* Editorial content for AdSense: buying tips and helpful info */}
+                <div className="mt-8 pt-8 border-t border-gray-100">
+                  <h4 className="text-lg font-bold text-gray-900 mb-3">{t('product.whatToConsider') || 'What to consider when buying'}</h4>
+                  <p className="text-gray-600 leading-relaxed mb-4">
+                    {t('product.buyingTip1') || 'When choosing calisthenics equipment, look for solid construction and clear weight limits. Wall-mounted bars should be fixed to load-bearing structure—never drywall alone—and all fixings should be checked periodically for wear or loosening.'}
+                  </p>
+                  <p className="text-gray-600 leading-relaxed mb-4">
+                    {t('product.buyingTip2') || 'Material and finish matter: steel with a powder-coated or chrome finish resists rust and provides a secure grip. If you train frequently, equipment with multiple grip options can reduce strain on joints and help you target different muscles.'}
+                  </p>
+                  <p className="text-gray-600 leading-relaxed">
+                    {t('product.buyingTip3') || 'We stock only gear that meets these standards so you can train safely for years. For more detail, see our Guides on choosing pull-up bars and calisthenics equipment.'}
+                  </p>
+                </div>
               </div>
             )}
 
@@ -687,23 +689,34 @@ const ProductDetail = () => {
             )}
 
             {activeTab === 'usage' && (
-              <div className="space-y-6">
+              <div className="space-y-6 text-gray-600">
                 <div className="flex items-start gap-4">
-                  <div className="bg-yellow-100 p-3 rounded-lg text-yellow-600">
+                  <div className="bg-yellow-100 p-3 rounded-lg text-yellow-600 flex-shrink-0">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">Training Tips</h3>
-                    <p className="text-gray-600">Perfect for progressively overloading your calisthenics skills. Start with basic movements and work your way up.</p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">{t('product.usage.trainingTips') || 'Training Tips'}</h3>
+                    <p className="leading-relaxed mb-3">Perfect for progressively overloading your calisthenics skills. Start with basic movements and work your way up.</p>
+                    <p className="leading-relaxed">{t('product.usage.trainingTipDetail') || 'Focus on full range of motion and good form rather than speed or reps. Add one rep or one set per week rather than rushing—consistency and recovery are key to long-term progress.'}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
-                  <div className="bg-blue-100 p-3 rounded-lg text-blue-600">
+                  <div className="bg-blue-100 p-3 rounded-lg text-blue-600 flex-shrink-0">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">Safety First</h3>
-                    <p className="text-gray-600">Always check equipment before use. Ensure all bolts are tightened and the setup is stable.</p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">{t('product.usage.safetyFirst') || 'Safety First'}</h3>
+                    <p className="leading-relaxed mb-3">Always check equipment before use. Ensure all bolts are tightened and the setup is stable.</p>
+                    <p className="leading-relaxed">{t('product.usage.safetyDetail') || 'Inspect the bar and fixings periodically for wear or loosening. If you feel any wobble or hear unusual sounds, stop and tighten or replace hardware. A few minutes of inspection can prevent injury and extend the life of your equipment.'}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="bg-green-100 p-3 rounded-lg text-green-600 flex-shrink-0">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">{t('product.usage.warmup') || 'Warm-up and maintenance'}</h3>
+                    <p className="leading-relaxed">{t('product.usage.warmupDetail') || 'Spend 5–10 minutes warming up before heavy sets: arm circles, scapular pulls, and dead hangs help prepare your shoulders and grip. Wipe down bars and handles after use to remove sweat and dust; this keeps the surface grippy and prolongs the finish.'}</p>
                   </div>
                 </div>
               </div>
@@ -718,7 +731,7 @@ const ProductDetail = () => {
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 md:mb-8 font-outfit">{t('product.youMayAlsoLike')}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {relatedProducts.map((related) => (
-              <Link
+              <ReloadLink
                 to={`/product/${related.id}`}
                 key={related.id}
                 className="group bg-white rounded-lg sm:rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all"
@@ -728,13 +741,14 @@ const ProductDetail = () => {
                     src={related.image}
                     alt={related.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
                   />
                 </div>
                 <div className="p-3 sm:p-4">
                   <h3 className="font-bold text-gray-900 mb-1 sm:mb-2 truncate text-sm sm:text-base">{related.name}</h3>
                   <p className="text-yellow-600 font-bold text-sm sm:text-base">{Number(related.price || 0).toLocaleString()} DA</p>
                 </div>
-              </Link>
+              </ReloadLink>
             ))}
           </div>
         </div>
@@ -751,7 +765,7 @@ const ProductDetail = () => {
               className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center relative"
             >
               <button
-                onClick={() => navigate('/')}
+                onClick={() => { window.location.href = '/'; }}
                 className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
               >
                 <Close />

@@ -3,6 +3,13 @@
 // Professional Calisthenics Coach + MERN Engineer
 
 const ProgramSave = require('../models/ProgramSave');
+const SixWeekRequest = require('../models/SixWeekRequest');
+const PendingPayPalOrder = require('../models/PendingPayPalOrder');
+const FreeProgramLimit = require('../models/FreeProgramLimit');
+const { generate6WeekProgram, generate12WeekProgram, calculateNutrition } = require('../services/programGenerator6Week');
+const { sendProgramEmail, send1WeekProgramEmail, sendCustomizedRequestEmail } = require('../services/emailService');
+const { createOrder: createPayPalOrder, captureOrder: capturePayPalOrder } = require('../services/paypalService');
+const { addCoachReviewsToProgram } = require('../services/coachReviewService');
 
 /** Parse AI JSON response (strip markdown code block if present) */
 function parseAIProgramResponse(text) {
@@ -20,19 +27,22 @@ function parseAIProgramResponse(text) {
       exercises: (d.exercises ?? []).map((e) => ({
         name: e.name ?? '',
         sets: e.sets ?? '',
-        rest: e.rest ?? ''
+        rest: e.rest ?? '',
+        note: e.note ?? '',
+        type: e.type ?? null
       }))
     }))
   }));
 }
 
-/** Build the calisthenics program prompt for OpenRouter. Kept explicit for older/smaller models. */
-function buildProgramPrompt(level, maxReps) {
+/** Build the calisthenics program prompt for OpenRouter. Elite coach polish, sport-specific logic. */
+function buildProgramPrompt(level, maxReps, options = {}) {
   const pull = maxReps.pullUps || 0;
   const dips = maxReps.dips || 0;
   const push = maxReps.pushUps || 0;
   const squats = maxReps.squats || 0;
   const legs = maxReps.legRaises || 0;
+  const burpeesVal = maxReps.burpees || 0;
   const muscleUp = level === 'beginner' ? 0 : (maxReps.muscleUp || 0);
 
   const pct = level === 'beginner' ? 0.6 : 0.7;
@@ -42,61 +52,166 @@ function buildProgramPrompt(level, maxReps) {
   const rPush = rep(push);
   const rSquats = rep(squats);
   const rLegs = rep(legs);
+  const rBurpees = rep(burpeesVal);
 
-  return `Task: Create a 1-week calisthenics program. Output ONLY one valid JSON object. No markdown, no explanation, no text before or after the JSON.
+  const sportRaw = (options.otherSport || '').toString().trim().toLowerCase();
+  const sportSpec = getSportSpecificBlock(sportRaw);
 
-RULES:
-1. Level: ${level}. Rep prescription: use about ${level === 'beginner' ? '60%' : '70%'} of max reps per set.
-2. Exactly 4 days. Day 1 = Pull Day. Day 2 = Push Day. Day 3 = Legs + Core + Cardio. Day 4 = Endurance Integration Day.
-3. ${level === 'beginner' ? 'No muscle-ups. Use Australian pull-ups at higher reps instead.' : 'Muscle-ups optional at ~30-40% of max.'}
-4. User max reps: Pull-ups ${pull}, Dips ${dips}, Push-ups ${push}, Squats ${squats}, Leg raises ${legs}${muscleUp ? `, Muscle-ups ${muscleUp}` : ''}. So prescribe roughly: pull ${rPull}, dips ${rDips}, push ${rPush}, squats ${rSquats}, leg raises ${rLegs} per set (or rounds).
-5. Each day: first exercise "Warm-up (5-7 min)" with light description, then 2-3 main exercises with "sets" (e.g. "4 sets x 6 reps" or "6 pull-ups, 6 Australian pull-ups x 4 rounds") and "rest" (e.g. "90s between sets" or "2-3 min between rounds").
-6. Day 4 must include: Warm-up, Activation (short), Main Set (combined pull+push in rounds), Finisher (short AMRAP or holds).
+  const needsRegression = (n) => n < 15 && n >= 1;
+  const regressions = [];
+  if (needsRegression(pull)) regressions.push(`Pull-ups (${pull}) → Australian, chin-ups, or hammer pull-ups`);
+  if (needsRegression(dips)) regressions.push(`Dips (${dips}) → bench dips or band-assisted dips`);
+  if (needsRegression(push)) regressions.push(`Push-ups (${push}) → knee, incline, or wall-assisted HSPU`);
+  if (needsRegression(squats)) regressions.push(`Squats (${squats}) → assisted or box squats`);
+  if (needsRegression(legs)) regressions.push(`Leg raises (${legs}) → knee raises or lying leg raises`);
+  if (needsRegression(burpeesVal)) regressions.push(`Burpees (${burpeesVal}) → step-back or tempo burpees`);
+  const regressionBlock = regressions.length > 0
+    ? `\nREGRESSIONS (max <15, prioritize quality reps):\n${regressions.map(r => `- ${r}`).join('\n')}`
+    : '';
 
-REQUIRED JSON SHAPE (use these exact keys):
+  const materials = 'Pull-up bar, parallel bars, rings, resistance bands, dumbbells, plates (0–20 kg), floor.';
+
+  return `You are an elite calisthenics coach refining and finalizing an algorithm-generated program. Your role: POLISH, EXPLAIN, ADD SPORT-SPECIFIC LOGIC. Do NOT invent exercises or volumes outside the algorithm. Tone: professional, calm, authoritative. Concise, token-efficient.
+
+ATHLETE: Level ${level}. Max: Pull ${pull}, Dips ${dips}, Push ${push}, Squats ${squats}, Leg raises ${legs}, Burpees ${burpeesVal}${muscleUp ? `, MU ${muscleUp}` : ''}. Prescription ~${pct * 100}%: pull ~${rPull}, dips ~${rDips}, push ~${rPush}, squats ~${rSquats}, legs ~${rLegs}, burpees ~${rBurpees}.
+${sportSpec}
+${regressionBlock}
+
+ALGORITHM RULES (do not alter):
+- Level detection per exercise (Pull, Push, Legs, Core)
+- Regressions automatic for max <15. Quality reps over quantity.
+- Structure: Day 1 Pull, Day 2 Push, Day 3 Legs+Cardio, Day 4 Endurance, Day 5 Weighted (0–20 kg, low reps, slow tempo)
+- Warm-ups: 8–12 min, progression general→joint prep→movement-specific, low fatigue, joint-safe, sport-specific
+- Materials for every exercise: ${materials}
+
+COACH NOTES (1–2 lines, examples):
+- "Hammer pull-ups strengthen grip for wrestling."
+- "Incline push-ups allow safe shoulder progression for boxing."
+- "Weighted dips kept light to respect level and avoid early fatigue."
+
+OUTPUT: Exactly one valid JSON. No markdown. Output ONLY the JSON. Include weekly overview in week 1 first day note or last day closing note. Closing note: reassure program is safe, progressive, sport-specific; emphasize correct progression and joint health.
+
 {"program":[{"week":1,"days":[
-  {"day":1,"focus":"Pull Day","exercises":[{"name":"...","sets":"...","rest":"..."}]},
-  {"day":2,"focus":"Push Day","exercises":[{"name":"...","sets":"...","rest":"..."}]},
-  {"day":3,"focus":"Legs + Core + Cardio","exercises":[{"name":"...","sets":"...","rest":"..."}]},
-  {"day":4,"focus":"Endurance Integration Day","exercises":[{"name":"...","sets":"...","rest":"..."}]}
+  {"day":1,"focus":"Pull Day","exercises":[{"name":"Warm-up (8–12 min)","sets":"[goal, exercises, sets/reps, materials]","rest":"","note":"Sport-specific. Low fatigue, joint-safe.","type":"warmup"},{"name":"...","sets":"...","rest":"...","note":"..."}]},
+  {"day":2,"focus":"Push Day","exercises":[{"name":"Warm-up (8–12 min)","sets":"...","rest":"","note":"...","type":"warmup"},{"name":"...","sets":"...","rest":"...","note":"..."}]},
+  {"day":3,"focus":"Legs + Core + Cardio","exercises":[{"name":"Warm-up (8–12 min)","sets":"...","rest":"","note":"...","type":"warmup"},{"name":"...","sets":"...","rest":"...","note":"..."}]},
+  {"day":4,"focus":"Endurance Integration Day","exercises":[{"name":"Warm-up (8–12 min)","sets":"...","rest":"","note":"...","type":"warmup"},{"name":"...","sets":"...","rest":"...","note":"..."}]},
+  {"day":5,"focus":"Weighted Calisthenics","exercises":[{"name":"Warm-up (8–12 min)","sets":"[account for load, movement rehearsal]","rest":"","note":"...","type":"warmup"},{"name":"...","sets":"...","rest":"...","note":"0–20 kg, low reps. Closing: safe, progressive, sport-specific, joint health."}]}
 ]}]}
 
-Every exercise must have "name", "sets", and "rest". "sets" = only the prescription (numbers and rounds). "rest" = one short phrase.
-Output ONLY the JSON object.`;
+Output ONLY the JSON.`;
 }
 
-/** Generate 1-week program using OpenRouter. Set OPENROUTER_API_KEY in .env. OPENROUTER_MODEL default: openai/gpt-oss-120b:free */
-async function generateProgramWithOpenRouter(level, maxReps) {
+/** Sport-specific emphasis for program design */
+function getSportSpecificBlock(sportRaw) {
+  if (!sportRaw) return 'SPORT: Calisthenics (default). Balanced push/pull/core, all regressions as needed.';
+  if (sportRaw.includes('judo') || sportRaw.includes('wrestling')) {
+    return 'SPORT: Judo/Wrestling. PULL DOMINANT. Pull-ups, chin-ups, hammer pull-ups, Australian pull-ups (<15 reps). Focus: grip, back strength, core stability. Warm-ups: shoulders, grip.';
+  }
+  if (sportRaw.includes('boxing') || sportRaw.includes('striking') || sportRaw.includes('muay thai') || sportRaw.includes('kickboxing')) {
+    return 'SPORT: Boxing/Striking. PUSH DOMINANT. Dips, push-ups, incline push-ups, handstand push-ups (<15 reps). Focus: shoulders, arms, pushing strength. Warm-ups: shoulders, wrists.';
+  }
+  if (sportRaw.includes('swim')) {
+    return 'SPORT: Swimming. PULL + ENDURANCE. Pull-ups, chin-ups, Australian pull-ups (<15 reps), high-rep sets. Focus: lat activation, upper back, endurance. Warm-ups: shoulders, thoracic mobility.';
+  }
+  if (sportRaw.includes('bodybuild') || sportRaw.includes('gym') || sportRaw.includes('weight')) {
+    return 'SPORT: Bodybuilding. HYPERTROPHY FOCUS ON EVERYTHING. Full-body approach: push, pull, legs, core. Weighted calisthenics (0–20 kg), moderate reps (8–15), controlled tempo. MINIMIZE CARDIO: keep cardio sessions short, low volume, or replace with active recovery/walking. Focus: muscle growth, not endurance. Warm-ups general.';
+  }
+  return `SPORT: ${sportRaw}. Apply regressions for max <15. Warm-ups match sport emphasis.`;
+}
+
+/** Request timeout for OpenRouter (ms). Prevents hanging on slow/unresponsive API. */
+const OPENROUTER_TIMEOUT_MS = 90000;
+
+/** Call OpenRouter API – used for 1-week generation and 6-week enhancement. Retries on 429/503 with backoff; request timeout to avoid hanging. */
+async function callOpenRouter(messages, options = {}) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY not set');
+  const model = (process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini').trim();
+  const rateLimitRetries = options._rateLimitRetries ?? 0;
+  const maxRateLimitRetries = 3;
 
-  const model = process.env.OPENROUTER_MODEL || 'openai/gpt-oss-120b:free';
-  const prompt = buildProgramPrompt(level, maxReps);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-      'HTTP-Referer': process.env.FRONTEND_URL || 'https://reps-dz.web.app'
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.2,
-      max_tokens: 4096
-    })
-  });
+  let response;
+  try {
+    response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': process.env.FRONTEND_URL || 'https://reps-dz.web.app'
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: options.temperature ?? 0.2,
+        max_tokens: options.max_tokens ?? 4096
+      })
+    });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error(`OpenRouter request timed out after ${OPENROUTER_TIMEOUT_MS / 1000}s`);
+    }
+    throw err;
+  }
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const errText = await response.text();
+    const isRateLimit = response.status === 429 || response.status === 503;
+    if (isRateLimit && rateLimitRetries < maxRateLimitRetries) {
+      let delayMs = [4000, 8000, 12000][rateLimitRetries];
+      const retryAfter = response.headers.get('Retry-After');
+      if (retryAfter != null) {
+        const sec = parseInt(retryAfter, 10);
+        if (!Number.isNaN(sec)) delayMs = Math.min(sec * 1000, 15000);
+      }
+      console.warn(`[Program] OpenRouter ${response.status} (rate limit), retrying in ${delayMs / 1000}s... (${rateLimitRetries + 1}/${maxRateLimitRetries})`);
+      await new Promise((r) => setTimeout(r, delayMs));
+      return callOpenRouter(messages, { ...options, _rateLimitRetries: rateLimitRetries + 1 });
+    }
     throw new Error(`OpenRouter API error ${response.status}: ${errText}`);
   }
-
   const data = await response.json();
   const content = data?.choices?.[0]?.message?.content;
-  if (!content || typeof content !== 'string') throw new Error('OpenRouter returned no content');
+  if (!content || typeof content !== 'string') {
+    if ((options._retryCount ?? 0) < 2) {
+      const retry = (options._retryCount || 0) + 1;
+      console.warn('[Program] OpenRouter returned no content, retrying...', retry);
+      await new Promise((r) => setTimeout(r, 2000));
+      return callOpenRouter(messages, { ...options, _retryCount: retry });
+    }
+    throw new Error('OpenRouter returned no content');
+  }
+  return content;
+}
+
+/** Generate 1-week program using OpenRouter. Set OPENROUTER_API_KEY in .env. */
+async function generateProgramWithOpenRouter(level, maxReps, options = {}) {
+  const model = (process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini').trim();
+  console.log('[Program] 1-week: Calling OpenRouter | model:', model, '| level:', level);
+  const prompt = buildProgramPrompt(level, maxReps, options);
+  const content = await callOpenRouter([{ role: 'user', content: prompt }]);
   return parseAIProgramResponse(content);
+}
+
+/** Enhance 6-week or 12-week program with AI coach note. Called when OPENROUTER_API_KEY is set. */
+async function enhancePaidProgramWithAI(result, options = {}) {
+  const level = result.level || 'intermediate';
+  const weeksCount = options.weeksCount || 6;
+  const weeksLabel = weeksCount === 12 ? '12-week' : '6-week';
+  const goals = Array.isArray(options.goals) && options.goals.length > 0
+    ? options.goals.join(', ')
+    : 'general fitness';
+  const prompt = `You are an elite calisthenics coach. In 2-3 concise sentences, write a personalized coach note for a ${level} athlete starting a ${weeksLabel} program. Goals: ${goals}. Emphasize movement quality, consistency, and recovery. No bullet points. Output ONLY the coach note text.`;
+  const model = (process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini').trim();
+  console.log('[Program]', weeksLabel, ': Calling OpenRouter for coach note | model:', model, '| level:', level);
+  const coachNote = (await callOpenRouter([{ role: 'user', content: prompt }], { max_tokens: 200 })).trim();
+  return { ...result, aiCoachNote: coachNote };
 }
 
 /**
@@ -105,7 +220,7 @@ async function generateProgramWithOpenRouter(level, maxReps) {
  */
 const generateProgram = async (req, res) => {
   try {
-    const { level, maxReps, programId } = req.body;
+    const { level, maxReps, programId, heightCm, weightKg } = req.body;
 
     // Validation
     if (!level || !['beginner', 'intermediate', 'advanced'].includes(level)) {
@@ -123,7 +238,7 @@ const generateProgram = async (req, res) => {
     }
 
     // Validate all maxReps values
-    const requiredExercises = ['muscleUp', 'pullUps', 'dips', 'pushUps', 'squats', 'legRaises'];
+    const requiredExercises = ['muscleUp', 'pullUps', 'dips', 'pushUps', 'squats', 'legRaises', 'burpees'];
     for (const exercise of requiredExercises) {
       if (typeof maxReps[exercise] !== 'number' || maxReps[exercise] < 0) {
         return res.status(400).json({
@@ -135,12 +250,13 @@ const generateProgram = async (req, res) => {
 
     // Safety limits
     const safetyLimits = {
-      muscleUp: 25,
-      pullUps: 60,
-      dips: 80,
-      pushUps: 120,
-      squats: 200,
-      legRaises: 60
+      muscleUp: 50,
+      pullUps: 100,
+      dips: 150,
+      pushUps: 200,
+      squats: 400,
+      legRaises: 80,
+      burpees: 80
     };
 
     for (const [exercise, limit] of Object.entries(safetyLimits)) {
@@ -160,24 +276,36 @@ const generateProgram = async (req, res) => {
 
     let program;
     const seed = programId || Date.now();
+    const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
 
     if (process.env.OPENROUTER_API_KEY) {
       try {
+        console.log('[Program] Using AI model:', model, '| level:', level);
         program = await generateProgramWithOpenRouter(level, payloadMaxReps);
+        console.log('[Program] AI generation succeeded');
       } catch (openRouterErr) {
-        console.error('OpenRouter program generation failed, using algorithm:', openRouterErr.message);
+        console.error('[Program] AI failed, falling back to algorithm:', openRouterErr.message);
         program = generate4WeekProgram(level, payloadMaxReps, seed);
+        console.log('[Program] Using algorithm (fallback)');
       }
     } else {
+      console.log('[Program] Using algorithm (no OPENROUTER_API_KEY) | level:', level);
       program = generate4WeekProgram(level, payloadMaxReps, seed);
     }
+
+    const nutrition = (heightCm != null && weightKg != null && heightCm >= 100 && weightKg >= 30)
+      ? calculateNutrition(Number(heightCm), Number(weightKg))
+      : { bmr: null, tdee: null, proteinG: null, note: 'Add height and weight for calorie estimates.', sampleMeals: null };
 
     res.status(200).json({
       success: true,
       data: {
         level,
         maxReps: payloadMaxReps,
-        program
+        program,
+        nutrition,
+        heightCm: heightCm != null ? Number(heightCm) : undefined,
+        weightKg: weightKg != null ? Number(weightKg) : undefined
       }
     });
 
@@ -188,6 +316,127 @@ const generateProgram = async (req, res) => {
       message: 'Failed to generate program',
       error: error.message
     });
+  }
+};
+
+/**
+ * Send free 1-week program to user's email.
+ * Body: email (required), userName, level, maxReps, heightCm, weightKg
+ */
+const FREE_PROGRAMS_PER_MONTH = 3;
+
+const sendFreeProgramEmail = async (req, res) => {
+  try {
+    const { email, userName, userAge, level, maxReps, heightCm, weightKg, calisthenicsMainSport, otherSport, goals } = req.body;
+
+    const emailTrimmed = (email && String(email).trim().toLowerCase()) || '';
+    if (!emailTrimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      return res.status(400).json({ success: false, message: 'Valid email is required to receive your program.' });
+    }
+
+    const yearMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    let limitDoc = await FreeProgramLimit.findOne({ email: emailTrimmed, yearMonth });
+    if (!limitDoc) {
+      limitDoc = await FreeProgramLimit.create({ email: emailTrimmed, yearMonth, count: 0 });
+    }
+    if (limitDoc.count >= FREE_PROGRAMS_PER_MONTH) {
+      return res.status(429).json({
+        success: false,
+        message: `Free plan: ${FREE_PROGRAMS_PER_MONTH} free generations limit reached. Try the 6-week plan for more.`
+      });
+    }
+
+    if (!level || !['beginner', 'intermediate', 'advanced'].includes(level)) {
+      return res.status(400).json({ success: false, message: 'Invalid level. Must be: beginner, intermediate, or advanced' });
+    }
+
+    if (!maxReps || typeof maxReps !== 'object') {
+      return res.status(400).json({ success: false, message: 'maxReps must be an object with exercise values' });
+    }
+
+    const requiredExercises = ['muscleUp', 'pullUps', 'dips', 'pushUps', 'squats', 'legRaises', 'burpees'];
+    for (const exercise of requiredExercises) {
+      if (typeof maxReps[exercise] !== 'number' || maxReps[exercise] < 0) {
+        return res.status(400).json({ success: false, message: `${exercise} must be a non-negative number` });
+      }
+    }
+
+    const payloadMaxReps = { ...maxReps };
+    if (level === 'beginner') payloadMaxReps.muscleUp = 0;
+
+    const seed = Date.now();
+    const options = {
+      calisthenicsMainSport: calisthenicsMainSport !== false,
+      otherSport: !calisthenicsMainSport && otherSport ? otherSport : undefined,
+      goals: Array.isArray(goals) && goals.length > 0 ? goals : undefined
+    };
+    let program;
+    const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+    if (process.env.OPENROUTER_API_KEY) {
+      try {
+        console.log('[Program] send-free-email: Using AI model:', model, '| level:', level, '| email:', emailTrimmed);
+        program = await generateProgramWithOpenRouter(level, payloadMaxReps, options);
+        console.log('[Program] AI generation succeeded for free email');
+      } catch (openRouterErr) {
+        console.error('[Program] AI failed, falling back to algorithm:', openRouterErr.message);
+        program = generate4WeekProgram(level, payloadMaxReps, seed);
+        console.log('[Program] Using algorithm (fallback) for free email');
+      }
+    } else {
+      console.log('[Program] send-free-email: Using algorithm (no OPENROUTER_API_KEY) | level:', level);
+      program = generate4WeekProgram(level, payloadMaxReps, seed);
+    }
+
+    const oneWeek = Array.isArray(program) ? program.slice(0, 1) : [{ week: 1, days: [] }];
+    const h = heightCm != null && heightCm >= 100 && heightCm <= 250 ? Number(heightCm) : undefined;
+    const w = weightKg != null && weightKg >= 30 && weightKg <= 300 ? Number(weightKg) : undefined;
+    const nutrition = (h && w) ? calculateNutrition(h, w, options.goals) : { bmr: null, tdee: null, proteinG: null, note: 'Add height and weight for calorie estimates.', sampleMeals: null };
+
+    const programData = {
+      level,
+      maxReps: payloadMaxReps,
+      program: oneWeek,
+      nutrition
+    };
+
+    const nameToUse = (userName && String(userName).trim() !== '') ? String(userName).trim() : 'user';
+    const ageNum = userAge != null && typeof userAge === 'number' && userAge >= 13 && userAge <= 120 ? userAge : undefined;
+    await send1WeekProgramEmail(emailTrimmed, nameToUse, programData, { userAge: ageNum, goals: options.goals });
+
+    limitDoc.count += 1;
+    await limitDoc.save();
+
+    res.status(200).json({
+      success: true,
+      data: { email: emailTrimmed }
+    });
+  } catch (error) {
+    console.error('Error sending free program email:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to send program to your email. Please try again.'
+    });
+  }
+};
+
+/**
+ * GET free program limit for an email this month.
+ * Query: email
+ */
+const getFreeLimitStatus = async (req, res) => {
+  try {
+    const emailTrimmed = (req.query.email && String(req.query.email).trim().toLowerCase()) || '';
+    if (!emailTrimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      return res.status(200).json({ used: 0, max: FREE_PROGRAMS_PER_MONTH, remaining: FREE_PROGRAMS_PER_MONTH });
+    }
+    const yearMonth = new Date().toISOString().slice(0, 7);
+    const limitDoc = await FreeProgramLimit.findOne({ email: emailTrimmed, yearMonth });
+    const used = limitDoc ? limitDoc.count : 0;
+    const remaining = Math.max(0, FREE_PROGRAMS_PER_MONTH - used);
+    res.status(200).json({ used, max: FREE_PROGRAMS_PER_MONTH, remaining });
+  } catch (err) {
+    console.error('getFreeLimitStatus:', err);
+    res.status(500).json({ used: 0, max: FREE_PROGRAMS_PER_MONTH, remaining: FREE_PROGRAMS_PER_MONTH });
   }
 };
 
@@ -1506,7 +1755,7 @@ const seededRandom = (seed) => {
  */
 const saveProgram = async (req, res) => {
   try {
-    const { userName, deviceId, level, maxReps, program } = req.body;
+    const { userName, deviceId, level, maxReps, program, heightCm, weightKg, nutrition } = req.body;
 
     if (!level || !['beginner', 'intermediate', 'advanced'].includes(level)) {
       return res.status(400).json({
@@ -1528,8 +1777,11 @@ const saveProgram = async (req, res) => {
       userName: name,
       deviceId: deviceId || undefined,
       level,
+      heightCm: heightCm != null && heightCm >= 100 && heightCm <= 250 ? Number(heightCm) : undefined,
+      weightKg: weightKg != null && weightKg >= 30 && weightKg <= 300 ? Number(weightKg) : undefined,
       maxReps: maxReps && typeof maxReps === 'object' ? maxReps : {},
-      program: programData
+      program: programData,
+      nutrition: nutrition && typeof nutrition === 'object' ? { bmr: nutrition.bmr, tdee: nutrition.tdee, proteinG: nutrition.proteinG, note: nutrition.note, sampleMeals: nutrition.sampleMeals || undefined } : undefined
     });
     res.status(201).json({ success: true, data: doc });
   } catch (error) {
@@ -1542,8 +1794,430 @@ const saveProgram = async (req, res) => {
   }
 };
 
+/**
+ * Paid 6-week program: auto level, height/weight for nutrition, 5 days/week, week 6 day 5 = max test.
+ * Body: maxReps, level (optional), heightCm (optional), weightKg (optional), programId (optional).
+ */
+const generateProgram6Week = async (req, res) => {
+  try {
+    const { level, maxReps, heightCm, weightKg, programId } = req.body;
+
+    if (!maxReps || typeof maxReps !== 'object') {
+      return res.status(400).json({
+        success: false,
+        message: 'maxReps must be an object with exercise values'
+      });
+    }
+
+    const requiredExercises = ['muscleUp', 'pullUps', 'dips', 'pushUps', 'squats', 'legRaises', 'burpees'];
+    for (const exercise of requiredExercises) {
+      if (typeof maxReps[exercise] !== 'number' || maxReps[exercise] < 0) {
+        return res.status(400).json({
+          success: false,
+          message: `${exercise} must be a non-negative number`
+        });
+      }
+    }
+
+    const safetyLimits = {
+      muscleUp: 50,
+      pullUps: 100,
+      dips: 150,
+      pushUps: 200,
+      squats: 400,
+      legRaises: 80,
+      burpees: 80
+    };
+    for (const [exercise, limit] of Object.entries(safetyLimits)) {
+      if (maxReps[exercise] > limit) {
+        return res.status(400).json({
+          success: false,
+          message: `${exercise} max reps (${maxReps[exercise]}) exceeds limit of ${limit}`
+        });
+      }
+    }
+
+    const seed = programId || Date.now();
+    const options = {};
+    if (heightCm != null && weightKg != null) {
+      options.heightCm = Number(heightCm);
+      options.weightKg = Number(weightKg);
+    }
+    const result = generate6WeekProgram(level || null, maxReps, seed, options);
+
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error generating 6-week program:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate 6-week program',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Generate 6-week program and send it to the user's email (paid flow).
+ * Body: email (required), userName (optional), level, maxReps, heightCm, weightKg, programId.
+ */
+const generateAndSend6WeekEmail = async (req, res) => {
+  try {
+    const { email, userName, level, maxReps, heightCm, weightKg, programId, goals } = req.body;
+
+    const emailTrimmed = (email && String(email).trim()) || '';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailTrimmed || !emailRegex.test(emailTrimmed)) {
+      return res.status(400).json({
+        success: false,
+        message: 'A valid email address is required to receive your 6-week program.'
+      });
+    }
+
+    if (!maxReps || typeof maxReps !== 'object') {
+      return res.status(400).json({
+        success: false,
+        message: 'maxReps must be an object with exercise values'
+      });
+    }
+
+    const requiredExercises = ['muscleUp', 'pullUps', 'dips', 'pushUps', 'squats', 'legRaises', 'burpees'];
+    for (const exercise of requiredExercises) {
+      if (typeof maxReps[exercise] !== 'number' || maxReps[exercise] < 0) {
+        return res.status(400).json({
+          success: false,
+          message: `${exercise} must be a non-negative number`
+        });
+      }
+    }
+
+    const safetyLimits = {
+      muscleUp: 50,
+      pullUps: 100,
+      dips: 150,
+      pushUps: 200,
+      squats: 400,
+      legRaises: 80,
+      burpees: 80
+    };
+    for (const [exercise, limit] of Object.entries(safetyLimits)) {
+      if (maxReps[exercise] > limit) {
+        return res.status(400).json({
+          success: false,
+          message: `${exercise} max reps (${maxReps[exercise]}) exceeds limit of ${limit}`
+        });
+      }
+    }
+
+    const seed = programId || Date.now();
+    const options = {};
+    if (heightCm != null && weightKg != null) {
+      options.heightCm = Number(heightCm);
+      options.weightKg = Number(weightKg);
+    }
+    if (Array.isArray(goals) && goals.length > 0) options.goals = goals;
+    console.log('[Program] 6-week send-email: level:', level, '| email:', emailTrimmed);
+    let result = generate6WeekProgram(level || null, maxReps, seed, options);
+    if (process.env.OPENROUTER_API_KEY) {
+      try {
+        const [withReviews, withCover] = await Promise.all([
+          addCoachReviewsToProgram(result, { level, goals: options.goals }, callOpenRouter),
+          enhancePaidProgramWithAI(result, { goals: options.goals, weeksCount: 6 })
+        ]);
+        result = { ...withReviews, aiCoachNote: withCover.aiCoachNote };
+        console.log('[Program] 6-week: AI validation & coach note added');
+      } catch (aiErr) {
+        console.error('[Program] AI enhancement failed:', aiErr.message);
+      }
+    }
+    const nameToUse = (userName && String(userName).trim()) ? String(userName).trim() : null;
+
+    await sendProgramEmail(emailTrimmed, nameToUse, result);
+
+    await SixWeekRequest.create({
+      email: emailTrimmed,
+      userName: nameToUse || undefined,
+      level: level || undefined
+    }).catch((err) => console.error('Error saving SixWeekRequest:', err));
+
+    res.status(200).json({
+      success: true,
+      message: 'Your 6-week program has been sent to your email.',
+      data: { email: emailTrimmed }
+    });
+  } catch (error) {
+    console.error('Error sending 6-week program email:', error);
+    const isConfig = error.message && error.message.includes('not configured');
+    res.status(isConfig ? 503 : 500).json({
+      success: false,
+      message: isConfig ? 'Email service is not configured. Please try again later.' : (error.message || 'Failed to send program to your email.'),
+      error: isConfig ? undefined : error.message
+    });
+  }
+};
+
+/**
+ * Create PayPal order for paid program (6-week or 12-week).
+ * Body: email (required), userName, level, maxReps, heightCm, weightKg, plan ('6week'|'12week').
+ * Returns: { orderId } - use with PayPal JS SDK to approve payment.
+ */
+const createPayPalOrderHandler = async (req, res) => {
+  try {
+    const clientId = process.env.PAYPAL_CLIENT_ID;
+    if (!clientId) {
+      return res.status(503).json({
+        success: false,
+        message: 'Payment is not configured. Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET.'
+      });
+    }
+
+    const { email, userName, userAge, level, maxReps, heightCm, weightKg, plan: planParam, calisthenicsMainSport, otherSport, goals } = req.body;
+    const plan = planParam === '12week' ? '12week' : '6week';
+
+    const emailTrimmed = (email && String(email).trim()) || '';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailTrimmed || !emailRegex.test(emailTrimmed)) {
+      return res.status(400).json({
+        success: false,
+        message: 'A valid email address is required for the 6-week program.'
+      });
+    }
+
+    if (!maxReps || typeof maxReps !== 'object') {
+      return res.status(400).json({
+        success: false,
+        message: 'maxReps must be an object with exercise values'
+      });
+    }
+
+    const requiredExercises = ['muscleUp', 'pullUps', 'dips', 'pushUps', 'squats', 'legRaises', 'burpees'];
+    for (const exercise of requiredExercises) {
+      if (typeof maxReps[exercise] !== 'number' || maxReps[exercise] < 0) {
+        return res.status(400).json({
+          success: false,
+          message: `${exercise} must be a non-negative number`
+        });
+      }
+    }
+
+    const safetyLimits = { muscleUp: 50, pullUps: 100, dips: 150, pushUps: 200, squats: 400, legRaises: 80, burpees: 80 };
+    for (const [ex, limit] of Object.entries(safetyLimits)) {
+      if (maxReps[ex] > limit) {
+        return res.status(400).json({
+          success: false,
+          message: `${ex} max reps (${maxReps[ex]}) exceeds limit of ${limit}`
+        });
+      }
+    }
+
+    const amountCents = plan === '12week' ? 5499 : 3999; // 54.99 or 39.99 USD
+    const { id: orderId } = await createPayPalOrder(amountCents, 'USD');
+
+    const ageNum = userAge != null && typeof userAge === 'number' && userAge >= 13 && userAge <= 120 ? userAge : undefined;
+    await PendingPayPalOrder.create({
+      orderId,
+      email: emailTrimmed,
+      userName: (userName && String(userName).trim()) || undefined,
+      userAge: ageNum,
+      level: level || 'intermediate',
+      maxReps,
+      heightCm: heightCm ? Number(heightCm) : undefined,
+      weightKg: weightKg ? Number(weightKg) : undefined,
+      plan,
+      calisthenicsMainSport: calisthenicsMainSport !== false,
+      otherSport: otherSport || undefined,
+      goals: Array.isArray(goals) && goals.length > 0 ? goals : []
+    });
+
+    res.status(200).json({ success: true, orderId });
+  } catch (error) {
+    console.error('PayPal create order error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Could not create payment order.'
+    });
+  }
+};
+
+/**
+ * Capture PayPal order and fulfill paid program.
+ * Called after user approves payment in PayPal popup.
+ * POST body: { order_id }
+ */
+const fulfillPaidProgram = async (req, res) => {
+  try {
+    const clientId = process.env.PAYPAL_CLIENT_ID;
+    if (!clientId) {
+      return res.status(503).json({
+        success: false,
+        message: 'Payment is not configured.'
+      });
+    }
+
+    const orderId = req.body.order_id || req.body.orderId;
+    if (!orderId || typeof orderId !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'order_id is required.'
+      });
+    }
+
+    // Look up pending order data
+    const pending = await PendingPayPalOrder.findOne({ orderId }).lean();
+    if (!pending) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order not found or expired. Please try again.'
+      });
+    }
+
+    // Capture payment with PayPal
+    const captureResult = await capturePayPalOrder(orderId);
+    const status = captureResult.status;
+    if (status !== 'COMPLETED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment was not completed.'
+      });
+    }
+
+    // Generate and send program
+    const { email, program, plan } = await fulfillProgramFromPayPalData(pending);
+    const weeksLabel = plan === '12week' ? '12-week' : '6-week';
+
+    // Remove pending (one-time use)
+    await PendingPayPalOrder.deleteOne({ orderId }).catch(() => {});
+
+    res.status(200).json({
+      success: true,
+      message: `Your ${weeksLabel} program has been sent to your email.`,
+      data: { email, program }
+    });
+  } catch (error) {
+    console.error('Fulfill paid program error:', error?.message || error);
+    if (error?.stack) console.error('Stack:', error.stack);
+    const msg = error?.message || 'Failed to send your program.';
+    // PayPal validation/compliance errors → 422 (not server bug)
+    const isPayPalValidation = /capture|compliance|order may already be captured|expired|invalid/i.test(msg);
+    res.status(isPayPalValidation ? 422 : 500).json({
+      success: false,
+      message: msg
+    });
+  }
+};
+
+/**
+ * Fulfill program from PayPal pending order data.
+ */
+async function fulfillProgramFromPayPalData(pending) {
+  const { email, userName, userAge, level, maxReps, heightCm, weightKg, orderId, plan, calisthenicsMainSport, otherSport } = pending;
+  const goals = Array.isArray(pending.goals) ? pending.goals : [];
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('No valid email for this order.');
+  }
+
+  const seed = Date.now();
+  const options = {};
+  if (heightCm != null && weightKg != null) {
+    options.heightCm = heightCm;
+    options.weightKg = weightKg;
+  }
+  if (calisthenicsMainSport === false && otherSport) options.otherSport = otherSport;
+  if (goals.length > 0) options.goals = goals;
+  const is12Week = plan === '12week';
+  console.log('[Program] Paid program:', is12Week ? '12-week' : '6-week', '| level:', level, '| email:', email);
+  let result = is12Week
+    ? generate12WeekProgram(level || 'intermediate', maxReps, seed, options)
+    : generate6WeekProgram(level || 'intermediate', maxReps, seed, options);
+  const weeksCount = is12Week ? 12 : 6;
+  if (process.env.OPENROUTER_API_KEY) {
+    try {
+      const [withReviews, withCover] = await Promise.all([
+        addCoachReviewsToProgram(result, { level, otherSport, goals }, callOpenRouter),
+        enhancePaidProgramWithAI(result, { goals, weeksCount })
+      ]);
+      result = { ...withReviews, aiCoachNote: withCover.aiCoachNote };
+      console.log('[Program]', is12Week ? '12-week' : '6-week', ': AI validation & coach note added');
+    } catch (aiErr) {
+      console.error('[Program] AI enhancement failed:', aiErr.message);
+    }
+  }
+  const weeksLabel = is12Week ? '12-week' : '6-week';
+  if (!result.aiCoachNote || !String(result.aiCoachNote).trim()) {
+    result = { ...result, aiCoachNote: `Focus on movement quality and consistency. Rest and recover between sessions. This ${weeksLabel} plan is built to progress safely—stick to the structure and adjust only if needed.` };
+  }
+  const nameToUse = (userName && String(userName).trim()) ? String(userName).trim() : null;
+  const ageNum = userAge != null && typeof userAge === 'number' && userAge >= 13 && userAge <= 120 ? userAge : undefined;
+
+  await sendProgramEmail(email, nameToUse, result, { weeksCount, userAge: ageNum, goals });
+
+  await SixWeekRequest.create({
+    email,
+    userName: nameToUse || undefined,
+    level: level || undefined,
+    maxReps,
+    heightCm: heightCm || undefined,
+    weightKg: weightKg || undefined,
+    stripeSessionId: orderId,
+    amountPaid: is12Week ? 5499 : 3999,
+    currency: 'usd',
+    paymentStatus: 'paid'
+  }).catch((err) => console.error('Error saving SixWeekRequest:', err));
+
+  return { email, program: result, plan: is12Week ? '12week' : '6week' };
+}
+
+/**
+ * Submit customized program request. Sends form data to admin email.
+ * Body: name, email, pullExercises, pushExercises, cardioLegs, other, description
+ */
+const submitCustomizedRequest = async (req, res) => {
+  try {
+    const { name, email, pullExercises, pushExercises, cardioLegs, other, description, heightCm, weightKg, calisthenicsMainSport, otherSport } = req.body;
+    const emailTrimmed = (email && String(email).trim()) || '';
+    if (!emailTrimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      return res.status(400).json({ success: false, message: 'A valid email is required.' });
+    }
+    await sendCustomizedRequestEmail({
+      name: name || '',
+      email: emailTrimmed,
+      pullExercises: pullExercises || '',
+      pushExercises: pushExercises || '',
+      cardioLegs: cardioLegs || '',
+      other: other || '',
+      description: description || '',
+      heightCm: heightCm || '',
+      weightKg: weightKg || '',
+      calisthenicsMainSport: calisthenicsMainSport !== false,
+      otherSport: otherSport || ''
+    });
+    res.status(200).json({
+      success: true,
+      message: 'Your customized program request has been sent. We will contact you at your email with a quote.',
+      data: { email: emailTrimmed }
+    });
+  } catch (error) {
+    console.error('Customized request error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to send your request.'
+    });
+  }
+};
+
 module.exports = {
   generateProgram,
+  generateProgram6Week,
+  generateAndSend6WeekEmail,
+  sendFreeProgramEmail,
+  getFreeLimitStatus,
   generateBatchPrograms,
-  saveProgram
+  saveProgram,
+  createPayPalOrderHandler,
+  fulfillPaidProgram,
+  submitCustomizedRequest
 };
+
+

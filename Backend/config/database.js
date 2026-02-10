@@ -1,30 +1,33 @@
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
+  const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/titoubarz';
+  const isLocal = /localhost|127\.0\.0\.1/.test(mongoURI);
+
   try {
-    // MongoDB connection string - you can change this to your MongoDB Atlas connection
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/titoubarz';
-    
     const conn = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
     });
-    
-    // Handle connection events
+
     mongoose.connection.on('error', (err) => {
       console.error('MongoDB connection error:', err);
     });
 
-    // Graceful shutdown
     process.on('SIGINT', async () => {
       await mongoose.connection.close();
       process.exit(0);
     });
-
   } catch (error) {
     console.error('Error connecting to MongoDB:', error.message);
+    if (isLocal) {
+      console.error('\n→ To run MongoDB locally: install MongoDB and start the service, or use MongoDB Atlas.');
+      console.error('→ With Atlas: set MONGODB_URI in Backend/.env to your cluster connection string.\n');
+    } else {
+      console.error('\n→ Check MONGODB_URI in Backend/.env (network, firewall, correct Atlas URL).\n');
+    }
     process.exit(1);
   }
 };

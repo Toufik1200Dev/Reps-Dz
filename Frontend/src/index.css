@@ -4,6 +4,34 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Programs page – single font family (Inter) */
+.programs-page,
+.programs-page h1,
+.programs-page h2,
+.programs-page h3,
+.programs-page h4,
+.programs-page h5,
+.programs-page h6,
+.programs-page button,
+.programs-page input,
+.programs-page select,
+.programs-page textarea,
+.programs-page label,
+.programs-page p,
+.programs-page span,
+.programs-page li {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Programs page – loading button shimmer */
+@keyframes program-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.animate-program-shimmer {
+  animation: program-shimmer 2s ease-in-out infinite;
+}
+
 /* RTL Support */
 [dir="rtl"] {
   direction: rtl;
@@ -128,10 +156,36 @@
   --transition-smooth: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+/* Focus styles for keyboard accessibility */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #FFD700;
+  outline-offset: 2px;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 body {
@@ -140,6 +194,11 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Main content area - consistent padding */
+main {
+  min-height: 50vh;
 }
 
 h1,

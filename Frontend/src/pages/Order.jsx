@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ShoppingBag, LocalShipping, CheckCircle, Close } from '@mui/icons-material';
 import { ordersAPI } from '../services/api';
 import { wilayas } from '../data/wilayas';
 import { PLACEHOLDER_IMAGE } from '../assets/placeholders';
 import { useCart } from '../contexts/CartContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 
 // Color name to hex mapping
 const getColorValue = (colorName) => {
@@ -42,22 +42,22 @@ const getColorValue = (colorName) => {
 };
 
 export default function Order() {
-  const navigate = useNavigate();
   const location = useLocation();
-  const { clearCart } = useCart();
+  const { clearCart, items: cartContextItems } = useCart();
   const { t } = useLanguage();
   
-  // Get product data from location state - support both single product (Buy Now) and cart items (Cart checkout)
+  // Get product data from location state or CartContext (for full page reload from Cart)
   const { product: initialProduct, quantity: initialQuantity = 1, size: initialSize = null, color: initialColor = null, cartItems: initialCartItems } = location.state || {};
+  const cartItemsFromContext = cartContextItems || [];
   
-  // Determine if this is a cart checkout or single product order
-  const isCartCheckout = !!initialCartItems && initialCartItems.length > 0;
-  const orderItems = isCartCheckout ? initialCartItems : (initialProduct ? [{
+  // Determine if this is a cart checkout or single product order (use context when state is empty, e.g. after full page reload)
+  const isCartCheckout = (!!initialCartItems && initialCartItems.length > 0) || (cartItemsFromContext.length > 0 && !initialProduct);
+  const orderItems = (initialCartItems && initialCartItems.length > 0) ? initialCartItems : (cartItemsFromContext.length > 0 ? cartItemsFromContext : (initialProduct ? [{
     ...initialProduct,
     quantity: initialQuantity,
     size: initialSize,
     color: initialColor
-  }] : []);
+  }] : []));
   
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -81,9 +81,9 @@ export default function Order() {
   // Redirect if no product/cart data
   useEffect(() => {
     if (!initialProduct && !isCartCheckout) {
-      navigate('/shop');
+      window.location.href = '/shop';
     }
-  }, [initialProduct, isCartCheckout, navigate]);
+  }, [initialProduct, isCartCheckout]);
 
   const handleChange = (e) => {
     setFormData({
@@ -203,7 +203,7 @@ export default function Order() {
 
       // Redirect after 3 seconds
       setTimeout(() => {
-        navigate('/');
+        window.location.href = '/';
       }, 3000);
 
     } catch (err) {
@@ -224,7 +224,7 @@ export default function Order() {
         <div className="max-w-6xl mx-auto px-4">
           {/* Header */}
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => window.history.back()}
             className="flex items-center gap-2 text-gray-600 hover:text-black mb-6 transition-colors"
           >
             <ArrowLeft />
@@ -721,7 +721,7 @@ export default function Order() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => navigate('/')}
+              onClick={() => { window.location.href = '/'; }}
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             >
               <motion.div
@@ -732,7 +732,7 @@ export default function Order() {
                 className="bg-white rounded-xl md:rounded-2xl shadow-xl p-6 md:p-8 max-w-md w-full mx-4 text-center relative"
               >
                 <button
-                  onClick={() => navigate('/')}
+                  onClick={() => { window.location.href = '/'; }}
                   className="absolute top-3 right-3 md:top-4 md:right-4 text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <Close className="text-lg md:text-xl" />

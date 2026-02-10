@@ -11,4 +11,8 @@ router.get('/status', adminController.getAdminStatus);
 router.get('/stats/calories', adminAuth, adminController.getCalorieStatsWithSubmissions);
 router.get('/stats/generator', adminAuth, adminController.getGeneratorStatsWithSubmissions);
 
+// Admin settings - IP whitelist (protected)
+router.get('/settings/ip-whitelist', adminAuth, adminController.getIpWhitelist);
+router.put('/settings/ip-whitelist', adminAuth, adminController.updateIpWhitelist);
+
 module.exports = router;

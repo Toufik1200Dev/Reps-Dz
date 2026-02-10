@@ -12,14 +12,16 @@ import {
   FitnessCenter,
   Star,
   Instagram,
+  Calculate,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCart } from '../contexts/CartContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 import { productsAPI } from '../services/api';
 import { PLACEHOLDER_IMAGE } from '../assets/placeholders';
 import HeroSlider from '../components/HeroSlider';
+import ReloadLink from '../components/ReloadLink';
+import { guides } from '../data/guides';
 
 // Featured Categories
 import wallMountedImg from '../assets/imgs/wallmountedbarresIMG.png';
@@ -72,7 +74,6 @@ const whyChooseUs = [
 ];
 
 export default function Home() {
-  const navigate = useNavigate();
   const { addToCart } = useCart();
   const { t } = useLanguage();
   const [bestSellers, setBestSellers] = useState([]);
@@ -82,17 +83,9 @@ export default function Home() {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const [featured, offers] = await Promise.all([
-          productsAPI.getFeaturedProducts().catch(() => []),
-          productsAPI.getBestOffers(8).catch(() => [])
-        ]);
-
-        const allProducts = [...(featured || []), ...(offers || [])];
-        const uniqueProducts = allProducts.filter((product, index, self) =>
-          index === self.findIndex(p => (p._id || p.id) === (product._id || product.id))
-        ).slice(0, 8);
-
-        setBestSellers(uniqueProducts.map(p => ({
+        const data = await productsAPI.getAllProducts({ limit: 999 }).catch(() => ({}));
+        const list = Array.isArray(data) ? data : (data?.products || data?.data || []);
+        setBestSellers(list.map(p => ({
           ...p,
           id: p._id || p.id
         })));
@@ -130,8 +123,68 @@ export default function Home() {
     <div className="bg-light min-h-screen font-sans">
       <HeroSlider />
 
+      {/* Program Generator Section */}
+      <section className="py-10 sm:py-14 md:py-16 bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-16"
+          >
+            <div className="flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-yellow-100 flex items-center justify-center">
+              <FitnessCenter sx={{ fontSize: 40, color: '#EAB308' }} />
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <h2 className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-gray-900 mb-3 tracking-tight">
+                {t('home.programGeneratorTitle') || 'Free Workout Program Generator'}
+              </h2>
+              <p className="text-gray-600 text-base md:text-lg leading-relaxed mb-6 max-w-2xl">
+                {t('home.programGeneratorDesc') || 'Get a personalized 1-week calisthenics program based on your level and max reps. Enter your numbers, generate your plan, and download a PDF to follow.'}
+              </p>
+              <button
+                onClick={() => { window.location.href = '/programs'; }}
+                className="inline-flex items-center gap-2 bg-black text-[#FFD700] font-bold px-6 py-3 rounded-xl hover:bg-gray-800 transition-all"
+              >
+                {t('home.generateProgram') || 'Generate Program'} <ArrowForward className="text-lg" />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Calorie Calculator Section */}
+      <section className="py-10 sm:py-14 md:py-16 bg-gray-50 border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="flex flex-col md:flex-row-reverse items-center gap-8 md:gap-12 lg:gap-16"
+          >
+            <div className="flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-orange-100 flex items-center justify-center">
+              <Calculate sx={{ fontSize: 40, color: '#EA580C' }} />
+            </div>
+            <div className="flex-1 text-center md:text-left md:order-2">
+              <h2 className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-gray-900 mb-3 tracking-tight">
+                {t('home.calorieCalculatorTitle') || 'Calorie Calculator'}
+              </h2>
+              <p className="text-gray-600 text-base md:text-lg leading-relaxed mb-6 max-w-2xl">
+                {t('home.calorieCalculatorDesc') || 'Calculate your daily calories and macro targets (protein, carbs, fat) based on your age, weight, height, and activity level. Reach your fitness goals with the right nutrition.'}
+              </p>
+              <button
+                onClick={() => { window.location.href = '/calorie-calculator'; }}
+                className="inline-flex items-center gap-2 bg-black text-[#FFD700] font-bold px-6 py-3 rounded-xl hover:bg-gray-800 transition-all"
+              >
+                {t('home.calculateCalories') || 'Calculate Calories'} <ArrowForward className="text-lg" />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Quick Features Strip */}
-      <div className="bg-black text-secondary py-3 md:py-4 border-b border-white/10">
+      <div className="bg-black text-[#FFD700] py-3 md:py-4 border-b border-white/10">
         <div className="max-w-7xl mx-auto px-3 sm:px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
             {[
@@ -140,8 +193,8 @@ export default function Home() {
               { icon: Support, textKey: "home.support24" },
               { icon: FitnessCenter, textKey: "home.premiumQuality" }
             ].map((f, i) => (
-              <div key={i} className="flex items-center justify-center gap-1 sm:gap-2 opacity-80 hover:opacity-100 transition-opacity px-1">
-                <f.icon className="text-base sm:text-lg md:text-xl flex-shrink-0" />
+              <div key={i} className="flex items-center justify-center gap-1 sm:gap-2 opacity-90 hover:opacity-100 transition-opacity px-1 py-1">
+                <f.icon className="text-base sm:text-lg md:text-xl flex-shrink-0 text-[#FFD700]" />
                 <span className="text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-wider text-center leading-tight">{t(f.textKey)}</span>
               </div>
             ))}
@@ -171,9 +224,9 @@ export default function Home() {
               transition={{ delay: idx * 0.1, duration: 0.6 }}
               viewport={{ once: true }}
               className="group cursor-pointer relative aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl"
-              onClick={() => navigate(cat.path)}
+              onClick={() => { window.location.href = cat.path; }}
             >
-              <img src={cat.image} alt={cat.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+              <img src={cat.image} alt={cat.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" loading="lazy" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
               
               <div className="absolute inset-0 flex flex-col justify-end p-8 sm:p-10">
@@ -208,7 +261,7 @@ export default function Home() {
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              onClick={() => navigate('/shop')}
+              onClick={() => { window.location.href = '/shop'; }}
               className="group flex items-center gap-3 bg-black text-white font-black uppercase tracking-widest hover:bg-secondary hover:text-black transition-all duration-300 text-xs sm:text-sm py-4 px-8 rounded-full"
             >
               {t('home.viewAll')} <ArrowForward className="group-hover:translate-x-1 transition-transform" />
@@ -229,13 +282,14 @@ export default function Home() {
                   transition={{ delay: idx * 0.1 }}
                   viewport={{ once: true }}
                   className="group bg-white rounded-3xl cursor-pointer transition-all duration-500 hover:-translate-y-2"
-                  onClick={() => navigate(`/product/${product.id}`)}
+                  onClick={() => { window.location.href = `/product/${product.id}`; }}
                 >
                   <div className="relative aspect-square overflow-hidden rounded-[2rem] bg-gray-100 mb-6 group/img shadow-lg">
                     <img
                       src={product.images?.main || product.image || product.images?.[0]?.url || PLACEHOLDER_IMAGE}
                       alt={product.name}
                       className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                      loading="lazy"
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = PLACEHOLDER_IMAGE;
@@ -291,6 +345,59 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Guides & Tips */}
+      <section className="py-12 sm:py-16 md:py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-10 sm:mb-14"
+          >
+            <h2 className="font-display font-black text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-4 tracking-tight">
+              {t('home.guidesTitle') || 'Guides & Tips'}
+            </h2>
+            <p className="text-gray-500 text-sm sm:text-base md:text-lg max-w-2xl mx-auto">
+              {t('home.guidesDesc') || 'Expert advice on equipment, calisthenics, and training at home.'}
+            </p>
+          </motion.div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+            {guides.slice(0, 8).map((guide, idx) => (
+              <motion.div
+                key={guide.slug}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(idx * 0.06, 0.4) }}
+                viewport={{ once: true }}
+              >
+                <ReloadLink
+                  to={`/guides/${guide.slug}`}
+                  className="block bg-gray-50 hover:bg-yellow-50/50 rounded-2xl p-6 sm:p-8 border border-gray-100 hover:border-yellow-200 transition-all group h-full"
+                >
+                  <h3 className="font-display font-bold text-lg sm:text-xl text-gray-900 mb-2 group-hover:text-yellow-600 transition-colors line-clamp-2">
+                    {guide.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm sm:text-base leading-relaxed mb-4 line-clamp-2">
+                    {guide.excerpt}
+                  </p>
+                  <span className="text-yellow-600 font-semibold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+                    {t('guides.readMore') || 'Read full guide'} <ArrowForward className="text-base" />
+                  </span>
+                </ReloadLink>
+              </motion.div>
+            ))}
+          </div>
+          <div className="text-center mt-8 sm:mt-10">
+            <ReloadLink
+              to="/guides"
+              className="inline-flex items-center gap-2 bg-black text-secondary font-bold px-6 py-3 rounded-full hover:bg-gray-800 transition-colors text-sm sm:text-base"
+            >
+              {t('home.readGuides') || 'Read Guides'} <ArrowForward className="text-lg" />
+            </ReloadLink>
+          </div>
+        </div>
+      </section>
+
       {/* Value Props */}
       <section className="py-8 sm:py-12 md:py-16 lg:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-3 sm:px-4">
@@ -326,7 +433,7 @@ export default function Home() {
             {t('home.journeyDesc')}
           </p>
           <button
-            onClick={() => navigate('/shop')}
+            onClick={() => { window.location.href = '/shop'; }}
             className="bg-secondary text-black font-bold text-sm sm:text-base md:text-lg px-6 sm:px-8 md:px-12 py-3 sm:py-3.5 md:py-4 rounded-full hover:bg-white transition-all shadow-lg hover:shadow-gold duration-300 transform hover:-translate-y-1 min-h-[44px] touch-manipulation"
           >
             {t('home.shopNow')}

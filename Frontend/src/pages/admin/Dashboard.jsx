@@ -7,12 +7,16 @@ import {
   LocalShipping,
   Assessment,
   Add,
-  Visibility
+  Visibility,
+  MenuBook,
+  Article,
+  FitnessCenter,
+  CalendarViewMonth
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../../services/api';
 import { productsAPI } from '../../services/api';
-import { getVisitorStats } from '../../utils/analytics';
+import { getVisitorStats, getBlogClickStats, getPageViewStats, getProductClickStats, getProgramEventStats } from '../../utils/analytics';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -24,6 +28,13 @@ export default function Dashboard() {
     reachToday: 0,
     totalProducts: 0,
     lowStockProducts: 0,
+    blogClicks: 0,
+    blogReach: 0,
+    pageViews: 0,
+    pageViewsToday: 0,
+    productClicks: 0,
+    sixWeekTotal: 0,
+    programGenerates: { free: 0, paid: 0 },
   });
 
   const [recentOrders, setRecentOrders] = useState([]);
@@ -34,12 +45,22 @@ export default function Dashboard() {
       try {
         setLoading(true);
 
-        // Reach (visitors) from localStorage analytics
+        // Reach (visitors), blog, page views, product clicks from localStorage analytics
         const visitorStats = getVisitorStats();
+        const blogStats = getBlogClickStats();
+        const pageStats = getPageViewStats();
+        const productStats = getProductClickStats();
+        const programStats = getProgramEventStats();
         setStats(prev => ({
           ...prev,
           reach: visitorStats.total,
           reachToday: visitorStats.today,
+          blogClicks: blogStats.totalClicks,
+          blogReach: blogStats.reach,
+          pageViews: pageStats.total,
+          pageViewsToday: pageStats.today,
+          productClicks: productStats.total,
+          programGenerates: programStats.generates,
         }));
 
         // Orders: fetch from API
@@ -101,6 +122,17 @@ export default function Dashboard() {
         } catch (e) {
           console.error('Error fetching products for dashboard:', e);
         }
+
+        // 6-week plan stats from backend
+        try {
+          const genRes = await adminAPI.getGeneratorStats({ range: 'all' });
+          const genData = genRes.data?.data?.stats;
+          if (genData?.sixWeekTotal != null) {
+            setStats(prev => ({ ...prev, sixWeekTotal: genData.sixWeekTotal }));
+          }
+        } catch (e) {
+          console.error('Error fetching generator stats for dashboard:', e);
+        }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
       } finally {
@@ -129,8 +161,8 @@ export default function Dashboard() {
     >
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-3xl font-black font-display mb-1">{value}</h2>
-          <p className="text-gray-500 font-medium">{title}</p>
+          <h2 className="text-2xl sm:text-3xl font-black font-display mb-1 break-words">{value}</h2>
+          <p className="text-gray-500 font-medium text-sm sm:text-base">{title}</p>
         </div>
         <div className={`p-3 rounded-xl ${colorClass}`}>
           {icon}
@@ -159,14 +191,14 @@ export default function Dashboard() {
         <p className="text-gray-500">Reach and orders at a glance.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 mb-8">
         <StatCard
           title="Total Revenue"
           value={`${stats.totalRevenue.toLocaleString()} DA`}
           icon={<AttachMoney className="text-green-600" />}
           colorClass="bg-green-50"
           subtitle="From orders"
-          onClick={() => navigate('/admin/analytics')}
+          onClick={() => { navigate('/admin/analytics'); }}
         />
         <StatCard
           title="Total Orders"
@@ -174,7 +206,7 @@ export default function Dashboard() {
           icon={<ShoppingCart className="text-blue-600" />}
           colorClass="bg-blue-50"
           subtitle="All time"
-          onClick={() => navigate('/admin/orders')}
+          onClick={() => { navigate('/admin/orders'); }}
         />
         <StatCard
           title="Reach"
@@ -182,7 +214,23 @@ export default function Dashboard() {
           icon={<People className="text-purple-600" />}
           colorClass="bg-purple-50"
           subtitle={stats.reachToday > 0 ? `${stats.reachToday} today` : 'Site visitors'}
-          onClick={() => navigate('/admin/analytics')}
+          onClick={() => { navigate('/admin/analytics'); }}
+        />
+        <StatCard
+          title="Page Views"
+          value={stats.pageViews}
+          icon={<Article className="text-indigo-600" />}
+          colorClass="bg-indigo-50"
+          subtitle={stats.pageViewsToday > 0 ? `${stats.pageViewsToday} today` : 'Across all pages'}
+          onClick={() => { navigate('/admin/analytics'); }}
+        />
+        <StatCard
+          title="Product Clicks"
+          value={stats.productClicks}
+          icon={<Visibility className="text-amber-600" />}
+          colorClass="bg-amber-50"
+          subtitle="Product detail views"
+          onClick={() => { navigate('/admin/analytics'); }}
         />
         <StatCard
           title="Total Products"
@@ -190,7 +238,31 @@ export default function Dashboard() {
           icon={<Inventory className="text-orange-600" />}
           colorClass="bg-orange-50"
           subtitle={stats.lowStockProducts > 0 ? `${stats.lowStockProducts} low stock` : ''}
-          onClick={() => navigate('/admin/products')}
+          onClick={() => { navigate('/admin/products'); }}
+        />
+        <StatCard
+          title="Blog Clicks"
+          value={stats.blogClicks}
+          icon={<MenuBook className="text-teal-600" />}
+          colorClass="bg-teal-50"
+          subtitle={stats.blogReach > 0 ? `Reach: ${stats.blogReach} guides` : 'Guide views'}
+          onClick={() => { navigate('/admin/analytics'); }}
+        />
+        <StatCard
+          title="6-Week Plan"
+          value={stats.sixWeekTotal}
+          icon={<CalendarViewMonth className="text-rose-600" />}
+          colorClass="bg-rose-50"
+          subtitle="Paid plans sent via email"
+          onClick={() => { navigate('/admin/generator-stats'); }}
+        />
+        <StatCard
+          title="Program Generates"
+          value={(stats.programGenerates?.free || 0) + (stats.programGenerates?.paid || 0)}
+          icon={<FitnessCenter className="text-cyan-600" />}
+          colorClass="bg-cyan-50"
+          subtitle={stats.programGenerates?.free ? `${stats.programGenerates.free} free, ${stats.programGenerates.paid || 0} paid` : '1-week & 6-week'}
+          onClick={() => { navigate('/admin/generator-stats'); }}
         />
       </div>
 
@@ -200,7 +272,7 @@ export default function Dashboard() {
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-lg">Recent Orders</h2>
               <button
-                onClick={() => navigate('/admin/orders')}
+                onClick={() => { navigate('/admin/orders'); }}
                 className="text-sm font-bold text-[#FFD700] bg-black px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
               >
                 View All
@@ -226,7 +298,7 @@ export default function Dashboard() {
                         {order.status}
                       </span>
                       <button
-                        onClick={() => navigate(`/admin/orders`)}
+                        onClick={() => { navigate('/admin/orders'); }}
                         className="text-gray-400 hover:text-black"
                         aria-label="View order"
                       >
@@ -245,28 +317,28 @@ export default function Dashboard() {
             <h2 className="font-bold text-lg mb-4">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-4">
               <button
-                onClick={() => navigate('/admin/products')}
+                onClick={() => { navigate('/admin/products'); }}
                 className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 hover:border-[#FFD700] hover:bg-[#FFD700]/5 transition-all group"
               >
                 <Add className="mb-2 text-gray-600 group-hover:text-black" />
                 <span className="text-xs font-bold text-gray-600 group-hover:text-black">Add Product</span>
               </button>
               <button
-                onClick={() => navigate('/admin/analytics')}
+                onClick={() => { navigate('/admin/analytics'); }}
                 className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 hover:border-[#FFD700] hover:bg-[#FFD700]/5 transition-all group"
               >
                 <Assessment className="mb-2 text-gray-600 group-hover:text-black" />
                 <span className="text-xs font-bold text-gray-600 group-hover:text-black">Analytics</span>
               </button>
               <button
-                onClick={() => navigate('/admin/orders')}
+                onClick={() => { navigate('/admin/orders'); }}
                 className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 hover:border-[#FFD700] hover:bg-[#FFD700]/5 transition-all group"
               >
                 <LocalShipping className="mb-2 text-gray-600 group-hover:text-black" />
                 <span className="text-xs font-bold text-gray-600 group-hover:text-black">Orders</span>
               </button>
               <button
-                onClick={() => navigate('/admin/analytics')}
+                onClick={() => { navigate('/admin/analytics'); }}
                 className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 hover:border-[#FFD700] hover:bg-[#FFD700]/5 transition-all group"
               >
                 <People className="mb-2 text-gray-600 group-hover:text-black" />

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
+import ReloadLink from '../components/ReloadLink';
 import { motion } from 'framer-motion';
 import {
   Scale,
@@ -12,8 +13,7 @@ import {
   Calculate
 } from '@mui/icons-material';
 import API_CONFIG from '../config/api';
-import { useLanguage } from '../contexts/LanguageContext';
-import AdSense from '../components/ads/AdSense';
+import { useLanguage } from '../hooks/useLanguage';
 
 const getOrCreateDeviceId = () => {
   const key = 'calorie_device_id';
@@ -43,39 +43,16 @@ export default function CalorieCalculator() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [fitnessTips, setFitnessTips] = useState([]);
+  const resultsRef = useRef(null);
 
-  // Fitness tips pool
+  // Fitness tips pool – titles/tips translated via t(); icons fixed
   const tipsPool = [
-    {
-      title: "Protein Timing",
-      tip: "Aim to consume 20-30g of protein within 30 minutes after your workout for optimal muscle recovery and growth.",
-      icon: <FitnessCenter className="text-3xl text-blue-500" />
-    },
-    {
-      title: "Stay Hydrated",
-      tip: "Drink at least 2-3 liters of water daily. Your muscles need proper hydration to perform and recover effectively.",
-      icon: <LocalDrink sx={{ fontSize: '3rem', color: '#60A5FA' }} />
-    },
-    {
-      title: "Recovery & Sleep",
-      tip: "Prioritize 7-9 hours of quality sleep. Growth hormone production peaks during deep sleep, essential for muscle recovery.",
-      icon: <Bedtime sx={{ fontSize: '3rem', color: '#6366F1' }} />
-    },
-    {
-      title: "Strength Nutrition",
-      tip: "For strength training, ensure adequate carbs pre-workout for energy and protein post-workout for repair.",
-      icon: <TrendingUp className="text-3xl text-green-500" />
-    },
-    {
-      title: "Fiber Benefits",
-      tip: "Adequate fiber intake supports digestion, keeps you full longer, and helps maintain steady energy levels throughout the day.",
-      icon: <Spa sx={{ fontSize: '3rem', color: '#10B981' }} />
-    },
-    {
-      title: "Meal Timing",
-      tip: "Space your protein intake evenly throughout the day (every 3-4 hours) to maximize muscle protein synthesis.",
-      icon: <DirectionsRun sx={{ fontSize: '3rem', color: '#F97316' }} />
-    }
+    { titleKey: 'calorie.tip1Title', tipKey: 'calorie.tip1Text', icon: <FitnessCenter className="text-3xl text-blue-500" /> },
+    { titleKey: 'calorie.tip2Title', tipKey: 'calorie.tip2Text', icon: <LocalDrink sx={{ fontSize: '3rem', color: '#60A5FA' }} /> },
+    { titleKey: 'calorie.tip3Title', tipKey: 'calorie.tip3Text', icon: <Bedtime sx={{ fontSize: '3rem', color: '#6366F1' }} /> },
+    { titleKey: 'calorie.tip4Title', tipKey: 'calorie.tip4Text', icon: <TrendingUp className="text-3xl text-green-500" /> },
+    { titleKey: 'calorie.tip5Title', tipKey: 'calorie.tip5Text', icon: <Spa sx={{ fontSize: '3rem', color: '#10B981' }} /> },
+    { titleKey: 'calorie.tip6Title', tipKey: 'calorie.tip6Text', icon: <DirectionsRun sx={{ fontSize: '3rem', color: '#F97316' }} /> }
   ];
 
   const handleChange = (e) => {
@@ -89,19 +66,19 @@ export default function CalorieCalculator() {
 
   const validateInputs = () => {
     if (!formData.gender) {
-      setError('Please select your gender');
+      setError(t('calorie.errorSelectGender'));
       return false;
     }
     if (!formData.height || formData.height <= 0 || formData.height > 250) {
-      setError('Please enter a valid height (1-250 cm)');
+      setError(t('calorie.errorHeight'));
       return false;
     }
     if (!formData.weight || formData.weight <= 0 || formData.weight > 300) {
-      setError('Please enter a valid weight (1-300 kg)');
+      setError(t('calorie.errorWeight'));
       return false;
     }
     if (formData.age && (formData.age < 1 || formData.age > 120)) {
-      setError('Please enter a valid age (1-120 years)');
+      setError(t('calorie.errorAge'));
       return false;
     }
     return true;
@@ -219,7 +196,7 @@ export default function CalorieCalculator() {
       }, 100);
 
     } catch (err) {
-      setError('Error calculating. Please check your inputs and try again.');
+      setError(t('calorie.errorGeneric'));
       console.error('Calculation error:', err);
     } finally {
       setLoading(false);
@@ -227,51 +204,11 @@ export default function CalorieCalculator() {
   };
 
   const macroCards = [
-    {
-      label: 'Calories',
-      value: results?.calories,
-      unit: 'kcal',
-      icon: <DirectionsRun sx={{ fontSize: '2.5rem' }} />,
-      color: 'from-orange-400 to-orange-600',
-      bgColor: 'bg-orange-50',
-      borderColor: 'border-orange-200'
-    },
-    {
-      label: 'Protein',
-      value: results?.protein,
-      unit: 'g',
-      icon: <FitnessCenter sx={{ fontSize: '2.5rem' }} />,
-      color: 'from-blue-400 to-blue-600',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200'
-    },
-    {
-      label: 'Carbs',
-      value: results?.carbs,
-      unit: 'g',
-      icon: <Restaurant sx={{ fontSize: '2.5rem' }} />,
-      color: 'from-green-400 to-green-600',
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200'
-    },
-    {
-      label: 'Fat',
-      value: results?.fat,
-      unit: 'g',
-      icon: <Scale sx={{ fontSize: '2.5rem' }} />,
-      color: 'from-purple-400 to-purple-600',
-      bgColor: 'bg-purple-50',
-      borderColor: 'border-purple-200'
-    },
-    {
-      label: 'Fiber',
-      value: results?.fiber,
-      unit: 'g',
-      icon: <Spa sx={{ fontSize: '2.5rem' }} />,
-      color: 'from-emerald-400 to-emerald-600',
-      bgColor: 'bg-emerald-50',
-      borderColor: 'border-emerald-200'
-    }
+    { labelKey: 'calorie.macroCalories', value: results?.calories, unit: 'kcal', icon: <DirectionsRun sx={{ fontSize: '2.5rem' }} />, color: 'from-orange-400 to-orange-600', bgColor: 'bg-orange-50', borderColor: 'border-orange-200' },
+    { labelKey: 'calorie.macroProtein', value: results?.protein, unit: 'g', icon: <FitnessCenter sx={{ fontSize: '2.5rem' }} />, color: 'from-blue-400 to-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+    { labelKey: 'calorie.macroCarbs', value: results?.carbs, unit: 'g', icon: <Restaurant sx={{ fontSize: '2.5rem' }} />, color: 'from-green-400 to-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
+    { labelKey: 'calorie.macroFat', value: results?.fat, unit: 'g', icon: <Scale sx={{ fontSize: '2.5rem' }} />, color: 'from-purple-400 to-purple-600', bgColor: 'bg-purple-50', borderColor: 'border-purple-200' },
+    { labelKey: 'calorie.macroFiber', value: results?.fiber, unit: 'g', icon: <Spa sx={{ fontSize: '2.5rem' }} />, color: 'from-emerald-400 to-emerald-600', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200' }
   ];
 
   return (
@@ -289,10 +226,13 @@ export default function CalorieCalculator() {
             </div>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-3">
-            Calorie & Macro <span className="text-orange-500">Calculator</span>
+            {t('calorie.title')} <span className="text-orange-500">{t('calorie.calculator')}</span>
           </h1>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            Calculate your daily caloric needs and macronutrient targets based on your body metrics and activity level
+            {t('calorie.subtitle')}
+          </p>
+          <p className="mt-4 text-sm text-gray-500 max-w-xl mx-auto">
+            {t('calorie.wantFullGuide') || 'Want to understand calories to lose fat?'} <ReloadLink to="/guides/calories-needed-to-lose-fat-full-guide" className="text-orange-600 font-semibold hover:underline">{t('calorie.readCaloriesGuide') || 'Read our full Calories guide'}</ReloadLink>
           </p>
         </motion.div>
 
@@ -303,19 +243,19 @@ export default function CalorieCalculator() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8"
           >
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Information</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('calorie.yourInfo')}</h2>
               
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
-                    Your name
+                    {t('calorie.yourName')}
                   </label>
                   <input
                     type="text"
                     name="userName"
                     value={formData.userName}
                     onChange={handleChange}
-                    placeholder="e.g. Ahmed"
+                    placeholder={t('calorie.yourNamePlaceholder')}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                   />
                 </div>
@@ -323,7 +263,7 @@ export default function CalorieCalculator() {
                 {/* Gender */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-3">
-                    Gender <span className="text-red-500">*</span>
+                    {t('calorie.gender')} <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-4">
                     <button
@@ -335,7 +275,7 @@ export default function CalorieCalculator() {
                           : 'border-gray-200 hover:border-gray-300 text-gray-700'
                       }`}
                     >
-                      <div className="font-bold">Male</div>
+                      <div className="font-bold">{t('calorie.male')}</div>
                     </button>
                     <button
                       type="button"
@@ -346,7 +286,7 @@ export default function CalorieCalculator() {
                           : 'border-gray-200 hover:border-gray-300 text-gray-700'
                       }`}
                     >
-                      <div className="font-bold">Female</div>
+                      <div className="font-bold">{t('calorie.female')}</div>
                     </button>
                   </div>
                 </div>
@@ -354,7 +294,7 @@ export default function CalorieCalculator() {
                 {/* Height */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
-                    Height (cm) <span className="text-red-500">*</span>
+                    {t('calorie.height')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -371,7 +311,7 @@ export default function CalorieCalculator() {
                 {/* Weight */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
-                    Weight (kg) <span className="text-red-500">*</span>
+                    {t('calorie.weight')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -387,7 +327,7 @@ export default function CalorieCalculator() {
 
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
-                    Age (years)
+                    {t('calorie.age')}
                   </label>
                   <input
                     type="number"
@@ -403,7 +343,7 @@ export default function CalorieCalculator() {
 
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
-                    Activity Level
+                    {t('calorie.activityLevel')}
                   </label>
                   <select
                     name="activityLevel"
@@ -411,10 +351,10 @@ export default function CalorieCalculator() {
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white"
                   >
-                    <option value="">Select activity level</option>
-                    <option value="low">Low (sedentary, minimal exercise)</option>
-                    <option value="moderate">Moderate (3-5 days/week exercise)</option>
-                    <option value="high">High (6-7 days/week, intense training)</option>
+                    <option value="">{t('calorie.selectActivity')}</option>
+                    <option value="low">{t('calorie.activityLow')}</option>
+                    <option value="moderate">{t('calorie.activityModerate')}</option>
+                    <option value="high">{t('calorie.activityHigh')}</option>
                   </select>
                 </div>
 
@@ -434,12 +374,12 @@ export default function CalorieCalculator() {
                   {loading ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Calculating...
+                      {t('calorie.calculating')}
                     </>
                   ) : (
                     <>
                       <Calculate sx={{ fontSize: '1.5rem' }} />
-                      Calculate
+                      {t('calorie.calculate')}
                     </>
                   )}
                 </button>
@@ -447,50 +387,39 @@ export default function CalorieCalculator() {
             </motion.div>
         </div>
 
-        {/* Ad shown when user clicks Calculate (submit) – between form and results */}
-        {results && (
-          <div className="m-2 flex justify-center">
-            <AdSense slotName="calorieOnSubmit" format="auto" className="w-full max-w-[970px] min-h-[50px]" />
-          </div>
-        )}
-
-        {/* Results Section */}
+        {/* Results Section – on-click ad shows only when results are visible (contentRef) */}
         {results && (
           <motion.div
+            ref={resultsRef}
             id="results"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="mt-14 max-w-4xl mx-auto"
           >
-            {/* Ad above calorie results – spaced from Calculate button */}
-            <div className="m-2 flex justify-center">
-              <AdSense slotName="calorieAboveResults" format="auto" className="w-full min-h-[50px]" />
-            </div>
-
             {/* Summary card */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
               <div className="bg-gradient-to-br from-orange-500 to-orange-600 px-6 py-5 sm:px-8 sm:py-6">
-                <p className="text-orange-100 text-sm font-semibold uppercase tracking-widest mb-1">Daily caloric target</p>
+                <p className="text-orange-100 text-sm font-semibold uppercase tracking-widest mb-1">{t('calorie.dailyTarget')}</p>
                 <p className="text-white text-4xl sm:text-5xl font-black tracking-tight">{results.calories.toLocaleString()} <span className="text-orange-200 font-bold text-2xl sm:text-3xl">kcal</span></p>
-                <p className="text-orange-100 text-sm mt-2">Based on your profile and activity level</p>
+                <p className="text-orange-100 text-sm mt-2">{t('calorie.basedOnProfile')}</p>
               </div>
               <div className="px-6 py-4 sm:px-8 sm:py-5 bg-gray-50 border-t border-gray-100">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
-                    <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">BMR (at rest)</p>
-                    <p className="text-gray-900 text-xl font-bold">{results.bmr.toLocaleString()} kcal/day</p>
+                    <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">{t('calorie.bmrAtRest')}</p>
+                    <p className="text-gray-900 text-xl font-bold">{results.bmr.toLocaleString()} kcal{t('calorie.perDay')}</p>
                   </div>
-                  <p className="text-gray-500 text-sm max-w-xs">Calories your body burns at complete rest (Mifflin-St Jeor)</p>
+                  <p className="text-gray-500 text-sm max-w-xs">{t('calorie.bmrDesc')}</p>
                 </div>
               </div>
             </div>
 
-            <h3 className="text-lg font-bold text-gray-900 mb-4 px-1">Macronutrient targets</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4 px-1">{t('calorie.macroTargets')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-              {macroCards.filter(c => c.label !== 'Calories').map((card, index) => (
+              {macroCards.filter(c => c.labelKey !== 'calorie.macroCalories').map((card, index) => (
                 <motion.div
-                  key={card.label}
+                  key={card.labelKey}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + index * 0.06 }}
@@ -499,12 +428,12 @@ export default function CalorieCalculator() {
                   <div className={`px-5 py-4 ${card.bgColor} border-b border-gray-100`}>
                     <div className="flex items-center gap-3">
                       <span className="text-gray-600">{card.icon}</span>
-                      <span className="text-sm font-bold text-gray-700 uppercase tracking-wide">{card.label}</span>
+                      <span className="text-sm font-bold text-gray-700 uppercase tracking-wide">{t(card.labelKey)}</span>
                     </div>
                   </div>
                   <div className="px-5 py-5 text-center">
                     <p className="text-2xl sm:text-3xl font-black text-gray-900 tabular-nums">{card.value ?? '\u2014'}</p>
-                    <p className="text-sm font-medium text-gray-500 mt-0.5">{card.unit}/day</p>
+                    <p className="text-sm font-medium text-gray-500 mt-0.5">{card.unit}{t('calorie.perDay')}</p>
                   </div>
                 </motion.div>
               ))}
@@ -512,13 +441,13 @@ export default function CalorieCalculator() {
 
             <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 bg-gray-50 rounded-xl px-4 py-3 mb-10 border border-gray-100">
               <Spa sx={{ fontSize: 20, color: '#059669' }} />
-              <span><strong className="text-gray-800">Fiber:</strong> {results.fiber} g/day recommended (14g per 1000 kcal)</span>
+              <span><strong className="text-gray-800">{t('calorie.fiberNote')}</strong> {results.fiber} {t('calorie.fiberRecommended')}</span>
             </div>
 
             {/* Fitness Tips */}
             {fitnessTips.length > 0 && (
               <div className="pt-6 border-t border-gray-200">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 px-1">Fitness tips</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-4 px-1">{t('calorie.fitnessTips')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {fitnessTips.map((tip, index) => (
                     <motion.div
@@ -533,8 +462,8 @@ export default function CalorieCalculator() {
                           {tip.icon}
                         </div>
                         <div>
-                          <h4 className="font-bold text-gray-900 mb-1">{tip.title}</h4>
-                          <p className="text-gray-600 text-sm leading-relaxed">{tip.tip}</p>
+                          <h4 className="font-bold text-gray-900 mb-1">{t(tip.titleKey)}</h4>
+                          <p className="text-gray-600 text-sm leading-relaxed">{t(tip.tipKey)}</p>
                         </div>
                       </div>
                     </motion.div>
@@ -542,11 +471,6 @@ export default function CalorieCalculator() {
                 </div>
               </div>
             )}
-
-            {/* Ad below calorie results – spaced from content */}
-            <div className="m-2 flex justify-center">
-              <AdSense slotName="calorieBelowResults" format="auto" className="w-full min-h-[50px]" />
-            </div>
           </motion.div>
         )}
       </div>

@@ -5,8 +5,30 @@ const path = require('path');
 const fs = require('fs');
 const connectDB = require('./config/database');
 
-// Load environment variables
-dotenv.config();
+// Load environment variables (explicit path so .env loads from Backend folder)
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+// Log config status at startup (for debugging - no secrets logged)
+const brevoKey = process.env.BREVO_API_KEY;
+const brevoSender = process.env.BREVO_SENDER_EMAIL;
+if (!brevoKey || !brevoSender) {
+  console.warn('[Brevo] Email not configured: Set BREVO_API_KEY and BREVO_SENDER_EMAIL in .env');
+} else {
+  console.log('[Brevo] Email configured. Sender:', brevoSender);
+}
+const paypalClient = process.env.PAYPAL_CLIENT_ID;
+if (!paypalClient) {
+  console.warn('[PayPal] Payment not configured: Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in .env');
+} else {
+  console.log('[PayPal] Payment configured');
+}
+const openRouterKey = process.env.OPENROUTER_API_KEY;
+const openRouterModel = (process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini').trim();
+if (!openRouterKey) {
+  console.warn('[OpenRouter] NOT configured – no AI requests will be made. Add OPENROUTER_API_KEY to .env (get key at openrouter.ai)');
+} else {
+  console.log('[OpenRouter] Configured – AI will enhance 1-week and 6-week programs. Model:', openRouterModel);
+}
 
 // Import routes
 const productRoutes = require('./routes/productRoutes');
@@ -22,6 +44,7 @@ const adminRoutes = require('./routes/adminRoutes');
 
 // Import middleware
 const adminAuth = require('./middleware/adminAuth');
+const adminIpWhitelist = require('./middleware/adminIpWhitelist');
 
 const app = express();
 
@@ -38,8 +61,8 @@ if (!fs.existsSync(uploadsDir)) {
 app.use((req, res, next) => {
   // Allow requests from your frontend domain
   const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? ['https://reps-dz.web.app', 'https://reps-dz.firebaseapp.com']
-    : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'];
+    ? ['https://reps-dz.web.app', 'https://reps-dz.firebaseapp.com', 'https://localhost:5173', 'http://localhost:5173']
+    : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000', 'https://localhost:5173'];
   
   const origin = req.headers.origin;
   
@@ -149,6 +172,10 @@ app.get('/api/status', (req, res) => {
         cloudName: process.env.CLOUDINARY_CLOUD_NAME ? 'Set' : 'Missing',
         apiKey: process.env.CLOUDINARY_API_KEY ? 'Set' : 'Missing',
         apiSecret: process.env.CLOUDINARY_API_SECRET ? 'Set' : 'Missing'
+      },
+      openRouter: {
+        hasApiKey: !!process.env.OPENROUTER_API_KEY,
+        model: process.env.OPENROUTER_MODEL || 'openai/gpt-oss-120b:free'
       }
     });
   } catch (error) {
@@ -171,7 +198,8 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/programs', programRoutes);
 app.use('/api/calories', calorieRoutes);
 
-// Admin routes
+// Admin routes (IP whitelist applied to all /api/admin/*)
+app.use('/api/admin', adminIpWhitelist);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/orders', adminAuth, orderRoutes);
 
@@ -181,8 +209,8 @@ app.use((err, req, res, next) => {
   
   // Set CORS headers even on error
   const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? ['https://reps-dz.web.app', 'https://reps-dz.firebaseapp.com']
-    : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'];
+    ? ['https://reps-dz.web.app', 'https://reps-dz.firebaseapp.com', 'https://localhost:5173', 'http://localhost:5173']
+    : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000', 'https://localhost:5173'];
   
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {

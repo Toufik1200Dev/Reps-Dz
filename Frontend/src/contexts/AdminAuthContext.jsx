@@ -18,8 +18,12 @@ export const AdminAuthProvider = ({ children }) => {
   const login = async (password) => {
     const result = await adminAPI.login(password);
     if (result.success) {
+      const trimmed = (password || '').trim();
+      if (trimmed) {
+        localStorage.setItem('adminPassword', trimmed);
+      }
       setIsAdminAuthenticated(true);
-      setAdminPassword(password);
+      setAdminPassword(trimmed);
       return true;
     }
     return false;

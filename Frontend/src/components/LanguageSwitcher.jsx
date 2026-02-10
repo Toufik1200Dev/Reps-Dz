@@ -1,7 +1,7 @@
 import React from 'react';
 import { IconButton, Menu, MenuItem } from '@mui/material';
 import { Language } from '@mui/icons-material';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 
 export default function LanguageSwitcher() {
   const { language, switchLanguage } = useLanguage();

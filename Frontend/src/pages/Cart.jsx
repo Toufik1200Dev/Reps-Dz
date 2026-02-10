@@ -27,15 +27,14 @@ import {
   Security,
   Support,
 } from '@mui/icons-material';
-import { useNavigate, Link } from 'react-router-dom';
+import ReloadLink from '../components/ReloadLink';
 import { useCart } from '../contexts/CartContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 import { PLACEHOLDER_IMAGE } from '../assets/placeholders';
 
 export default function Cart() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const navigate = useNavigate();
   const { items: cartItems, updateQuantity, removeFromCart, totalPrice: cartTotalPrice } = useCart();
   const { t } = useLanguage();
 
@@ -69,15 +68,11 @@ export default function Cart() {
   };
 
   const handleCheckout = () => {
-    navigate('/order', { 
-      state: { 
-        cartItems: cartItems 
-      } 
-    });
+    window.location.href = '/order';
   };
 
   const handleContinueShopping = () => {
-    navigate('/shop');
+    window.location.href = '/shop';
   };
 
   if (cartItems.length === 0) {
@@ -144,7 +139,7 @@ export default function Cart() {
 
                     {/* Product Info */}
                     <Grid size={{ xs: 12, sm: 4 }}>
-                      <Typography variant="subtitle1" component={Link} to={`/product/${item.productId || item.id}`} sx={{ textDecoration: 'none', color: 'text.primary', fontWeight: 'bold' }}>
+                      <Typography variant="subtitle1" component={ReloadLink} to={`/product/${item.productId || item.id}`} sx={{ textDecoration: 'none', color: 'text.primary', fontWeight: 'bold' }}>
                         {item.name}
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>

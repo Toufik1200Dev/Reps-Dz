@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, ArrowForward } from "@mui/icons-material"
 import { IconButton } from "@mui/material"
 import { motion, AnimatePresence } from "framer-motion"
-import { useLanguage } from "../contexts/LanguageContext"
+import { useLanguage } from '../hooks/useLanguage';
 import pic1 from "../assets/imgs/pic1.jpg"
 import pic2 from "../assets/imgs/pic2.jpg"
 import pic3 from "../assets/imgs/pic3.jpg"

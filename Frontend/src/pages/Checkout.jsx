@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Container,
   Typography,
@@ -31,7 +31,6 @@ import {
   CheckCircle,
   ArrowBack,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { ordersAPI, apiUtils } from '../services/api';
 
@@ -40,7 +39,6 @@ const steps = ['Cart Review', 'Shipping Information', 'Payment', 'Confirmation']
 export default function Checkout() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const navigate = useNavigate();
   const { items: cartItems, clearCart } = useCart();
 
   // State
@@ -357,7 +355,7 @@ export default function Checkout() {
             </Typography>
             <Button
               variant="contained"
-              onClick={() => navigate('/')}
+              onClick={() => { window.location.href = '/'; }}
             >
               Continue Shopping
             </Button>
@@ -375,7 +373,7 @@ export default function Checkout() {
       <Box sx={{ mb: 4 }}>
         <Button
           startIcon={<ArrowBack />}
-          onClick={() => navigate('/cart')}
+          onClick={() => { window.location.href = '/cart'; }}
           sx={{ mb: 2 }}
         >
           Back to Cart

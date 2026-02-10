@@ -18,14 +18,15 @@ import {
   Email,
   Description
 } from '@mui/icons-material';
-import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import logo from '../../assets/logo/logo.png';
+import logo from '../../assets/logo/toufikcalisthenicsLogo.png';
 
 const menuItems = [
   { text: 'Products', icon: <Inventory />, path: '/admin/products' },
   { text: 'Orders', icon: <ShoppingCart />, path: '/admin/orders' },
+  { text: 'Settings', icon: <Settings />, path: '/admin/settings' },
   { text: 'Contact Messages', icon: <Email />, path: '/admin/contact-messages' },
   { text: 'Analytics', icon: <Assessment />, path: '/admin/analytics' },
   { text: 'Generator Stats', icon: <FitnessCenter />, path: '/admin/generator-stats' },
@@ -34,24 +35,24 @@ const menuItems = [
 ];
 
 export default function AdminLayout() {
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
   const { logout } = useAdminAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    window.location.href = '/';
   };
 
   const SidebarContent = () => (
     <div className="h-full flex flex-col bg-black text-white">
       <div className="p-6 flex items-center justify-between border-b border-white/10">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="REPS-DZ" className="w-10 h-10 object-contain rounded-lg" />
+          <img src={logo} alt="Toufik | calisthenics" className="w-10 h-10 object-contain rounded-lg" />
           <div>
-            <h1 className="font-display font-bold text-xl tracking-wider text-secondary">REPS-DZ</h1>
+            <h1 className="font-display font-bold text-xl tracking-wider text-secondary">Toufik | calisthenics</h1>
             <span className="text-xs text-gray-400 uppercase tracking-widest block">Admin Panel</span>
           </div>
         </div>
@@ -168,10 +169,10 @@ export default function AdminLayout() {
                       exit={{ opacity: 0, y: 10 }}
                       className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-20 py-2"
                     >
-                      <button onClick={() => navigate('/admin/profile')} className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-black flex items-center gap-2">
+                      <button onClick={() => { navigate('/admin/profile'); }} className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-black flex items-center gap-2">
                         <AccountCircle className="text-lg" /> Profile
                       </button>
-                      <button onClick={() => navigate('/admin/settings')} className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-black flex items-center gap-2">
+                      <button onClick={() => { navigate('/admin/settings'); }} className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-black flex items-center gap-2">
                         <Settings className="text-lg" /> Settings
                       </button>
                       <div className="h-px bg-gray-100 my-1" />

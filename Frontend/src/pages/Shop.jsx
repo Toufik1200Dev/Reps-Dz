@@ -22,18 +22,17 @@ import {
   ArrowForward
 } from '@mui/icons-material';
 import { productsAPI } from '../services/api';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import ReloadLink from '../components/ReloadLink';
 import { useCart } from '../contexts/CartContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PLACEHOLDER_IMAGE } from '../assets/placeholders';
-import AdSense from '../components/ads/AdSense';
 
 // Mock data fallback if API fails
 import { featuredProducts } from '../data/products';
 
 export default function Shop() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { addToCart, isInCart } = useCart();
   const { t, language } = useLanguage();
@@ -353,12 +352,6 @@ export default function Shop() {
                   <AnimatePresence mode="popLayout">
                     {currentProducts.map((product, index) => (
                       <React.Fragment key={product.id}>
-                        {/* Insert ad row between product rows (after every 4 products) */}
-                        {index > 0 && index % 4 === 0 && (
-                          <div className="col-span-full m-2 flex justify-center">
-                            <AdSense slotName="shopBetweenProducts" format="auto" className="w-full max-w-[970px] min-h-[50px]" />
-                          </div>
-                        )}
                         <motion.div
                           layout
                           initial={{ opacity: 0, y: 20 }}
@@ -366,7 +359,7 @@ export default function Shop() {
                           exit={{ opacity: 0, scale: 0.95 }}
                           transition={{ duration: 0.3 }}
                           className="group flex flex-col bg-white rounded-3xl border border-gray-100 hover:border-secondary/30 shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer overflow-hidden"
-                          onClick={() => navigate(`/product/${product.id}`)}
+                          onClick={() => { window.location.href = `/product/${product.id}`; }}
                         >
                           {/* Image Container */}
                           <div className="relative pt-[110%] bg-gray-50 overflow-hidden">
@@ -374,6 +367,7 @@ export default function Shop() {
                               src={product.image}
                               alt={product.name}
                               className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                              loading="lazy"
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
 
@@ -484,6 +478,24 @@ export default function Shop() {
           </main>
         </div>
       </div>
+
+      {/* Buying guide – bottom of shop */}
+      <section className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 border-t border-gray-100">
+        <div className="max-w-3xl mx-auto text-center md:text-left">
+          <h2 className="font-display font-bold text-xl sm:text-2xl text-gray-900 mb-4">
+            {t('shop.buyingGuideTitle') || 'How to Choose the Right Calisthenics Equipment'}
+          </h2>
+          <p className="text-gray-600 leading-relaxed mb-4">
+            {t('shop.buyingGuideIntro') || 'Whether you\'re building a home gym or upgrading your setup, the right equipment makes a real difference. Look for solid steel construction, clear weight limits, and secure fixings—especially for wall-mounted bars and dip stations. Pull-up bars should support your body weight plus any added load; parallettes and push-up handles should feel stable and not slip. We stock only gear that meets these standards so you can train safely for years.'}
+          </p>
+          <p className="text-gray-600 leading-relaxed">
+            {t('shop.buyingGuideOutro') || 'Need more detail? Check our Guides for in-depth advice on pull-up bars, parallettes, and getting started with calisthenics.'}
+          </p>
+          <ReloadLink to="/guides" className="inline-flex items-center gap-2 mt-4 text-yellow-600 font-semibold hover:text-yellow-700 transition-colors text-sm sm:text-base">
+            {t('home.readGuides') || 'Read Guides'} <ArrowForward className="text-lg" />
+          </ReloadLink>
+        </div>
+      </section>
 
       {/* Mobile Drawer */}
       <Drawer

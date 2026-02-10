@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { Lock, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function AdminLogin() {
   const [password, setPassword] = useState('');
@@ -21,8 +21,8 @@ export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
   
   const { login, checkAuth } = useAdminAuth();
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -36,7 +36,7 @@ export default function AdminLogin() {
       }
     };
     verifyAuth();
-  }, [checkAuth, navigate, location]);
+  }, [checkAuth, location, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

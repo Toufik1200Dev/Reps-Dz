@@ -21,27 +21,25 @@ import {
   Close,
   ChevronRight
 } from "@mui/icons-material";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useCart } from "../../contexts/CartContext";
-import { useLanguage } from "../../contexts/LanguageContext";
-import logo from "../../assets/logo/logo.png";
+import { useLanguage } from '../../hooks/useLanguage';
+import logo from "../../assets/logo/toufikcalisthenicsLogo.png";
 import { motion, AnimatePresence } from "framer-motion";
-import AnnouncementBar from '../layout/AnnouncementBar';
 import LanguageSwitcher from '../LanguageSwitcher';
-import AdSense from '../ads/AdSense';
 
 const navigationItems = [
   { key: "header.home", href: "/" },
   { key: "header.shop", href: "/shop" },
+  { key: "header.guides", href: "/guides" },
   { key: "header.programs", href: "/programs" },
   { key: "header.calorieCalculator", href: "/calorie-calculator" },
-  { key: "header.contact", href: "/contact" },
+  { key: "header.contact", href: "/about-me" },
 ];
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
   const { totalItems } = useCart();
   const { t, language } = useLanguage();
@@ -56,8 +54,8 @@ export default function Header() {
   }, []);
 
   const handleNavClick = (href) => {
-    navigate(href);
     setMobileMenuOpen(false);
+    window.location.href = href;
   };
 
   const isActive = (href) => {
@@ -68,7 +66,6 @@ export default function Header() {
 
   return (
     <>
-      <AnnouncementBar />
       <AppBar
         position="sticky"
         elevation={0}
@@ -91,8 +88,8 @@ export default function Header() {
               <Box
                 component="span"
                 sx={{
-                  width: { xs: 40, sm: 44, md: 48 },
-                  height: { xs: 40, sm: 44, md: 48 },
+                  width: { xs: 52, sm: 56, md: 64 },
+                  height: { xs: 52, sm: 56, md: 64 },
                   flexShrink: 0,
                   overflow: "hidden",
                   backgroundColor: "transparent",
@@ -102,7 +99,7 @@ export default function Header() {
               >
                 <img
                   src={logo}
-                  alt="REPS-DZ"
+                  alt="Toufik | calisthenics"
                   style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "transparent" }}
                 />
               </Box>
@@ -110,15 +107,16 @@ export default function Header() {
                 variant="h6"
                 component="span"
                 sx={{
-                  fontWeight: 800,
-                  letterSpacing: "-0.03em",
-                  fontSize: { xs: "1.05rem", sm: "1.2rem", md: "1.35rem" },
+                  fontFamily: "'Oswald', 'Inter', sans-serif",
+                  fontWeight: 700,
+                  letterSpacing: "0.02em",
+                  fontSize: { xs: "1.2rem", sm: "1.35rem", md: "1.55rem" },
                   display: { xs: "none", sm: "block" },
                   color: "#111",
-                  "& .accent": { color: "#C9A227" }
+                  "& .accent": { color: "#EAB308", fontWeight: 600 }
                 }}
               >
-                REPS<span className="accent">-DZ</span>
+                Toufik<span className="accent"> | calisthenics</span>
               </Typography>
             </Box>
 
@@ -228,10 +226,6 @@ export default function Header() {
         </Container>
       </AppBar>
 
-      {/* Ad below page header (all pages) – responsive, compact */}
-      <div className="bg-gray-50 border-b border-gray-100 min-h-[50px] flex items-center justify-center m-2">
-        <AdSense slotName="belowHeader" format="auto" className="min-h-[50px] w-full max-w-[970px] mx-auto" />
-      </div>
 
       {/* Mobile Drawer Navigation */}
       <Drawer
@@ -259,9 +253,9 @@ export default function Header() {
                   backgroundColor: "transparent"
                 }}
               >
-                <img src={logo} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "transparent" }} />
+                <img src={logo} alt="Toufik | calisthenics" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "transparent" }} />
               </Box>
-              <Typography variant="h6" fontWeight={800} color="#111">REPS<span style={{ color: "#C9A227" }}>-DZ</span></Typography>
+              <Typography variant="h6" sx={{ fontFamily: "'Oswald', sans-serif", fontWeight: 700 }} color="#111">Toufik<span style={{ color: "#EAB308" }}> | calisthenics</span></Typography>
             </Box>
             <IconButton onClick={() => setMobileMenuOpen(false)} sx={{ bgcolor: "rgba(0,0,0,0.05)" }}>
               <Close />
@@ -316,7 +310,7 @@ export default function Header() {
               {t('home.shopNow')}
             </Button>
             <Typography variant="caption" textAlign="center" display="block" color="text.secondary">
-              © {new Date().getFullYear()} REPS-DZ. {t('footer.rights')}
+              © {new Date().getFullYear()} Toufik | calisthenics. {t('footer.rights')}
             </Typography>
           </Box>
         </Box>

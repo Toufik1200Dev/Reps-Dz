@@ -40,12 +40,12 @@ const generateProgram = async (req, res) => {
 
     // Safety limits
     const safetyLimits = {
-      muscleUp: 25,
-      pullUps: 60,
-      dips: 80,
-      pushUps: 120,
-      squats: 200,
-      legRaises: 60
+      muscleUp: 50,
+      pullUps: 100,
+      dips: 150,
+      pushUps: 200,
+      squats: 400,
+      legRaises: 80
     };
 
     for (const [exercise, limit] of Object.entries(safetyLimits)) {

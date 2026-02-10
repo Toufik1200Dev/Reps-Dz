@@ -5,7 +5,8 @@ import {
   BarChart,
   People,
   CalendarToday,
-  AccessTime
+  AccessTime,
+  CalendarViewMonth
 } from '@mui/icons-material';
 import { adminAPI } from '../../services/api';
 
@@ -18,9 +19,11 @@ export default function GeneratorStats() {
     advancedCount: 0,
     averagePerDay: 0,
     peakHour: 'N/A',
-    mostPopularExercise: 'N/A'
+    mostPopularExercise: 'N/A',
+    sixWeekTotal: 0,
   });
   const [submissions, setSubmissions] = useState([]);
+  const [sixWeekRequests, setSixWeekRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('7d'); // 7d, 30d, all
 
@@ -34,8 +37,9 @@ export default function GeneratorStats() {
       const response = await adminAPI.getGeneratorStats({ range: timeRange });
       const payload = response.data?.data;
       if (response.data && response.data.success && payload) {
-        setStats(payload.stats || { totalGenerations: 0, totalUsers: 0, beginnerCount: 0, intermediateCount: 0, advancedCount: 0, averagePerDay: 0, peakHour: 'N/A', mostPopularExercise: 'N/A' });
+        setStats(payload.stats || { totalGenerations: 0, totalUsers: 0, beginnerCount: 0, intermediateCount: 0, advancedCount: 0, averagePerDay: 0, peakHour: 'N/A', mostPopularExercise: 'N/A', sixWeekTotal: 0 });
         setSubmissions(payload.submissions || []);
+        setSixWeekRequests(payload.stats?.sixWeekRequests || []);
       }
     } catch (error) {
       console.error('Error fetching generator stats:', error);
@@ -46,25 +50,32 @@ export default function GeneratorStats() {
 
   const statCards = [
     {
-      title: 'Total Generations',
+      title: '1-Week (Free)',
       value: stats.totalGenerations.toLocaleString(),
       icon: <FitnessCenter className="text-blue-600" />,
       colorClass: 'bg-blue-50',
-      change: '+12%'
+      change: ''
+    },
+    {
+      title: '6-Week (Paid)',
+      value: (stats.sixWeekTotal ?? 0).toLocaleString(),
+      icon: <CalendarViewMonth className="text-rose-600" />,
+      colorClass: 'bg-rose-50',
+      change: ''
     },
     {
       title: 'Total Users',
       value: stats.totalUsers.toLocaleString(),
       icon: <People className="text-purple-600" />,
       colorClass: 'bg-purple-50',
-      change: '+8%'
+      change: ''
     },
     {
       title: 'Average Per Day',
       value: stats.averagePerDay.toLocaleString(),
       icon: <TrendingUp className="text-green-600" />,
       colorClass: 'bg-green-50',
-      change: '+15%'
+      change: ''
     },
     {
       title: 'Peak Hour',
@@ -208,34 +219,89 @@ export default function GeneratorStats() {
         </div>
       </div>
 
-      {/* All program generations – user name and data */}
+      {/* 6-Week Plan Requests (paid - sent via email) */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 overflow-hidden">
-        <h2 className="text-lg font-bold text-gray-900 mb-6">All Program Generations (with user name & data)</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <CalendarViewMonth className="text-rose-600" />
+          6-Week Plan Requests ({sixWeekRequests.length})
+        </h2>
+        <p className="text-sm text-gray-500 mb-4">Paid 6-week programs sent to user email</p>
+        <div className="overflow-x-auto -mx-2 sm:mx-0">
+          <table className="w-full text-left text-sm min-w-[700px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="p-3 font-bold text-gray-600">Email</th>
                 <th className="p-3 font-bold text-gray-600">Name</th>
                 <th className="p-3 font-bold text-gray-600">Level</th>
-                <th className="p-3 font-bold text-gray-600">Max reps (pull / dips / push / squats / legs)</th>
+                <th className="p-3 font-bold text-gray-600">Max Reps</th>
+                <th className="p-3 font-bold text-gray-600">H/W</th>
+                <th className="p-3 font-bold text-gray-600">Payment</th>
                 <th className="p-3 font-bold text-gray-600">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {sixWeekRequests.length === 0 && (
+                <tr>
+                  <td colSpan="7" className="p-6 text-center text-gray-500">No 6-week plan requests yet</td>
+                </tr>
+              )}
+              {sixWeekRequests.map((row) => {
+                const mr = row.maxReps || {};
+                const repsStr = [mr.pullUps, mr.dips, mr.pushUps].map((n) => n ?? '–').join('/');
+                const hw = [row.heightCm && `${row.heightCm}cm`, row.weightKg && `${row.weightKg}kg`].filter(Boolean).join(' ') || '–';
+                const amt = row.amountPaid != null ? `$${(row.amountPaid / 100).toFixed(2)}` : '—';
+                return (
+                  <tr key={row._id} className="hover:bg-gray-50">
+                    <td className="p-3 font-medium">{row.email || '—'}</td>
+                    <td className="p-3">{row.userName || '—'}</td>
+                    <td className="p-3 capitalize">{row.level || '—'}</td>
+                    <td className="p-3 text-xs">{repsStr}</td>
+                    <td className="p-3 text-xs">{hw}</td>
+                    <td className="p-3 text-green-600 font-medium">{amt}</td>
+                    <td className="p-3 text-gray-500 whitespace-nowrap">{row.createdAt ? new Date(row.createdAt).toLocaleString() : '—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* All program generations – 1-week free (user name and data) */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 overflow-hidden">
+        <h2 className="text-lg font-bold text-gray-900 mb-6">1-Week Program Generations (Free)</h2>
+        <p className="text-sm text-gray-500 mb-4">Client name and data from the program generator form.</p>
+        <div className="overflow-x-auto -mx-2 sm:mx-0">
+          <table className="w-full text-left text-sm min-w-[700px]">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Client</th>
+                <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Level</th>
+                <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Pull / Dips / Push / Squats / Legs</th>
+                <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Muscle-ups</th>
+                <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Height / Weight</th>
+                <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {submissions.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="p-6 text-center text-gray-500">No program saves yet</td>
+                  <td colSpan="6" className="p-6 text-center text-gray-500">No program saves yet</td>
                 </tr>
               )}
               {submissions.map((row) => {
                 const mr = row.maxReps || {};
-                const repsStr = [mr.pullUps, mr.dips, mr.pushUps, mr.squats, mr.legRaises].map((n) => n ?? '–').join(' / ');
+                const repsStr = [mr.pullUps, mr.dips, mr.pushUps, mr.squats, mr.legRaises, mr.burpees].map((n) => n ?? '–').join(' / ');
+                const displayName = row.userName && String(row.userName).trim() && row.userName !== 'None' ? row.userName : '—';
+                const hw = [row.heightCm && `${row.heightCm} cm`, row.weightKg && `${row.weightKg} kg`].filter(Boolean).join(' • ') || '–';
                 return (
                   <tr key={row._id} className="hover:bg-gray-50">
-                    <td className="p-3 font-medium text-gray-900">{row.userName || 'None'}</td>
+                    <td className="p-3 font-medium text-gray-900">{displayName}</td>
                     <td className="p-3 text-gray-600 capitalize">{row.level}</td>
-                    <td className="p-3 text-gray-600">{repsStr}</td>
-                    <td className="p-3 text-gray-500 text-xs">{row.createdAt ? new Date(row.createdAt).toLocaleString() : '–'}</td>
+                    <td className="p-3 text-gray-600 text-xs sm:text-sm">{repsStr}</td>
+                    <td className="p-3 text-gray-600">{mr.muscleUp != null ? mr.muscleUp : '–'}</td>
+                    <td className="p-3 text-gray-600 text-xs sm:text-sm">{hw}</td>
+                    <td className="p-3 text-gray-500 text-xs whitespace-nowrap">{row.createdAt ? new Date(row.createdAt).toLocaleString() : '–'}</td>
                   </tr>
                 );
               })}

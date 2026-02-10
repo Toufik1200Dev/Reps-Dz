@@ -281,6 +281,10 @@ export const adminAPI = {
   getCustomerReport: (params) => api.get('/admin/analytics/customers', { params }),
   getCalorieStats: (params) => api.get('/admin/stats/calories', { params }),
   getGeneratorStats: (params) => api.get('/admin/stats/generator', { params }),
+
+  // IP Whitelist Settings
+  getIpWhitelist: () => api.get('/admin/settings/ip-whitelist'),
+  updateIpWhitelist: (ips) => api.put('/admin/settings/ip-whitelist', { ips }),
 };
 
 // Orders API (public routes)

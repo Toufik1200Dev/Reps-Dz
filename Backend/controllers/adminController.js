@@ -3,6 +3,8 @@
 
 const CalorieSubmission = require('../models/CalorieSubmission');
 const ProgramSave = require('../models/ProgramSave');
+const SixWeekRequest = require('../models/SixWeekRequest');
+const adminIpWhitelist = require('../middleware/adminIpWhitelist');
 
 /**
  * @desc    Verify admin password
@@ -182,6 +184,13 @@ const getGeneratorStatsWithSubmissions = async (req, res) => {
     const intermediateCount = submissions.filter(s => s.level === 'intermediate').length;
     const advancedCount = submissions.filter(s => s.level === 'advanced').length;
 
+    // Six-week plan requests (paid flow - sent via email)
+    const sixWeekFilter = startDate ? { createdAt: { $gte: startDate } } : {};
+    const sixWeekRequests = await SixWeekRequest.find(sixWeekFilter)
+      .sort({ createdAt: -1 })
+      .lean();
+    const sixWeekTotal = sixWeekRequests.length;
+
     res.status(200).json({
       success: true,
       data: {
@@ -193,7 +202,9 @@ const getGeneratorStatsWithSubmissions = async (req, res) => {
           advancedCount,
           averagePerDay,
           peakHour: 'N/A',
-          mostPopularExercise: 'N/A'
+          mostPopularExercise: 'N/A',
+          sixWeekTotal,
+          sixWeekRequests
         },
         submissions
       }
@@ -208,9 +219,59 @@ const getGeneratorStatsWithSubmissions = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get IP whitelist and current client IP
+ * @route   GET /api/admin/settings/ip-whitelist
+ * @access  Private (Admin)
+ */
+const getIpWhitelist = async (req, res) => {
+  try {
+    const ips = adminIpWhitelist.getWhitelist();
+    const currentClientIp = adminIpWhitelist.getClientIp(req);
+    res.status(200).json({
+      success: true,
+      data: { ips, currentClientIp }
+    });
+  } catch (error) {
+    console.error('Error fetching IP whitelist:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching IP whitelist',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Update IP whitelist
+ * @route   PUT /api/admin/settings/ip-whitelist
+ * @access  Private (Admin)
+ */
+const updateIpWhitelist = async (req, res) => {
+  try {
+    const { ips } = req.body;
+    const list = Array.isArray(ips) ? ips.map((ip) => String(ip).trim()).filter(Boolean) : [];
+    adminIpWhitelist.saveWhitelist(list);
+    res.status(200).json({
+      success: true,
+      message: 'IP whitelist updated',
+      data: { ips: list }
+    });
+  } catch (error) {
+    console.error('Error updating IP whitelist:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating IP whitelist',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   verifyAdminPassword,
   getAdminStatus,
   getCalorieStatsWithSubmissions,
-  getGeneratorStatsWithSubmissions
+  getGeneratorStatsWithSubmissions,
+  getIpWhitelist,
+  updateIpWhitelist
 };
