@@ -1,78 +1,71 @@
 import React, { useState, useEffect } from 'react';
 import {
   ShoppingCart,
-  People,
-  AttachMoney,
   Inventory,
-  LocalShipping,
-  Assessment,
-  Add,
-  Visibility,
-  MenuBook,
-  Article,
+  AttachMoney,
   FitnessCenter,
-  CalendarViewMonth
+  Calculate,
+  RateReview,
+  Email,
+  Description,
+  CalendarViewMonth,
+  ArrowForward,
+  Visibility,
+  TrendingUp,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../../services/api';
 import { productsAPI } from '../../services/api';
-import { getVisitorStats, getBlogClickStats, getPageViewStats, getProductClickStats, getProgramEventStats } from '../../utils/analytics';
+import { contactAPI } from '../../services/api';
+import { getVisitorStats, getPageViewStats, getProgramEventStats } from '../../utils/analytics';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalRevenue: 0,
+  const [data, setData] = useState({
+    orders: [],
     totalOrders: 0,
+    totalRevenue: 0,
+    products: { total: 0, lowStock: 0 },
+    generator: { sixWeekTotal: 0, savedTotal: 0, free: 0, paid: 0 },
+    calories: { totalCalculations: 0, totalUsers: 0 },
+    feedback: { total: 0 },
+    contact: { total: 0, new: 0 },
+    recentOrders: [],
+    topProducts: [],
     reach: 0,
-    reachToday: 0,
-    totalProducts: 0,
-    lowStockProducts: 0,
-    blogClicks: 0,
-    blogReach: 0,
     pageViews: 0,
-    pageViewsToday: 0,
-    productClicks: 0,
-    sixWeekTotal: 0,
-    programGenerates: { free: 0, paid: 0 },
   });
 
-  const [recentOrders, setRecentOrders] = useState([]);
-  const [topProducts, setTopProducts] = useState([]);
-
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAll = async () => {
       try {
         setLoading(true);
+        const [
+          ordersRes,
+          productsRes,
+          genRes,
+          calorieRes,
+          contactRes,
+          feedbackRes,
+        ] = await Promise.allSettled([
+          adminAPI.getAllOrders({ limit: 100, page: 1 }),
+          productsAPI.getAllProducts({ limit: 500, page: 1 }),
+          adminAPI.getGeneratorStats({ range: 'all' }),
+          adminAPI.getCalorieStats({ range: 'all' }),
+          contactAPI.getStats(),
+          adminAPI.getFeedbackList({ limit: 1 }),
+        ]);
 
-        // Reach (visitors), blog, page views, product clicks from localStorage analytics
-        const visitorStats = getVisitorStats();
-        const blogStats = getBlogClickStats();
-        const pageStats = getPageViewStats();
-        const productStats = getProductClickStats();
-        const programStats = getProgramEventStats();
-        setStats(prev => ({
-          ...prev,
-          reach: visitorStats.total,
-          reachToday: visitorStats.today,
-          blogClicks: blogStats.totalClicks,
-          blogReach: blogStats.reach,
-          pageViews: pageStats.total,
-          pageViewsToday: pageStats.today,
-          productClicks: productStats.total,
-          programGenerates: programStats.generates,
-        }));
-
-        // Orders: fetch from API
-        const ordersRes = await adminAPI.getAllOrders({ limit: 50, page: 1 });
-        const orders = ordersRes.data?.data?.orders || ordersRes.data?.orders || [];
-        const pagination = ordersRes.data?.data?.pagination || ordersRes.data?.pagination || {};
-        const totalOrdersCount = pagination.totalOrders ?? orders.length;
-
+        const orders = ordersRes.status === 'fulfilled'
+          ? (ordersRes.value.data?.data?.orders || ordersRes.value.data?.orders || [])
+          : [];
+        const pagination = ordersRes.status === 'fulfilled'
+          ? (ordersRes.value.data?.data?.pagination || ordersRes.value.data?.pagination || {})
+          : {};
+        const totalOrders = pagination.totalOrders ?? orders.length;
         const totalRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-
-        // Recent orders (first 8)
-        const recent = orders.slice(0, 8).map((o) => ({
+        const recentOrders = orders.slice(0, 6).map((o) => ({
           id: o._id,
           orderNumber: o._id ? String(o._id).slice(-8).toUpperCase() : '—',
           customer: o.customer?.fullName || '—',
@@ -80,67 +73,72 @@ export default function Dashboard() {
           status: o.status || 'pending',
           date: o.orderDate ? new Date(o.orderDate).toLocaleDateString() : '—',
         }));
-        setRecentOrders(recent);
 
-        // Top products by revenue from orders
+        const products = productsRes.status === 'fulfilled' ? productsRes.value : null;
+        const productsList = products?.products || [];
+        const totalProducts = products?.pagination?.totalProducts ?? productsList.length;
+        const lowStock = productsList.filter((p) => (p.stock ?? p.stockQuantity ?? 0) < 5).length;
+
+        const genData = genRes.status === 'fulfilled' ? genRes.value.data?.data : null;
+        const genStats = genData?.stats || {};
+        const sixWeekTotal = genStats.sixWeekTotal ?? 0;
+        const savedTotal = genStats.totalGenerations ?? 0;
+        const programStats = getProgramEventStats();
+        const free = programStats.generates?.free ?? 0;
+        const paid = programStats.generates?.paid ?? 0;
+
+        const calorieData = calorieRes.status === 'fulfilled' ? calorieRes.value.data?.data : null;
+        const calorieStats = calorieData?.stats || {};
+        const totalCalculations = calorieStats.totalCalculations ?? 0;
+        const totalUsers = calorieStats.totalUsers ?? 0;
+
+        const contactData = contactRes.status === 'fulfilled' ? contactRes.value.data : null;
+        const contactTotal = contactData?.totalContacts ?? (Array.isArray(contactData) ? contactData.length : 0);
+        const contactNew = contactData?.newContacts ?? 0;
+
+        const feedbackTotal = feedbackRes.status === 'fulfilled' && feedbackRes.value?.data?.data
+          ? (feedbackRes.value.data.data.total ?? 0)
+          : 0;
+
+        const visitorStats = getVisitorStats();
+        const pageStats = getPageViewStats();
+
         const byProduct = {};
         orders.forEach((order) => {
           order.products?.forEach((item) => {
             const id = item.product?._id || item.product || item.name;
             const name = item.name || 'Unknown';
-            if (!byProduct[id]) {
-              byProduct[id] = { name, quantity: 0, revenue: 0 };
-            }
+            if (!byProduct[id]) byProduct[id] = { name, quantity: 0, revenue: 0 };
             byProduct[id].quantity += item.quantity || 1;
             byProduct[id].revenue += (item.price || 0) * (item.quantity || 1);
           });
         });
-        const top = Object.entries(byProduct)
+        const topProducts = Object.entries(byProduct)
           .map(([id, v]) => ({ id, ...v }))
           .sort((a, b) => b.revenue - a.revenue)
           .slice(0, 5);
-        setTopProducts(top);
 
-        setStats(prev => ({
-          ...prev,
+        setData({
+          orders,
+          totalOrders,
           totalRevenue,
-          totalOrders: totalOrdersCount,
-        }));
-
-        // Products count and low stock (public API)
-        try {
-          const productsRes = await productsAPI.getAllProducts({ limit: 500, page: 1 });
-          const products = productsRes.products || [];
-          const pag = productsRes.pagination || {};
-          const totalProducts = pag.totalProducts ?? products.length;
-          const lowStock = products.filter((p) => (p.stock ?? p.stockQuantity ?? 0) < 5).length;
-          setStats(prev => ({
-            ...prev,
-            totalProducts,
-            lowStockProducts: lowStock,
-          }));
-        } catch (e) {
-          console.error('Error fetching products for dashboard:', e);
-        }
-
-        // 6-week plan stats from backend
-        try {
-          const genRes = await adminAPI.getGeneratorStats({ range: 'all' });
-          const genData = genRes.data?.data?.stats;
-          if (genData?.sixWeekTotal != null) {
-            setStats(prev => ({ ...prev, sixWeekTotal: genData.sixWeekTotal }));
-          }
-        } catch (e) {
-          console.error('Error fetching generator stats for dashboard:', e);
-        }
+          products: { total: totalProducts, lowStock: lowStock },
+          generator: { sixWeekTotal, savedTotal, free, paid },
+          calories: { totalCalculations, totalUsers },
+          feedback: { total: feedbackTotal },
+          contact: { total: contactTotal, new: contactNew },
+          recentOrders,
+          topProducts,
+          reach: visitorStats.total,
+          pageViews: pageStats.total,
+        });
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
+        console.error('Dashboard fetch error:', err);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchData();
+    fetchAll();
   }, []);
 
   const getStatusColor = (status) => {
@@ -154,32 +152,31 @@ export default function Dashboard() {
     }
   };
 
-  const StatCard = ({ title, value, icon, subtitle, colorClass, onClick }) => (
-    <div
-      onClick={onClick}
-      className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-lg ${onClick ? 'cursor-pointer hover:-translate-y-1' : ''}`}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-black font-display mb-1 break-words">{value}</h2>
-          <p className="text-gray-500 font-medium text-sm sm:text-base">{title}</p>
+  const SectionCard = ({ title, icon, iconBg, children, onView, viewLabel = 'View all' }) => (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+      <div className="p-5 border-b border-gray-50 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`p-2.5 rounded-xl ${iconBg}`}>{icon}</div>
+          <h2 className="font-bold text-lg text-gray-900">{title}</h2>
         </div>
-        <div className={`p-3 rounded-xl ${colorClass}`}>
-          {icon}
-        </div>
+        {onView && (
+          <button
+            onClick={onView}
+            className="flex items-center gap-1 text-sm font-bold text-amber-600 hover:text-amber-700"
+          >
+            {viewLabel}
+            <ArrowForward sx={{ fontSize: 18 }} />
+          </button>
+        )}
       </div>
-      {subtitle != null && subtitle !== '' && (
-        <div className="flex items-center gap-1 text-sm text-gray-500 font-medium">
-          <span>{subtitle}</span>
-        </div>
-      )}
+      <div className="p-5">{children}</div>
     </div>
   );
 
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto flex items-center justify-center min-h-[400px]">
-        <div className="w-12 h-12 border-4 border-gray-200 border-t-[#FFD700] rounded-full animate-spin" />
+        <div className="w-12 h-12 border-4 border-gray-200 border-t-amber-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -187,185 +184,222 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-display font-black mb-2">Dashboard</h1>
-        <p className="text-gray-500">Reach and orders at a glance.</p>
+        <h1 className="text-2xl sm:text-3xl font-display font-black text-gray-900 mb-1">Dashboard</h1>
+        <p className="text-gray-500 text-sm sm:text-base">Overview of your store, programs, and engagement.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 mb-8">
-        <StatCard
-          title="Total Revenue"
-          value={`${stats.totalRevenue.toLocaleString()} DA`}
-          icon={<AttachMoney className="text-green-600" />}
-          colorClass="bg-green-50"
-          subtitle="From orders"
-          onClick={() => { navigate('/admin/analytics'); }}
-        />
-        <StatCard
-          title="Total Orders"
-          value={stats.totalOrders}
-          icon={<ShoppingCart className="text-blue-600" />}
-          colorClass="bg-blue-50"
-          subtitle="All time"
-          onClick={() => { navigate('/admin/orders'); }}
-        />
-        <StatCard
-          title="Reach"
-          value={stats.reach}
-          icon={<People className="text-purple-600" />}
-          colorClass="bg-purple-50"
-          subtitle={stats.reachToday > 0 ? `${stats.reachToday} today` : 'Site visitors'}
-          onClick={() => { navigate('/admin/analytics'); }}
-        />
-        <StatCard
-          title="Page Views"
-          value={stats.pageViews}
-          icon={<Article className="text-indigo-600" />}
-          colorClass="bg-indigo-50"
-          subtitle={stats.pageViewsToday > 0 ? `${stats.pageViewsToday} today` : 'Across all pages'}
-          onClick={() => { navigate('/admin/analytics'); }}
-        />
-        <StatCard
-          title="Product Clicks"
-          value={stats.productClicks}
-          icon={<Visibility className="text-amber-600" />}
-          colorClass="bg-amber-50"
-          subtitle="Product detail views"
-          onClick={() => { navigate('/admin/analytics'); }}
-        />
-        <StatCard
-          title="Total Products"
-          value={stats.totalProducts}
+      {/* Summary strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
+        <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-green-50">
+            <AttachMoney className="text-green-600" sx={{ fontSize: 24 }} />
+          </div>
+          <div>
+            <p className="text-xl font-black text-gray-900">{data.totalRevenue.toLocaleString()} DA</p>
+            <p className="text-xs text-gray-500">Revenue</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-blue-50">
+            <ShoppingCart className="text-blue-600" sx={{ fontSize: 24 }} />
+          </div>
+          <div>
+            <p className="text-xl font-black text-gray-900">{data.totalOrders}</p>
+            <p className="text-xs text-gray-500">Orders</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-purple-50">
+            <TrendingUp className="text-purple-600" sx={{ fontSize: 24 }} />
+          </div>
+          <div>
+            <p className="text-xl font-black text-gray-900">{data.reach}</p>
+            <p className="text-xs text-gray-500">Visitors</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-amber-50">
+            <Visibility className="text-amber-600" sx={{ fontSize: 24 }} />
+          </div>
+          <div>
+            <p className="text-xl font-black text-gray-900">{data.pageViews}</p>
+            <p className="text-xs text-gray-500">Page views</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main sections grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <SectionCard
+          title="Products"
           icon={<Inventory className="text-orange-600" />}
-          colorClass="bg-orange-50"
-          subtitle={stats.lowStockProducts > 0 ? `${stats.lowStockProducts} low stock` : ''}
-          onClick={() => { navigate('/admin/products'); }}
-        />
-        <StatCard
-          title="Blog Clicks"
-          value={stats.blogClicks}
-          icon={<MenuBook className="text-teal-600" />}
-          colorClass="bg-teal-50"
-          subtitle={stats.blogReach > 0 ? `Reach: ${stats.blogReach} guides` : 'Guide views'}
-          onClick={() => { navigate('/admin/analytics'); }}
-        />
-        <StatCard
-          title="6-Week Plan"
-          value={stats.sixWeekTotal}
-          icon={<CalendarViewMonth className="text-rose-600" />}
-          colorClass="bg-rose-50"
-          subtitle="Paid plans sent via email"
-          onClick={() => { navigate('/admin/generator-stats'); }}
-        />
-        <StatCard
-          title="Program Generates"
-          value={(stats.programGenerates?.free || 0) + (stats.programGenerates?.paid || 0)}
-          icon={<FitnessCenter className="text-cyan-600" />}
-          colorClass="bg-cyan-50"
-          subtitle={stats.programGenerates?.free ? `${stats.programGenerates.free} free, ${stats.programGenerates.paid || 0} paid` : '1-week & 6-week'}
-          onClick={() => { navigate('/admin/generator-stats'); }}
-        />
+          iconBg="bg-orange-50"
+          onView={() => navigate('/admin/products')}
+        >
+          <div className="flex flex-wrap gap-6">
+            <div>
+              <p className="text-2xl font-black text-gray-900">{data.products.total}</p>
+              <p className="text-sm text-gray-500">Total products</p>
+            </div>
+            <div>
+              <p className="text-2xl font-black text-gray-900">{data.products.lowStock}</p>
+              <p className="text-sm text-gray-500">Low stock (&lt;5)</p>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Orders"
+          icon={<ShoppingCart className="text-blue-600" />}
+          iconBg="bg-blue-50"
+          onView={() => navigate('/admin/orders')}
+        >
+          <div className="flex flex-wrap gap-6">
+            <div>
+              <p className="text-2xl font-black text-gray-900">{data.totalOrders}</p>
+              <p className="text-sm text-gray-500">Total orders</p>
+            </div>
+            <div>
+              <p className="text-2xl font-black text-green-600">{data.totalRevenue.toLocaleString()} DA</p>
+              <p className="text-sm text-gray-500">Revenue</p>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Programs & plans"
+          icon={<FitnessCenter className="text-rose-600" />}
+          iconBg="bg-rose-50"
+          onView={() => navigate('/admin/generator-stats')}
+        >
+          <div className="space-y-2 text-sm">
+            <p><span className="font-bold text-gray-900">{data.generator.sixWeekTotal}</span> 6/12-week plans sent</p>
+            <p><span className="font-bold text-gray-900">{data.generator.savedTotal}</span> saved programs</p>
+            <p><span className="font-bold text-gray-900">{data.generator.free}</span> free · <span className="font-bold text-gray-900">{data.generator.paid}</span> paid generations</p>
+          </div>
+          <button
+            onClick={() => navigate('/admin/saved-programs')}
+            className="mt-3 text-sm font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1"
+          >
+            Saved programs
+            <ArrowForward sx={{ fontSize: 16 }} />
+          </button>
+        </SectionCard>
+
+        <SectionCard
+          title="Calorie calculator"
+          icon={<Calculate className="text-teal-600" />}
+          iconBg="bg-teal-50"
+          onView={() => navigate('/admin/calorie-stats')}
+        >
+          <div className="flex flex-wrap gap-6">
+            <div>
+              <p className="text-2xl font-black text-gray-900">{data.calories.totalCalculations}</p>
+              <p className="text-sm text-gray-500">Calculations</p>
+            </div>
+            <div>
+              <p className="text-2xl font-black text-gray-900">{data.calories.totalUsers}</p>
+              <p className="text-sm text-gray-500">Unique users</p>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Feedback"
+          icon={<RateReview className="text-amber-600" />}
+          iconBg="bg-amber-50"
+          onView={() => navigate('/admin/feedback')}
+        >
+          <p className="text-2xl font-black text-gray-900">{data.feedback.total}</p>
+          <p className="text-sm text-gray-500">Generator feedback comments</p>
+        </SectionCard>
+
+        <SectionCard
+          title="Contact messages"
+          icon={<Email className="text-indigo-600" />}
+          iconBg="bg-indigo-50"
+          onView={() => navigate('/admin/contact-messages')}
+        >
+          <div className="flex flex-wrap gap-6">
+            <div>
+              <p className="text-2xl font-black text-gray-900">{data.contact.total}</p>
+              <p className="text-sm text-gray-500">Total</p>
+            </div>
+            <div>
+              <p className="text-2xl font-black text-blue-600">{data.contact.new}</p>
+              <p className="text-sm text-gray-500">New</p>
+            </div>
+          </div>
+        </SectionCard>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-lg">Recent Orders</h2>
-              <button
-                onClick={() => { navigate('/admin/orders'); }}
-                className="text-sm font-bold text-[#FFD700] bg-black px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
-              >
-                View All
-              </button>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {recentOrders.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">No orders yet.</div>
-              ) : (
-                recentOrders.map((order) => (
-                  <div key={order.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-gray-100 rounded-full text-gray-500">
-                        <ShoppingCart fontSize="small" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm">{order.orderNumber}</p>
-                        <p className="text-xs text-gray-500">{order.customer} • {order.amount.toLocaleString()} DA • {order.date}</p>
-                      </div>
+      {/* Recent orders + Top products */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-gray-50 flex items-center justify-between">
+            <h2 className="font-bold text-lg text-gray-900">Recent orders</h2>
+            <button
+              onClick={() => navigate('/admin/orders')}
+              className="text-sm font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1"
+            >
+              View all
+              <ArrowForward sx={{ fontSize: 16 }} />
+            </button>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {data.recentOrders.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 text-sm">No orders yet.</div>
+            ) : (
+              data.recentOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="p-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 bg-gray-100 rounded-lg text-gray-500 flex-shrink-0">
+                      <ShoppingCart sx={{ fontSize: 20 }} />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(order.status)}`}>
-                        {order.status}
-                      </span>
-                      <button
-                        onClick={() => { navigate('/admin/orders'); }}
-                        className="text-gray-400 hover:text-black"
-                        aria-label="View order"
-                      >
-                        <Visibility fontSize="small" />
-                      </button>
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm text-gray-900 truncate">{order.orderNumber}</p>
+                      <p className="text-xs text-gray-500 truncate">{order.customer} · {order.amount.toLocaleString()} DA · {order.date}</p>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+                  <span className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusColor(order.status)}`}>
+                    {order.status}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        <div className="space-y-8">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h2 className="font-bold text-lg mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => { navigate('/admin/products'); }}
-                className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 hover:border-[#FFD700] hover:bg-[#FFD700]/5 transition-all group"
-              >
-                <Add className="mb-2 text-gray-600 group-hover:text-black" />
-                <span className="text-xs font-bold text-gray-600 group-hover:text-black">Add Product</span>
-              </button>
-              <button
-                onClick={() => { navigate('/admin/analytics'); }}
-                className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 hover:border-[#FFD700] hover:bg-[#FFD700]/5 transition-all group"
-              >
-                <Assessment className="mb-2 text-gray-600 group-hover:text-black" />
-                <span className="text-xs font-bold text-gray-600 group-hover:text-black">Analytics</span>
-              </button>
-              <button
-                onClick={() => { navigate('/admin/orders'); }}
-                className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 hover:border-[#FFD700] hover:bg-[#FFD700]/5 transition-all group"
-              >
-                <LocalShipping className="mb-2 text-gray-600 group-hover:text-black" />
-                <span className="text-xs font-bold text-gray-600 group-hover:text-black">Orders</span>
-              </button>
-              <button
-                onClick={() => { navigate('/admin/analytics'); }}
-                className="flex flex-col items-center justify-center p-4 rounded-xl border border-gray-100 hover:border-[#FFD700] hover:bg-[#FFD700]/5 transition-all group"
-              >
-                <People className="mb-2 text-gray-600 group-hover:text-black" />
-                <span className="text-xs font-bold text-gray-600 group-hover:text-black">Reach</span>
-              </button>
-            </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-gray-50 flex items-center justify-between">
+            <h2 className="font-bold text-lg text-gray-900">Top products</h2>
+            <button
+              onClick={() => navigate('/admin/products')}
+              className="text-sm font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1"
+            >
+              Products
+              <ArrowForward sx={{ fontSize: 16 }} />
+            </button>
           </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h2 className="font-bold text-lg mb-4">Top Products</h2>
-            {topProducts.length === 0 ? (
+          <div className="p-5">
+            {data.topProducts.length === 0 ? (
               <p className="text-sm text-gray-500">No order data yet.</p>
             ) : (
-              <div className="space-y-6">
-                {topProducts.map((product, idx) => (
+              <div className="space-y-4">
+                {data.topProducts.map((product, idx) => (
                   <div key={product.id || idx}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-bold text-sm text-gray-800 line-clamp-1">{product.name}</h4>
-                        <p className="text-xs text-gray-500">{product.quantity} sold</p>
-                      </div>
-                      <span className="font-bold text-sm">{product.revenue.toLocaleString()} DA</span>
+                    <div className="flex justify-between items-start gap-2 mb-1">
+                      <p className="font-bold text-sm text-gray-800 line-clamp-1">{product.name}</p>
+                      <span className="font-bold text-sm text-gray-900 flex-shrink-0">{product.revenue.toLocaleString()} DA</span>
                     </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <p className="text-xs text-gray-500 mb-1">{product.quantity} sold</p>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-[#FFD700]"
-                        style={{ width: `${topProducts[0]?.revenue ? (product.revenue / topProducts[0].revenue) * 100 : 0}%` }}
+                        className="h-full bg-amber-400 rounded-full"
+                        style={{ width: `${data.topProducts[0]?.revenue ? (product.revenue / data.topProducts[0].revenue) * 100 : 0}%` }}
                       />
                     </div>
                   </div>

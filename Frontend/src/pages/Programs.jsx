@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
-import { FitnessCenter, Download, CheckCircle, Error as ErrorIcon, CalendarViewMonth, WorkspacePremium, CalendarMonth, Restaurant, Description, Bolt, MenuBook, Payment, Star, Create, ArrowForward } from '@mui/icons-material';
+import { FitnessCenter, Download, CheckCircle, Error as ErrorIcon, CalendarViewMonth, WorkspacePremium, CalendarMonth, Restaurant, Description, Bolt, MenuBook, Payment, Star, Create, ArrowForward, TrendingUp, People } from '@mui/icons-material';
 import API_CONFIG from '../config/api';
 import { useLanguage } from '../hooks/useLanguage';
 import { trackProgramPlanSelect, trackProgramGenerate } from '../utils/analytics';
@@ -689,6 +689,22 @@ export default function Programs() {
                   <MenuBook sx={{ fontSize: 18, color: plan === 'paid' ? '#B45309' : '#6b7280' }} />
                   {t('programs.planPaidBullet4') || 'Coach-designed methods'}
                 </li>
+                <li className="flex items-center gap-2 font-medium">
+                  <Description sx={{ fontSize: 18, color: plan === 'paid' ? '#B45309' : '#6b7280' }} />
+                  {t('programs.planPdfBulletDetailed') || 'Detailed program in PDF'}
+                </li>
+                <li className="flex items-center gap-2 font-medium">
+                  <MenuBook sx={{ fontSize: 18, color: plan === 'paid' ? '#B45309' : '#6b7280' }} />
+                  {t('programs.planPdfBulletExplanation') || 'Explanation at every step'}
+                </li>
+                <li className="flex items-center gap-2 font-medium">
+                  <TrendingUp sx={{ fontSize: 18, color: plan === 'paid' ? '#B45309' : '#6b7280' }} />
+                  {t('programs.planPdfBulletOverload') || 'Progressive overload system'}
+                </li>
+                <li className="flex items-center gap-2 font-medium">
+                  <People sx={{ fontSize: 18, color: plan === 'paid' ? '#B45309' : '#6b7280' }} />
+                  {t('programs.planPdfBulletLevels') || 'Friendly for all levels'}
+                </li>
               </ul>
               <p className={`text-base font-bold pt-3 border-t border-gray-200 mt-auto flex items-center justify-center gap-2 ${plan === 'paid' ? 'text-amber-800' : 'text-gray-600'}`}>
                 <Payment sx={{ fontSize: 20 }} />
@@ -737,6 +753,22 @@ export default function Programs() {
                 <li className="flex items-center gap-2 font-medium">
                   <MenuBook sx={{ fontSize: 18, color: plan === 'paid12' ? '#B45309' : '#6b7280' }} />
                   {t('programs.planPaidBullet4') || 'Coach-designed methods'}
+                </li>
+                <li className="flex items-center gap-2 font-medium">
+                  <Description sx={{ fontSize: 18, color: plan === 'paid12' ? '#B45309' : '#6b7280' }} />
+                  {t('programs.planPdfBulletDetailed') || 'Detailed program in PDF'}
+                </li>
+                <li className="flex items-center gap-2 font-medium">
+                  <MenuBook sx={{ fontSize: 18, color: plan === 'paid12' ? '#B45309' : '#6b7280' }} />
+                  {t('programs.planPdfBulletExplanation') || 'Explanation at every step'}
+                </li>
+                <li className="flex items-center gap-2 font-medium">
+                  <TrendingUp sx={{ fontSize: 18, color: plan === 'paid12' ? '#B45309' : '#6b7280' }} />
+                  {t('programs.planPdfBulletOverload') || 'Progressive overload system'}
+                </li>
+                <li className="flex items-center gap-2 font-medium">
+                  <People sx={{ fontSize: 18, color: plan === 'paid12' ? '#B45309' : '#6b7280' }} />
+                  {t('programs.planPdfBulletLevels') || 'Friendly for all levels'}
                 </li>
               </ul>
               <p className={`text-base font-bold pt-3 border-t border-gray-200 mt-auto flex items-center justify-center gap-2 ${plan === 'paid12' ? 'text-amber-800' : 'text-gray-600'}`}>

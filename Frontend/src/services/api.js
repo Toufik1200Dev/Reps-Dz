@@ -282,6 +282,10 @@ export const adminAPI = {
   getCalorieStats: (params) => api.get('/admin/stats/calories', { params }),
   getGeneratorStats: (params) => api.get('/admin/stats/generator', { params }),
 
+  // Generator feedback (admin)
+  getFeedbackList: (params) => api.get('/admin/feedback', { params }),
+  deleteFeedback: (id) => api.delete(`/admin/feedback/${id}`),
+
   // IP Whitelist Settings
   getIpWhitelist: () => api.get('/admin/settings/ip-whitelist'),
   updateIpWhitelist: (ips) => api.put('/admin/settings/ip-whitelist', { ips }),
@@ -332,6 +336,11 @@ export const contactAPI = {
   delete: (id) => api.delete(`/contact/${id}`),
   markAsRead: (id) => api.patch(`/contact/${id}/read`),
   getStats: () => api.get('/contact/stats'),
+};
+
+export const feedbackAPI = {
+  submit: (data) => api.post('/feedback', data),
+  getList: (params) => api.get('/feedback', { params }),
 };
 
 // Utility functions

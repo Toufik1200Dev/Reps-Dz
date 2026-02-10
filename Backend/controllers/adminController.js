@@ -4,6 +4,7 @@
 const CalorieSubmission = require('../models/CalorieSubmission');
 const ProgramSave = require('../models/ProgramSave');
 const SixWeekRequest = require('../models/SixWeekRequest');
+const GeneratorFeedback = require('../models/GeneratorFeedback');
 const adminIpWhitelist = require('../middleware/adminIpWhitelist');
 
 /**
@@ -220,6 +221,54 @@ const getGeneratorStatsWithSubmissions = async (req, res) => {
 };
 
 /**
+ * @desc    Get all generator feedback (admin) with count
+ * @route   GET /api/admin/feedback
+ * @access  Private (Admin)
+ */
+const getFeedbackListAdmin = async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 100, 200);
+    const [list, total] = await Promise.all([
+      GeneratorFeedback.find().sort({ createdAt: -1 }).limit(limit).lean(),
+      GeneratorFeedback.countDocuments()
+    ]);
+    res.status(200).json({
+      success: true,
+      data: { feedback: list, total }
+    });
+  } catch (err) {
+    console.error('Error fetching feedback (admin):', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching feedback',
+      error: err.message
+    });
+  }
+};
+
+/**
+ * @desc    Delete a feedback (admin)
+ * @route   DELETE /api/admin/feedback/:id
+ * @access  Private (Admin)
+ */
+const deleteFeedback = async (req, res) => {
+  try {
+    const deleted = await GeneratorFeedback.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: 'Feedback not found' });
+    }
+    res.status(200).json({ success: true, message: 'Feedback deleted' });
+  } catch (err) {
+    console.error('Error deleting feedback:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting feedback',
+      error: err.message
+    });
+  }
+};
+
+/**
  * @desc    Get IP whitelist and current client IP
  * @route   GET /api/admin/settings/ip-whitelist
  * @access  Private (Admin)
@@ -272,6 +321,8 @@ module.exports = {
   getAdminStatus,
   getCalorieStatsWithSubmissions,
   getGeneratorStatsWithSubmissions,
+  getFeedbackListAdmin,
+  deleteFeedback,
   getIpWhitelist,
   updateIpWhitelist
 };

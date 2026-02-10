@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Menu as MenuIcon,
-  Dashboard as DashboardIcon,
   ShoppingCart,
   People,
   Inventory,
@@ -9,14 +8,13 @@ import {
   Settings,
   Notifications,
   AccountCircle,
-  LocalShipping,
-  ContactSupport,
   Logout,
   Close,
   FitnessCenter,
   Calculate,
   Email,
-  Description
+  Description,
+  RateReview
 } from '@mui/icons-material';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
@@ -24,14 +22,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import logo from '../../assets/logo/toufikcalisthenicsLogo.png';
 
 const menuItems = [
+  { text: 'Dashboard', icon: <Assessment />, path: '/admin' },
   { text: 'Products', icon: <Inventory />, path: '/admin/products' },
   { text: 'Orders', icon: <ShoppingCart />, path: '/admin/orders' },
-  { text: 'Settings', icon: <Settings />, path: '/admin/settings' },
-  { text: 'Contact Messages', icon: <Email />, path: '/admin/contact-messages' },
-  { text: 'Analytics', icon: <Assessment />, path: '/admin/analytics' },
-  { text: 'Generator Stats', icon: <FitnessCenter />, path: '/admin/generator-stats' },
+  { text: 'Programs & plans', icon: <FitnessCenter />, path: '/admin/generator-stats' },
   { text: 'Saved Programs', icon: <Description />, path: '/admin/saved-programs' },
-  { text: 'Calorie Stats', icon: <Calculate />, path: '/admin/calorie-stats' },
+  { text: 'Calorie calculator', icon: <Calculate />, path: '/admin/calorie-stats' },
+  { text: 'Feedback', icon: <RateReview />, path: '/admin/feedback' },
+  { text: 'Contact messages', icon: <Email />, path: '/admin/contact-messages' },
+  { text: 'Analytics', icon: <People />, path: '/admin/analytics' },
+  { text: 'Settings', icon: <Settings />, path: '/admin/settings' },
 ];
 
 export default function AdminLayout() {
