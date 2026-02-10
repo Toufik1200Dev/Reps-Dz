@@ -239,7 +239,7 @@ export default function Programs() {
     }
   }, [level, maxReps, name, age, email, plan, heightCm, weightKg, calisthenicsMainSport, otherSport, goals]);
 
-  /** Validate required stats and scroll to first invalid field. Returns true if valid. */
+  /** Validate required stats and scroll to first invalid field. Returns true if valid. Free plan only requires email + reps; paid/customized require full details. */
   const validateAndScroll = () => {
     const nameTrimmed = (name && String(name).trim()) || '';
     const emailTrimmed = (email && String(email).trim()) || '';
@@ -250,6 +250,21 @@ export default function Programs() {
     const validAge = !isNaN(ageNum) && ageNum >= 13 && ageNum <= 120;
     const validHeight = !isNaN(h) && h >= 100 && h <= 250;
     const validWeight = !isNaN(w) && w >= 30 && w <= 300;
+
+    if (plan === 'free') {
+      if (!validEmail) {
+        setError(t('programs.errorEmailRequired') || 'Please enter a valid email to receive your program.');
+        contactRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+      }
+      if (maxReps.pullUps === 0 && maxReps.dips === 0 && maxReps.pushUps === 0) {
+        setError(t('programs.errorReps') || 'Please enter at least one exercise with reps > 0');
+        repsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+      }
+      setError(null);
+      return true;
+    }
 
     if (!nameTrimmed) {
       setError(t('programs.errorNameRequired') || 'Please enter your name.');

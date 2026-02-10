@@ -22,6 +22,7 @@ import Analytics from './pages/admin/Analytics';
 import GeneratorStats from './pages/admin/GeneratorStats';
 import SavedPrograms from './pages/admin/SavedPrograms';
 import CalorieStats from './pages/admin/CalorieStats';
+import ContactUs from './pages/ContactUs';
 import ContactMessages from './pages/admin/ContactMessages';
 import Settings from './pages/admin/Settings';
 import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
@@ -43,6 +44,7 @@ const PAGE_NAMES = {
   '/guides': 'Guides',
   '/privacy-policy': 'Privacy Policy',
   '/about-us': 'About Us',
+  '/feedback': 'Feedback',
 };
 
 function PageViewTracker() {
@@ -118,6 +120,14 @@ function App() {
                 </>
               } />
               <Route path="/contact" element={<Navigate to="/about-me" replace />} />
+              <Route path="/feedback" element={
+                <>
+                  <Header />
+                  <main id="main-content" tabIndex={-1}><ContactUs /></main>
+                  <Footer />
+                  <BackToTop />
+                </>
+              } />
               <Route path="/about-me" element={
                 <>
                   <Header />

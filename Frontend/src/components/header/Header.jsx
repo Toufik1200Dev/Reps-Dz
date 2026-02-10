@@ -35,6 +35,7 @@ const navigationItems = [
   { key: "header.programs", href: "/programs" },
   { key: "header.calorieCalculator", href: "/calorie-calculator" },
   { key: "header.contact", href: "/about-me" },
+  { key: "header.feedback", href: "/feedback" },
 ];
 
 export default function Header() {
