@@ -5,7 +5,7 @@
  */
 const { generate6WeekPdfBuffer, generate1WeekPdfBuffer } = require('./programPdfService');
 
-function buildProgramHtml(userName, data, weeksCount) {
+function buildProgramHtml(userName, data, weeksCount, attachmentFilename) {
   const w = weeksCount === 12 ? 12 : 6;
   const weekLabel = w === 12 ? '12-week' : '6-week';
   const testWeek = w === 12 ? 'week 12' : 'week 6';
@@ -14,6 +14,7 @@ function buildProgramHtml(userName, data, weeksCount) {
   const greeting = firstName ? `Hi ${firstName},` : 'Hello,';
   const nut = data.nutrition || {};
   const hasNutrition = nut.tdee || nut.proteinG;
+  const safeFilename = attachmentFilename ? attachmentFilename.replace(/[<>"&]/g, '') : 'Your-Program.pdf';
 
   return `
 <!DOCTYPE html>
@@ -33,38 +34,39 @@ function buildProgramHtml(userName, data, weeksCount) {
   </noscript>
   <![endif]-->
 </head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#f1f5f9;color:#1e293b;line-height:1.5;-webkit-font-smoothing:antialiased;">
-  <div style="display:none;max-height:0;overflow:hidden;">Your personalized ${weekLabel} calisthenics program is ready. Open this email to download your PDF.</div>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#f1f5f9;color:#1e293b;line-height:1.6;-webkit-font-smoothing:antialiased;">
+  <div style="display:none;max-height:0;overflow:hidden;">Your personalized ${weekLabel} calisthenics program is attached to this email. Look for the PDF attachment.</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:40px 20px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -2px rgba(0,0,0,0.1);">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 25px -5px rgba(0,0,0,0.08),0 4px 10px -5px rgba(0,0,0,0.04);">
           <!-- Header -->
           <tr>
-            <td style="background:#0f172a;padding:40px 40px 36px;text-align:center;">
-              <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;">Toufik Calisthenics</p>
-              <h1 style="margin:0;font-size:24px;font-weight:700;color:#ffffff;letter-spacing:-0.025em;">Your Program Is Ready</h1>
-              <p style="margin:8px 0 0;font-size:15px;color:#94a3b8;">${weekLabel.replace('week', 'Week')} Training Plan — Level ${level}</p>
+            <td style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);padding:44px 40px 40px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#94a3b8;letter-spacing:0.15em;text-transform:uppercase;">Toufik Calisthenics</p>
+              <h1 style="margin:0;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.03em;">Your Program Is Ready</h1>
+              <p style="margin:12px 0 0;font-size:15px;color:#94a3b8;">${weekLabel.replace('week', 'Week')} Training Plan · Level ${level}</p>
             </td>
           </tr>
           <!-- Body -->
           <tr>
-            <td style="padding:40px 40px 32px;">
-              <p style="margin:0 0 20px;font-size:16px;color:#334155;">${greeting}</p>
-              <p style="margin:0 0 24px;font-size:16px;color:#334155;">Thank you for your purchase. Your personalized <strong>${weekLabel} calisthenics program</strong> is attached to this email as a PDF.</p>
-              
-              <!-- Attachment callout -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:24px;">
+            <td style="padding:40px 40px 36px;">
+              <p style="margin:0 0 24px;font-size:17px;color:#334155;">${greeting}</p>
+              <p style="margin:0 0 24px;font-size:16px;color:#334155;">Thank you for choosing your <strong>${weekLabel} calisthenics program</strong>. Your personalized plan is attached to this email as a <strong>PDF file</strong> so you can save it, print it, or open it on any device.</p>
+
+              <!-- PDF attachment callout -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#fefce8 0%,#fef9c3 100%);border:2px solid #facc15;border-radius:12px;margin-bottom:28px;">
                 <tr>
-                  <td style="padding:20px 24px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0">
+                  <td style="padding:24px 28px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
-                        <td style="vertical-align:middle;padding-right:16px;">
-                          <div style="width:48px;height:48px;background:#fef3c7;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:24px;">📎</div>
+                        <td style="vertical-align:middle;width:56px;padding-right:20px;">
+                          <div style="width:56px;height:56px;background:#facc15;border-radius:12px;text-align:center;line-height:56px;font-size:28px;">📎</div>
                         </td>
-                        <td>
-                          <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#1e293b;">PDF Attachment</p>
-                          <p style="margin:0;font-size:13px;color:#64748b;">Your full program with exercises, sets, rest times, and nutrition — ready to save or print.</p>
+                        <td style="vertical-align:middle;">
+                          <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#1e293b;">Your program PDF is attached</p>
+                          <p style="margin:0 0 8px;font-size:14px;color:#475569;">Look for the file: <strong style="color:#0f172a;word-break:break-all;">${safeFilename}</strong></p>
+                          <p style="margin:0;font-size:13px;color:#64748b;">If you don't see it, check your <strong>Spam</strong> or <strong>Promotions</strong> folder and make sure your email client allows attachments.</p>
                         </td>
                       </tr>
                     </table>
@@ -72,25 +74,24 @@ function buildProgramHtml(userName, data, weeksCount) {
                 </tr>
               </table>
 
-              <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:#475569;">What's included</p>
-              <ul style="margin:0 0 24px;padding-left:20px;font-size:14px;color:#475569;">
-                <li style="margin-bottom:6px;">${w} weeks of structured training (5 sessions per week)</li>
-                <li style="margin-bottom:6px;">Personalized to your level and max reps</li>
-                ${hasNutrition ? '<li style="margin-bottom:6px;">Daily calorie & protein estimates</li><li style="margin-bottom:6px;">Sample meal ideas with timing</li>' : ''}
-                <li style="margin-bottom:6px;">Clear progression and rest days</li>
-                <li>Endurance testing in ${testWeek}</li>
+              <p style="margin:0 0 12px;font-size:15px;font-weight:600;color:#0f172a;">What's inside your program</p>
+              <ul style="margin:0 0 24px;padding-left:22px;font-size:15px;color:#475569;line-height:1.7;">
+                <li style="margin-bottom:8px;">${w} weeks of structured training (5 sessions per week)</li>
+                <li style="margin-bottom:8px;">Exercises, sets, reps, and rest times tailored to your level</li>
+                ${hasNutrition ? '<li style="margin-bottom:8px;">Daily calorie and protein targets</li><li style="margin-bottom:8px;">Sample meal ideas and timing</li>' : ''}
+                <li style="margin-bottom:8px;">Progressive overload and built-in deload week</li>
+                <li>Endurance test in ${testWeek} to track progress</li>
               </ul>
-              
-              <p style="margin:0 0 24px;font-size:15px;color:#334155;">Open the attached PDF to view your full program. You can save it to your device, print it, or keep it handy for your workouts.</p>
-              
-              <p style="margin:0;font-size:15px;color:#334155;">Train consistently and enjoy the journey.</p>
+
+              <p style="margin:0 0 24px;font-size:15px;color:#334155;">Open the attached PDF to start your plan. Train consistently and enjoy the journey.</p>
+              <p style="margin:0;font-size:15px;color:#334155;">If you have any questions, reply to this email — I'm here to help.</p>
             </td>
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="padding:24px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-              <p style="margin:0;font-size:14px;font-weight:600;color:#475569;">Toufik Calisthenics</p>
-              <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;">reps-dz.com</p>
+            <td style="padding:28px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="margin:0;font-size:15px;font-weight:600;color:#475569;">Toufik Calisthenics</p>
+              <p style="margin:6px 0 0;font-size:13px;color:#94a3b8;">reps-dz.com</p>
             </td>
           </tr>
         </table>
@@ -111,40 +112,45 @@ async function sendProgramEmail(to, userName, programData, options = {}) {
     throw new Error('Email not configured. Set BREVO_API_KEY and BREVO_SENDER_EMAIL in environment. Sender must be verified in Brevo dashboard.');
   }
 
-  const html = buildProgramHtml(userName, programData, weeksCount);
+  // Generate PDF first so we never send without attachment; include filename in email body
+  const nameStr = (userName && String(userName).trim()) ? String(userName).trim().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '') : 'program';
+  const levelStr = (programData.level || 'intermediate').charAt(0).toUpperCase() + (programData.level || 'intermediate').slice(1);
+  const dateStr = new Date().toISOString().split('T')[0];
+  const weekLabel = weeksCount === 12 ? '12Week' : '6Week';
+  const filename = `Your-${weekLabel}-Calisthenics-Program-${levelStr}-${nameStr}-${dateStr}.pdf`;
 
-  // Generate PDF and attach
-  let attachments = [];
+  let pdfBuffer;
   try {
-    const pdfBuffer = await generate6WeekPdfBuffer(programData, {
+    pdfBuffer = await generate6WeekPdfBuffer(programData, {
       userName: (userName && String(userName).trim()) || 'user',
       userAge: options.userAge,
       level: programData.level || 'intermediate',
       weeksCount,
       goals: options.goals || []
     });
-    const nameStr = (userName && String(userName).trim()) ? String(userName).trim().replace(/\s+/g, '-') : 'program';
-    const levelStr = (programData.level || 'intermediate').charAt(0).toUpperCase() + (programData.level || 'intermediate').slice(1);
-    const dateStr = new Date().toISOString().split('T')[0];
-    const weekLabel = weeksCount === 12 ? '12Week' : '6Week';
-    const filename = `Your-${weekLabel}-Calisthenics-Program-${levelStr}-${nameStr}-${dateStr}.pdf`;
-    attachments = [{
-      name: filename,
-      content: pdfBuffer.toString('base64')
-    }];
   } catch (pdfErr) {
-    console.error('PDF generation failed, sending without attachment:', pdfErr);
+    console.error('[Brevo] PDF generation failed:', pdfErr);
+    throw new Error('Could not generate your program PDF. Please try again or contact support.');
   }
+
+  if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
+    console.error('[Brevo] PDF buffer empty or invalid');
+    throw new Error('Program PDF could not be created. Please try again.');
+  }
+
+  const base64Content = pdfBuffer.toString('base64');
+  const attachments = [{ name: filename, content: base64Content }];
+  console.log('[Brevo] Attaching PDF:', filename, 'size:', pdfBuffer.length, 'bytes');
+
+  const html = buildProgramHtml(userName, programData, weeksCount, filename);
 
   const payload = {
     sender: { name: senderName, email: senderEmail },
     to: [{ email: to, ...(userName && { name: userName }) }],
-    subject: weeksCount === 12 ? 'Your 12-Week Calisthenics Program' : 'Your 6-Week Calisthenics Program',
-    htmlContent: html
+    subject: weeksCount === 12 ? 'Your 12-Week Calisthenics Program — PDF attached' : 'Your 6-Week Calisthenics Program — PDF attached',
+    htmlContent: html,
+    attachment: attachments
   };
-  if (attachments.length > 0) {
-    payload.attachment = attachments;
-  }
 
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -164,38 +170,61 @@ async function sendProgramEmail(to, userName, programData, options = {}) {
     throw new Error(msg);
   }
 
-  console.log('[Brevo] Email sent to', to);
+  console.log('[Brevo] Email with PDF sent to', to);
 }
 
 /** Build HTML for 1-week free program email. */
-function build1WeekProgramHtml(userName, data) {
+function build1WeekProgramHtml(userName, data, attachmentFilename) {
   const level = (data.level || 'intermediate').charAt(0).toUpperCase() + (data.level || 'intermediate').slice(1);
   const firstName = userName ? userName.split(/\s+/)[0] : '';
   const greeting = firstName ? `Hi ${firstName},` : 'Hello,';
+  const safeFilename = attachmentFilename ? attachmentFilename.replace(/[<>"&]/g, '') : 'Your-1Week-Program.pdf';
   return `
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Your 1-Week Calisthenics Program</title></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#f1f5f9;color:#1e293b;line-height:1.5;">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your 1-Week Calisthenics Program</title>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#f1f5f9;color:#1e293b;line-height:1.6;">
+  <div style="display:none;max-height:0;overflow:hidden;">Your 1-week calisthenics program is attached to this email as a PDF.</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 20px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
-        <tr><td style="background:#0f172a;padding:32px;text-align:center;">
-          <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;">Toufik Calisthenics</p>
-          <h1 style="margin:0;font-size:22px;font-weight:700;color:#fff;">Your 1-Week Program Is Ready</h1>
-          <p style="margin:8px 0 0;font-size:14px;color:#94a3b8;">4 Sessions — Level ${level}</p>
-        </td></tr>
-        <tr><td style="padding:32px;">
-          <p style="margin:0 0 16px;font-size:15px;">${greeting}</p>
-          <p style="margin:0 0 20px;font-size:15px;">Your <strong>1-week calisthenics program</strong> is attached as a PDF. Daily calorie and protein targets included (when height & weight provided).</p>
-          <p style="margin:0 0 20px;font-size:14px;color:#475569;">Check your inbox and spam folder if you don't see it.</p>
-          <p style="margin:0;font-size:15px;">Train consistently!</p>
-        </td></tr>
-        <tr><td style="padding:20px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-          <p style="margin:0;font-size:13px;font-weight:600;color:#475569;">Toufik Calisthenics · reps-dz.com</p>
-        </td></tr>
-      </table>
-    </td></tr>
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 10px 25px -5px rgba(0,0,0,0.08),0 4px 10px -5px rgba(0,0,0,0.04);">
+          <tr>
+            <td style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);padding:40px 32px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#94a3b8;letter-spacing:0.15em;text-transform:uppercase;">Toufik Calisthenics</p>
+              <h1 style="margin:0;font-size:24px;font-weight:700;color:#fff;">Your 1-Week Program Is Ready</h1>
+              <p style="margin:10px 0 0;font-size:14px;color:#94a3b8;">4 Sessions · Level ${level}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:36px 32px;">
+              <p style="margin:0 0 20px;font-size:16px;color:#334155;">${greeting}</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#334155;">Your <strong>1-week calisthenics program</strong> is attached to this email as a <strong>PDF file</strong>. Open it to see your 4 sessions, exercises, and — if you added height & weight — your daily calorie and protein targets.</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fefce8;border:2px solid #facc15;border-radius:12px;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1e293b;">Your program PDF is attached</p>
+                    <p style="margin:0 0 8px;font-size:14px;color:#475569;">Look for: <strong style="color:#0f172a;word-break:break-all;">${safeFilename}</strong></p>
+                    <p style="margin:0;font-size:13px;color:#64748b;">Can't see it? Check <strong>Spam</strong> or <strong>Promotions</strong> and ensure your email client shows attachments.</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0;font-size:15px;color:#334155;">Save the PDF to your device or print it, then train consistently. Enjoy your week!</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="margin:0;font-size:14px;font-weight:600;color:#475569;">Toufik Calisthenics</p>
+              <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;">reps-dz.com</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
   </table>
 </body>
 </html>`;
@@ -210,31 +239,41 @@ async function send1WeekProgramEmail(to, userName, programData, options = {}) {
     throw new Error('Email not configured. Set BREVO_API_KEY and BREVO_SENDER_EMAIL.');
   }
 
-  const html = build1WeekProgramHtml(userName, programData);
-  let attachments = [];
+  const nameStr = (userName && String(userName).trim()) ? String(userName).trim().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '') : 'program';
+  const levelStr = (programData.level || 'intermediate').charAt(0).toUpperCase() + (programData.level || 'intermediate').slice(1);
+  const dateStr = new Date().toISOString().split('T')[0];
+  const filename = `Your-1Week-Calisthenics-Program-${levelStr}-${nameStr}-${dateStr}.pdf`;
+
+  let pdfBuffer;
   try {
-    const pdfBuffer = await generate1WeekPdfBuffer(programData, {
+    pdfBuffer = await generate1WeekPdfBuffer(programData, {
       userName: (userName && String(userName).trim()) || 'user',
       userAge: options.userAge,
       level: programData.level || 'intermediate',
       goals: options.goals || []
     });
-    const nameStr = (userName && String(userName).trim()) ? String(userName).trim().replace(/\s+/g, '-') : 'program';
-    const levelStr = (programData.level || 'intermediate').charAt(0).toUpperCase() + (programData.level || 'intermediate').slice(1);
-    const dateStr = new Date().toISOString().split('T')[0];
-    const filename = `Your-1Week-Calisthenics-Program-${levelStr}-${nameStr}-${dateStr}.pdf`;
-    attachments = [{ name: filename, content: pdfBuffer.toString('base64') }];
   } catch (pdfErr) {
-    console.error('1-week PDF generation failed:', pdfErr);
+    console.error('[Brevo] 1-week PDF generation failed:', pdfErr);
+    throw new Error('Could not generate your 1-week program PDF. Please try again or contact support.');
   }
+
+  if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
+    console.error('[Brevo] 1-week PDF buffer empty or invalid');
+    throw new Error('Your program PDF could not be created. Please try again.');
+  }
+
+  const attachments = [{ name: filename, content: pdfBuffer.toString('base64') }];
+  console.log('[Brevo] Attaching 1-week PDF:', filename, 'size:', pdfBuffer.length, 'bytes');
+
+  const html = build1WeekProgramHtml(userName, programData, filename);
 
   const payload = {
     sender: { name: senderName, email: senderEmail },
     to: [{ email: to, ...(userName && { name: userName }) }],
-    subject: 'Your 1-Week Calisthenics Program',
-    htmlContent: html
+    subject: 'Your 1-Week Calisthenics Program — PDF attached',
+    htmlContent: html,
+    attachment: attachments
   };
-  if (attachments.length > 0) payload.attachment = attachments;
 
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -248,7 +287,7 @@ async function send1WeekProgramEmail(to, userName, programData, options = {}) {
     console.error('[Brevo] 1-week send failed:', JSON.stringify({ status: response.status, body: errBody }));
     throw new Error(msg);
   }
-  console.log('[Brevo] 1-week email sent to', to);
+  console.log('[Brevo] 1-week email with PDF sent to', to);
 }
 
 /** Send customized program request to admin. Form data will be forwarded to admin email. */
