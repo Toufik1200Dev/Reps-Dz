@@ -1934,7 +1934,7 @@ const generateAndSend6WeekEmail = async (req, res) => {
     }
     const nameToUse = (userName && String(userName).trim()) ? String(userName).trim() : null;
 
-    await sendProgramEmail(emailTrimmed, nameToUse, result);
+    await sendProgramEmail(emailTrimmed, nameToUse, result, { weeksCount: 6, goals: options.goals });
 
     await SixWeekRequest.create({
       email: emailTrimmed,

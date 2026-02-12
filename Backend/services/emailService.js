@@ -14,7 +14,32 @@ function buildProgramHtml(userName, data, weeksCount, attachmentFilename) {
   const greeting = firstName ? `Hi ${firstName},` : 'Hello,';
   const nut = data.nutrition || {};
   const hasNutrition = nut.tdee || nut.proteinG;
-  const safeFilename = attachmentFilename ? attachmentFilename.replace(/[<>"&]/g, '') : 'Your-Program.pdf';
+  const hasPdf = !!attachmentFilename;
+  const safeFilename = attachmentFilename ? attachmentFilename.replace(/[<>"&]/g, '') : '';
+
+  const attachmentBlock = hasPdf
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#fefce8 0%,#fef9c3 100%);border:2px solid #facc15;border-radius:12px;margin-bottom:28px;">
+        <tr><td style="padding:24px 28px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td style="vertical-align:middle;width:56px;padding-right:20px;">
+                <div style="width:56px;height:56px;background:#facc15;border-radius:12px;text-align:center;line-height:56px;font-size:28px;">📎</div>
+              </td>
+              <td style="vertical-align:middle;">
+                <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#1e293b;">Your program PDF is attached</p>
+                <p style="margin:0 0 8px;font-size:14px;color:#475569;">Look for the file: <strong style="color:#0f172a;word-break:break-all;">${safeFilename}</strong></p>
+                <p style="margin:0;font-size:13px;color:#64748b;">If you don't see it, check your <strong>Spam</strong> or <strong>Promotions</strong> folder and make sure your email client allows attachments.</p>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+      </table>`
+    : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border:2px solid #f87171;border-radius:12px;margin-bottom:28px;">
+        <tr><td style="padding:24px 28px;">
+          <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#991b1b;">We couldn't attach your PDF this time</p>
+          <p style="margin:0;font-size:14px;color:#7f1d1d;">Please reply to this email or contact us — we'll send your program PDF as soon as possible.</p>
+        </td></tr>
+      </table>`;
 
   return `
 <!DOCTYPE html>
@@ -52,27 +77,9 @@ function buildProgramHtml(userName, data, weeksCount, attachmentFilename) {
           <tr>
             <td style="padding:40px 40px 36px;">
               <p style="margin:0 0 24px;font-size:17px;color:#334155;">${greeting}</p>
-              <p style="margin:0 0 24px;font-size:16px;color:#334155;">Thank you for choosing your <strong>${weekLabel} calisthenics program</strong>. Your personalized plan is attached to this email as a <strong>PDF file</strong> so you can save it, print it, or open it on any device.</p>
+              <p style="margin:0 0 24px;font-size:16px;color:#334155;">Thank you for choosing your <strong>${weekLabel} calisthenics program</strong>. ${hasPdf ? 'Your personalized plan is attached to this email as a <strong>PDF file</strong> so you can save it, print it, or open it on any device.' : 'Unfortunately we could not attach your PDF right now, but we\'re working on it.'}</p>
 
-              <!-- PDF attachment callout -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#fefce8 0%,#fef9c3 100%);border:2px solid #facc15;border-radius:12px;margin-bottom:28px;">
-                <tr>
-                  <td style="padding:24px 28px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      <tr>
-                        <td style="vertical-align:middle;width:56px;padding-right:20px;">
-                          <div style="width:56px;height:56px;background:#facc15;border-radius:12px;text-align:center;line-height:56px;font-size:28px;">📎</div>
-                        </td>
-                        <td style="vertical-align:middle;">
-                          <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#1e293b;">Your program PDF is attached</p>
-                          <p style="margin:0 0 8px;font-size:14px;color:#475569;">Look for the file: <strong style="color:#0f172a;word-break:break-all;">${safeFilename}</strong></p>
-                          <p style="margin:0;font-size:13px;color:#64748b;">If you don't see it, check your <strong>Spam</strong> or <strong>Promotions</strong> folder and make sure your email client allows attachments.</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
+              ${attachmentBlock}
 
               <p style="margin:0 0 12px;font-size:15px;font-weight:600;color:#0f172a;">What's inside your program</p>
               <ul style="margin:0 0 24px;padding-left:22px;font-size:15px;color:#475569;line-height:1.7;">
@@ -83,7 +90,7 @@ function buildProgramHtml(userName, data, weeksCount, attachmentFilename) {
                 <li>Endurance test in ${testWeek} to track progress</li>
               </ul>
 
-              <p style="margin:0 0 24px;font-size:15px;color:#334155;">Open the attached PDF to start your plan. Train consistently and enjoy the journey.</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#334155;">${hasPdf ? 'Open the attached PDF to start your plan.' : 'We\'ll send your PDF as soon as our system is back online.'} Train consistently and enjoy the journey.</p>
               <p style="margin:0;font-size:15px;color:#334155;">If you have any questions, reply to this email — I'm here to help.</p>
             </td>
           </tr>
@@ -112,7 +119,6 @@ async function sendProgramEmail(to, userName, programData, options = {}) {
     throw new Error('Email not configured. Set BREVO_API_KEY and BREVO_SENDER_EMAIL in environment. Sender must be verified in Brevo dashboard.');
   }
 
-  // Generate PDF first so we never send without attachment; include filename in email body
   const nameStr = (userName && String(userName).trim()) ? String(userName).trim().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '') : 'program';
   const levelStr = (programData.level || 'intermediate').charAt(0).toUpperCase() + (programData.level || 'intermediate').slice(1);
   const dateStr = new Date().toISOString().split('T')[0];
@@ -120,6 +126,7 @@ async function sendProgramEmail(to, userName, programData, options = {}) {
   const filename = `Your-${weekLabel}-Calisthenics-Program-${levelStr}-${nameStr}-${dateStr}.pdf`;
 
   let pdfBuffer;
+  let pdfFailed = false;
   try {
     pdfBuffer = await generate6WeekPdfBuffer(programData, {
       userName: (userName && String(userName).trim()) || 'user',
@@ -129,28 +136,29 @@ async function sendProgramEmail(to, userName, programData, options = {}) {
       goals: options.goals || []
     });
   } catch (pdfErr) {
-    console.error('[Brevo] PDF generation failed:', pdfErr);
-    throw new Error('Could not generate your program PDF. Please try again or contact support.');
+    console.error('[Brevo] 6/12-week PDF generation failed (Puppeteer/Chromium may be unavailable):', pdfErr.message);
+    pdfFailed = true;
   }
 
-  if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
-    console.error('[Brevo] PDF buffer empty or invalid');
-    throw new Error('Program PDF could not be created. Please try again.');
+  const hasPdf = !pdfFailed && Buffer.isBuffer(pdfBuffer) && pdfBuffer.length > 0;
+  const attachments = hasPdf ? [{ name: filename, content: pdfBuffer.toString('base64') }] : [];
+  if (hasPdf) {
+    console.log('[Brevo] Attaching PDF:', filename, 'size:', pdfBuffer.length, 'bytes');
+  } else {
+    console.warn('[Brevo] Sending 6/12-week email without PDF attachment (PDF generation unavailable)');
   }
 
-  const base64Content = pdfBuffer.toString('base64');
-  const attachments = [{ name: filename, content: base64Content }];
-  console.log('[Brevo] Attaching PDF:', filename, 'size:', pdfBuffer.length, 'bytes');
-
-  const html = buildProgramHtml(userName, programData, weeksCount, filename);
+  const html = buildProgramHtml(userName, programData, weeksCount, hasPdf ? filename : null);
 
   const payload = {
     sender: { name: senderName, email: senderEmail },
     to: [{ email: to, ...(userName && { name: userName }) }],
-    subject: weeksCount === 12 ? 'Your 12-Week Calisthenics Program — PDF attached' : 'Your 6-Week Calisthenics Program — PDF attached',
-    htmlContent: html,
-    attachment: attachments
+    subject: weeksCount === 12
+      ? (hasPdf ? 'Your 12-Week Calisthenics Program — PDF attached' : 'Your 12-Week Calisthenics Program')
+      : (hasPdf ? 'Your 6-Week Calisthenics Program — PDF attached' : 'Your 6-Week Calisthenics Program'),
+    htmlContent: html
   };
+  if (attachments.length > 0) payload.attachment = attachments;
 
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -173,12 +181,29 @@ async function sendProgramEmail(to, userName, programData, options = {}) {
   console.log('[Brevo] Email with PDF sent to', to);
 }
 
-/** Build HTML for 1-week free program email. */
+/** Build HTML for 1-week free program email. attachmentFilename=null when PDF could not be generated. */
 function build1WeekProgramHtml(userName, data, attachmentFilename) {
   const level = (data.level || 'intermediate').charAt(0).toUpperCase() + (data.level || 'intermediate').slice(1);
   const firstName = userName ? userName.split(/\s+/)[0] : '';
   const greeting = firstName ? `Hi ${firstName},` : 'Hello,';
-  const safeFilename = attachmentFilename ? attachmentFilename.replace(/[<>"&]/g, '') : 'Your-1Week-Program.pdf';
+  const hasPdf = !!attachmentFilename;
+  const safeFilename = attachmentFilename ? attachmentFilename.replace(/[<>"&]/g, '') : '';
+
+  const attachmentBlock = hasPdf
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fefce8;border:2px solid #facc15;border-radius:12px;margin-bottom:24px;">
+        <tr><td style="padding:20px 24px;">
+          <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1e293b;">Your program PDF is attached</p>
+          <p style="margin:0 0 8px;font-size:14px;color:#475569;">Look for: <strong style="color:#0f172a;word-break:break-all;">${safeFilename}</strong></p>
+          <p style="margin:0;font-size:13px;color:#64748b;">Can't see it? Check <strong>Spam</strong> or <strong>Promotions</strong> and ensure your email client shows attachments.</p>
+        </td></tr>
+      </table>`
+    : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border:2px solid #f87171;border-radius:12px;margin-bottom:24px;">
+        <tr><td style="padding:20px 24px;">
+          <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#991b1b;">We couldn't attach your PDF this time</p>
+          <p style="margin:0;font-size:14px;color:#7f1d1d;">Please go back to <strong>reps-dz.com</strong>, open the Programs page, and generate your free 1-week program again. If the issue persists, contact us.</p>
+        </td></tr>
+      </table>`;
+
   return `
 <!DOCTYPE html>
 <html>
@@ -203,17 +228,9 @@ function build1WeekProgramHtml(userName, data, attachmentFilename) {
           <tr>
             <td style="padding:36px 32px;">
               <p style="margin:0 0 20px;font-size:16px;color:#334155;">${greeting}</p>
-              <p style="margin:0 0 24px;font-size:15px;color:#334155;">Your <strong>1-week calisthenics program</strong> is attached to this email as a <strong>PDF file</strong>. Open it to see your 4 sessions, exercises, and — if you added height & weight — your daily calorie and protein targets.</p>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fefce8;border:2px solid #facc15;border-radius:12px;margin-bottom:24px;">
-                <tr>
-                  <td style="padding:20px 24px;">
-                    <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#1e293b;">Your program PDF is attached</p>
-                    <p style="margin:0 0 8px;font-size:14px;color:#475569;">Look for: <strong style="color:#0f172a;word-break:break-all;">${safeFilename}</strong></p>
-                    <p style="margin:0;font-size:13px;color:#64748b;">Can't see it? Check <strong>Spam</strong> or <strong>Promotions</strong> and ensure your email client shows attachments.</p>
-                  </td>
-                </tr>
-              </table>
-              <p style="margin:0;font-size:15px;color:#334155;">Save the PDF to your device or print it, then train consistently. Enjoy your week!</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#334155;">Your <strong>1-week calisthenics program</strong> ${hasPdf ? 'is attached to this email as a <strong>PDF file</strong>. Open it to see your 4 sessions, exercises, and — if you added height & weight — your daily calorie and protein targets.' : 'request was received. Unfortunately we could not generate the PDF attachment right now.'}</p>
+              ${attachmentBlock}
+              <p style="margin:0;font-size:15px;color:#334155;">${hasPdf ? 'Save the PDF to your device or print it, then train consistently. Enjoy your week!' : 'Thank you for your patience.'}</p>
             </td>
           </tr>
           <tr>
@@ -245,6 +262,7 @@ async function send1WeekProgramEmail(to, userName, programData, options = {}) {
   const filename = `Your-1Week-Calisthenics-Program-${levelStr}-${nameStr}-${dateStr}.pdf`;
 
   let pdfBuffer;
+  let pdfFailed = false;
   try {
     pdfBuffer = await generate1WeekPdfBuffer(programData, {
       userName: (userName && String(userName).trim()) || 'user',
@@ -253,27 +271,27 @@ async function send1WeekProgramEmail(to, userName, programData, options = {}) {
       goals: options.goals || []
     });
   } catch (pdfErr) {
-    console.error('[Brevo] 1-week PDF generation failed:', pdfErr);
-    throw new Error('Could not generate your 1-week program PDF. Please try again or contact support.');
+    console.error('[Brevo] 1-week PDF generation failed (Puppeteer/Chromium may be unavailable):', pdfErr.message);
+    pdfFailed = true;
   }
 
-  if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) {
-    console.error('[Brevo] 1-week PDF buffer empty or invalid');
-    throw new Error('Your program PDF could not be created. Please try again.');
+  const hasPdf = !pdfFailed && Buffer.isBuffer(pdfBuffer) && pdfBuffer.length > 0;
+  const attachments = hasPdf ? [{ name: filename, content: pdfBuffer.toString('base64') }] : [];
+  if (hasPdf) {
+    console.log('[Brevo] Attaching 1-week PDF:', filename, 'size:', pdfBuffer.length, 'bytes');
+  } else {
+    console.warn('[Brevo] Sending 1-week email without PDF attachment (PDF generation unavailable)');
   }
 
-  const attachments = [{ name: filename, content: pdfBuffer.toString('base64') }];
-  console.log('[Brevo] Attaching 1-week PDF:', filename, 'size:', pdfBuffer.length, 'bytes');
-
-  const html = build1WeekProgramHtml(userName, programData, filename);
+  const html = build1WeekProgramHtml(userName, programData, hasPdf ? filename : null);
 
   const payload = {
     sender: { name: senderName, email: senderEmail },
     to: [{ email: to, ...(userName && { name: userName }) }],
-    subject: 'Your 1-Week Calisthenics Program — PDF attached',
-    htmlContent: html,
-    attachment: attachments
+    subject: hasPdf ? 'Your 1-Week Calisthenics Program — PDF attached' : 'Your 1-Week Calisthenics Program',
+    htmlContent: html
   };
+  if (attachments.length > 0) payload.attachment = attachments;
 
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',

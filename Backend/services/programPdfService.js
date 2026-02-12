@@ -612,7 +612,7 @@ ${coachReview["week" + week.week] ? `<div class="coach-review-box"><h4>Coach Not
             </div>`;
           }).join('')}
         </div>
-        <p class="intensity-note">Week 1 is introductory. Intensity progresses gradually. Weeks 5–6 are mandatory deload/taper.</p>
+        <p class="intensity-note">Week 1 is introductory. Intensity progresses gradually. ${weeksCount === 12 ? 'Weeks 5–6 and 11–12 are mandatory deload/taper.' : 'Weeks 5–6 are mandatory deload/taper.'}</p>
       </div>
       <p class="footer" style="margin-top:20px;">Toufik Calisthenics · toufik-calisthenics.com</p>
     </div>
