@@ -7,9 +7,31 @@
  * Page 5: Warm-up protocols detailed (goal, materials, exercises, coach notes)
  * Page 6: Intensity overview
  * Pages 7+: Program weeks (no break mid-day, bigger text, fit to page)
+ *
+ * Production (Render): uses @sparticuz/chromium + puppeteer-core (serverless-compatible)
+ * Development: uses puppeteer (bundled Chromium)
  */
 const puppeteer = require('puppeteer');
+const puppeteerCore = require('puppeteer-core');
 const { getMaterialsList } = require('./programValidation');
+
+/** Launch options: production uses @sparticuz/chromium for Render/serverless compatibility. */
+async function getPuppeteerLaunchOptions() {
+  if (process.env.NODE_ENV === 'production') {
+    const chromium = require('@sparticuz/chromium');
+    const opts = {
+      args: [...(chromium.args || []), '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless ?? true
+    };
+    if (chromium.defaultViewport) opts.defaultViewport = chromium.defaultViewport;
+    return opts;
+  }
+  return {
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+  };
+}
 
 const TRAINING_METHODS = [
   { name: 'EMOM', def: 'Every Minute On the Minute: perform a set number of reps at the start of each minute. Rest for the remainder. Classic endurance pacing.' },
@@ -624,12 +646,11 @@ ${coachReview["week" + week.week] ? `<div class="coach-review-box"><h4>Coach Not
 
 async function generate6WeekPdfBuffer(programData, options = {}) {
   const html = buildProgramHtml(programData, options);
+  const launchOpts = await getPuppeteerLaunchOptions();
+  const pptr = process.env.NODE_ENV === 'production' ? puppeteerCore : puppeteer;
   let browser;
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
+    browser = await pptr.launch(launchOpts);
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({
@@ -912,12 +933,11 @@ function build1WeekProgramHtml(programData, options = {}) {
 
 async function generate1WeekPdfBuffer(programData, options = {}) {
   const html = build1WeekProgramHtml(programData, options);
+  const launchOpts = await getPuppeteerLaunchOptions();
+  const pptr = process.env.NODE_ENV === 'production' ? puppeteerCore : puppeteer;
   let browser;
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
+    browser = await pptr.launch(launchOpts);
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({
