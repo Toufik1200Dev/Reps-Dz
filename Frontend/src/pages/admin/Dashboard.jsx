@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ShoppingCart,
   Inventory,
@@ -17,7 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../../services/api';
 import { productsAPI } from '../../services/api';
 import { contactAPI } from '../../services/api';
-import { getVisitorStats, getPageViewStats, getProgramEventStats } from '../../utils/analytics';
+import { getVisitorStats, getPageViewStats } from '../../utils/analytics';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -37,24 +37,25 @@ export default function Dashboard() {
     pageViews: 0,
   });
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        setLoading(true);
-        const [
-          ordersRes,
-          productsRes,
-          genRes,
-          calorieRes,
-          contactRes,
-          feedbackRes,
-        ] = await Promise.allSettled([
-          adminAPI.getAllOrders({ limit: 100, page: 1 }),
-          productsAPI.getAllProducts({ limit: 500, page: 1 }),
+  const fetchAll = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [
+        ordersRes,
+        productsRes,
+        genRes,
+        calorieRes,
+        contactRes,
+        feedbackRes,
+        analyticsRes,
+      ] = await Promise.allSettled([
+        adminAPI.getAllOrders({ limit: 1000, page: 1 }),
+        productsAPI.getAllProducts({ limit: 500, page: 1 }),
           adminAPI.getGeneratorStats({ range: 'all' }),
           adminAPI.getCalorieStats({ range: 'all' }),
           contactAPI.getStats(),
           adminAPI.getFeedbackList({ limit: 1 }),
+          adminAPI.getAnalyticsStats(),
         ]);
 
         const orders = ordersRes.status === 'fulfilled'
@@ -83,9 +84,10 @@ export default function Dashboard() {
         const genStats = genData?.stats || {};
         const sixWeekTotal = genStats.sixWeekTotal ?? 0;
         const savedTotal = genStats.totalGenerations ?? 0;
-        const programStats = getProgramEventStats();
-        const free = programStats.generates?.free ?? 0;
-        const paid = programStats.generates?.paid ?? 0;
+        // Emails sent: free 1-week PDF emails + paid 6/12-week PDF emails
+        const emailsFree = savedTotal;
+        const emailsPaid = sixWeekTotal;
+        const totalEmailsSent = emailsFree + emailsPaid;
 
         const calorieData = calorieRes.status === 'fulfilled' ? calorieRes.value.data?.data : null;
         const calorieStats = calorieData?.stats || {};
@@ -93,8 +95,9 @@ export default function Dashboard() {
         const totalUsers = calorieStats.totalUsers ?? 0;
 
         const contactData = contactRes.status === 'fulfilled' ? contactRes.value.data : null;
-        const contactTotal = contactData?.totalContacts ?? (Array.isArray(contactData) ? contactData.length : 0);
-        const contactNew = contactData?.newContacts ?? 0;
+        const contactPayload = contactData?.data ?? contactData;
+        const contactTotal = contactPayload?.totalContacts ?? (Array.isArray(contactPayload) ? contactPayload.length : 0);
+        const contactNew = contactPayload?.newContacts ?? 0;
 
         const feedbackTotal = feedbackRes.status === 'fulfilled' && feedbackRes.value?.data?.data
           ? (feedbackRes.value.data.data.total ?? 0)
@@ -102,6 +105,9 @@ export default function Dashboard() {
 
         const visitorStats = getVisitorStats();
         const pageStats = getPageViewStats();
+        const analyticsData = analyticsRes.status === 'fulfilled' ? analyticsRes.value.data?.data : null;
+        const reach = analyticsData?.totalVisitors ?? analyticsData?.totalPageViews ?? visitorStats.total;
+        const pageViews = analyticsData?.totalPageViews ?? pageStats.total;
 
         const byProduct = {};
         orders.forEach((order) => {
@@ -123,23 +129,31 @@ export default function Dashboard() {
           totalOrders,
           totalRevenue,
           products: { total: totalProducts, lowStock: lowStock },
-          generator: { sixWeekTotal, savedTotal, free, paid },
+          generator: { sixWeekTotal, savedTotal, totalEmailsSent, emailsFree, emailsPaid },
           calories: { totalCalculations, totalUsers },
           feedback: { total: feedbackTotal },
           contact: { total: contactTotal, new: contactNew },
           recentOrders,
           topProducts,
-          reach: visitorStats.total,
-          pageViews: pageStats.total,
+          reach,
+          pageViews,
         });
-      } catch (err) {
-        console.error('Dashboard fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAll();
+    } catch (err) {
+      console.error('Dashboard fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  useEffect(() => {
+    const onFocus = () => fetchAll();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchAll]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -267,21 +281,22 @@ export default function Dashboard() {
         </SectionCard>
 
         <SectionCard
-          title="Programs & plans"
+          title="Emails sent (program PDFs)"
           icon={<FitnessCenter className="text-rose-600" />}
           iconBg="bg-rose-50"
-          onView={() => navigate('/admin/generator-stats')}
+          onView={() => navigate('/admin/emails-sent')}
+          viewLabel="View all"
         >
           <div className="space-y-2 text-sm">
-            <p><span className="font-bold text-gray-900">{data.generator.sixWeekTotal}</span> 6/12-week plans sent</p>
-            <p><span className="font-bold text-gray-900">{data.generator.savedTotal}</span> saved programs</p>
-            <p><span className="font-bold text-gray-900">{data.generator.free}</span> free · <span className="font-bold text-gray-900">{data.generator.paid}</span> paid generations</p>
+            <p><span className="font-bold text-gray-900">{data.generator.totalEmailsSent}</span> total emails sent</p>
+            <p><span className="font-bold text-gray-900">{data.generator.emailsFree}</span> free 1-week (PDF)</p>
+            <p><span className="font-bold text-gray-900">{data.generator.emailsPaid}</span> paid 6/12-week (PDF)</p>
           </div>
           <button
-            onClick={() => navigate('/admin/saved-programs')}
+            onClick={() => navigate('/admin/emails-sent')}
             className="mt-3 text-sm font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1"
           >
-            Saved programs
+            View all emails sent
             <ArrowForward sx={{ fontSize: 16 }} />
           </button>
         </SectionCard>

@@ -41,6 +41,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const programRoutes = require('./routes/programRoutes');
 const calorieRoutes = require('./routes/calorieRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
 // Import middleware
@@ -199,6 +200,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/programs', programRoutes);
 app.use('/api/calories', calorieRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Admin routes (IP whitelist applied to all /api/admin/*)
 app.use('/api/admin', adminIpWhitelist);

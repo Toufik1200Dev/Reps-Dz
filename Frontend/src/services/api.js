@@ -281,6 +281,9 @@ export const adminAPI = {
   getCustomerReport: (params) => api.get('/admin/analytics/customers', { params }),
   getCalorieStats: (params) => api.get('/admin/stats/calories', { params }),
   getGeneratorStats: (params) => api.get('/admin/stats/generator', { params }),
+  getAnalyticsStats: () => api.get('/admin/stats/analytics'),
+  getEmailsSent: (params) => api.get('/admin/emails-sent', { params }),
+  getFreeProgramLimits: (params) => api.get('/admin/free-program-limits', { params }),
 
   // Generator feedback (admin)
   getFeedbackList: (params) => api.get('/admin/feedback', { params }),

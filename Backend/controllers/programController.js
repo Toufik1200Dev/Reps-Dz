@@ -406,6 +406,22 @@ const sendFreeProgramEmail = async (req, res) => {
     limitDoc.count += 1;
     await limitDoc.save();
 
+    // Auto-save to ProgramSave so Saved Programs and generator analytics show usage
+    try {
+      await ProgramSave.create({
+        userName: nameToUse !== 'user' ? nameToUse : 'None',
+        deviceId: emailTrimmed,
+        level,
+        heightCm: h,
+        weightKg: w,
+        maxReps: payloadMaxReps,
+        program: oneWeek,
+        nutrition: nutrition && typeof nutrition === 'object' ? { bmr: nutrition.bmr, tdee: nutrition.tdee, proteinG: nutrition.proteinG, note: nutrition.note, sampleMeals: nutrition.sampleMeals || undefined } : undefined
+      });
+    } catch (saveErr) {
+      console.error('[Program] Failed to save free program to DB (non-fatal):', saveErr.message);
+    }
+
     res.status(200).json({
       success: true,
       data: { email: emailTrimmed }

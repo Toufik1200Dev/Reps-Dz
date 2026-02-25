@@ -20,6 +20,7 @@ import Orders from './pages/admin/Orders';
 import Products from './pages/admin/Products';
 import Analytics from './pages/admin/Analytics';
 import GeneratorStats from './pages/admin/GeneratorStats';
+import EmailsSent from './pages/admin/EmailsSent';
 import SavedPrograms from './pages/admin/SavedPrograms';
 import CalorieStats from './pages/admin/CalorieStats';
 import Feedback from './pages/Feedback';
@@ -200,6 +201,7 @@ function App() {
                 <Route path="contact-messages" element={<ContactMessages />} />
                 <Route path="feedback" element={<AdminFeedback />} />
                 <Route path="generator-stats" element={<GeneratorStats />} />
+                <Route path="emails-sent" element={<EmailsSent />} />
                 <Route path="saved-programs" element={<SavedPrograms />} />
                 <Route path="calorie-stats" element={<CalorieStats />} />
                 <Route path="shipping" element={<div>Shipping Management (Coming Soon)</div>} />

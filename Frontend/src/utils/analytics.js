@@ -1,9 +1,42 @@
 // Analytics utility functions for tracking visitors and interactions
 
+import API_CONFIG from '../config/api';
+
 const PAGE_VIEWS_KEY = 'pageViews';
 const PAGE_VIEWS_MAX = 3000;
 const PROGRAM_EVENTS_KEY = 'programEvents';
 const PROGRAM_EVENTS_MAX = 2000;
+const VISITOR_ID_KEY = 'analytics_visitor_id';
+
+function getOrCreateVisitorId() {
+  try {
+    let id = localStorage.getItem(VISITOR_ID_KEY);
+    if (!id) {
+      id = 'v_' + Math.random().toString(36).slice(2) + '_' + Date.now();
+      localStorage.setItem(VISITOR_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+/** Send event to backend (fire-and-forget) */
+function sendToBackend(type, path, pageName) {
+  try {
+    const base = API_CONFIG.getBaseURL?.() ?? '/api';
+    fetch(`${base}/analytics/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type,
+        path: path || '/',
+        pageName: pageName || path || '',
+        visitorId: getOrCreateVisitorId()
+      })
+    }).catch(() => {});
+  } catch (_) {}
+}
 
 /** Track a page view (call on each page/route) */
 export const trackPageView = (path, pageName) => {
@@ -19,6 +52,7 @@ export const trackPageView = (path, pageName) => {
       views.splice(0, views.length - PAGE_VIEWS_MAX);
     }
     localStorage.setItem(PAGE_VIEWS_KEY, JSON.stringify(views));
+    sendToBackend('page_view', path || '/', pageName || path || '');
   } catch (err) {
     console.error('Error tracking page view:', err);
   }
@@ -100,7 +134,7 @@ export const trackVisitor = () => {
   try {
     const today = new Date().toISOString().split('T')[0];
     const visitors = JSON.parse(localStorage.getItem('visitors') || '[]');
-    
+
     // Check if we already tracked this visitor today (simple approach - one per day)
     const lastVisitor = visitors[visitors.length - 1];
     if (lastVisitor && lastVisitor.date === today) {
@@ -114,13 +148,14 @@ export const trackVisitor = () => {
         timestamp: new Date().toISOString()
       });
     }
-    
+
     // Keep only last 90 days
     if (visitors.length > 90) {
       visitors.splice(0, visitors.length - 90);
     }
-    
+
     localStorage.setItem('visitors', JSON.stringify(visitors));
+    sendToBackend('visit', '/', '');
   } catch (err) {
     console.error('Error tracking visitor:', err);
   }

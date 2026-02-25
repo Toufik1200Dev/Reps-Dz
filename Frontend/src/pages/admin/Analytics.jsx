@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Assessment,
   Visibility,
@@ -8,10 +8,13 @@ import {
   LocalShipping,
   MenuBook,
   Article,
-  CalendarViewMonth
+  CalendarViewMonth,
+  Refresh
 } from '@mui/icons-material';
 import { adminAPI } from '../../services/api';
 import { getVisitorStats, getProductClickStats, getBlogClickStats, getPageViewStats, getProgramEventStats } from '../../utils/analytics';
+
+const ANALYTICS_ORDERS_LIMIT = 1000;
 
 export default function Analytics() {
   const [visitorStats, setVisitorStats] = useState({ daily: [], total: 0, today: 0 });
@@ -23,77 +26,69 @@ export default function Analytics() {
   const [sixWeekRequests, setSixWeekRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch orders data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Get visitor, product click, blog, page view, program stats from localStorage
-        setVisitorStats(getVisitorStats());
-        setProductClickStats(getProductClickStats());
-        setBlogClickStats(getBlogClickStats());
-        setPageViewStats(getPageViewStats());
-        setProgramEventStats(getProgramEventStats());
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setVisitorStats(getVisitorStats());
+      setProductClickStats(getProductClickStats());
+      setBlogClickStats(getBlogClickStats());
+      setPageViewStats(getPageViewStats());
+      setProgramEventStats(getProgramEventStats());
 
-        // Fetch 6-week plan requests from backend
-        try {
-          const genRes = await adminAPI.getGeneratorStats({ range: 'all' });
-          const sixWeek = genRes.data?.data?.stats?.sixWeekRequests || [];
-          setSixWeekRequests(sixWeek);
-        } catch (e) {
-          console.error('Error fetching 6-week stats:', e);
-        }
+      const [genRes, ordersRes, analyticsRes] = await Promise.allSettled([
+        adminAPI.getGeneratorStats({ range: 'all' }),
+        adminAPI.getAllOrders({ limit: ANALYTICS_ORDERS_LIMIT, page: 1 }),
+        adminAPI.getAnalyticsStats().catch(() => null)
+      ]);
 
-        // Fetch orders from API using axios (interceptor handles x-admin-password)
-        const response = await adminAPI.getAllOrders();
-        // Backend returns { success: true, data: { orders: [...], pagination: {...} } }
-        // Axios wraps it, so we need response.data.data.orders
-        const orders = response.data?.data?.orders || response.data?.orders || [];
+      const sixWeek = genRes.status === 'fulfilled' ? (genRes.value.data?.data?.stats?.sixWeekRequests || []) : [];
+      setSixWeekRequests(sixWeek);
 
-          // Calculate order statistics by product
-          const ordersByProduct = {};
-          let totalRevenue = 0;
-
-          orders.forEach(order => {
-            totalRevenue += order.totalAmount || 0;
-            order.products?.forEach(product => {
-              const productId = product.product?._id || product.product || 'unknown';
-              const productName = product.name || 'Unknown Product';
-              
-              if (!ordersByProduct[productId]) {
-                ordersByProduct[productId] = {
-                  productId,
-                  productName,
-                  orders: 0,
-                  quantity: 0,
-                  revenue: 0
-                };
-              }
-              
-              ordersByProduct[productId].orders += 1;
-              ordersByProduct[productId].quantity += product.quantity || 1;
-              ordersByProduct[productId].revenue += (product.price || 0) * (product.quantity || 1);
-            });
-          });
-
-          // Convert to array and sort by orders
-          const productOrderStats = Object.values(ordersByProduct).sort((a, b) => b.orders - a.orders);
-
-        setOrderStats({
-          byProduct: productOrderStats,
-          total: totalRevenue,
-          totalOrders: orders.length
+      const orders = ordersRes.status === 'fulfilled'
+        ? (ordersRes.value.data?.data?.orders || ordersRes.value.data?.orders || [])
+        : [];
+      const ordersByProduct = {};
+      let totalRevenue = 0;
+      orders.forEach(order => {
+        totalRevenue += order.totalAmount || 0;
+        order.products?.forEach(product => {
+          const productId = product.product?._id || product.product || 'unknown';
+          const productName = product.name || 'Unknown Product';
+          if (!ordersByProduct[productId]) {
+            ordersByProduct[productId] = { productId, productName, orders: 0, quantity: 0, revenue: 0 };
+          }
+          ordersByProduct[productId].orders += 1;
+          ordersByProduct[productId].quantity += product.quantity || 1;
+          ordersByProduct[productId].revenue += (product.price || 0) * (product.quantity || 1);
         });
-      } catch (err) {
-        console.error('Error fetching analytics data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+      });
+      setOrderStats({
+        byProduct: Object.values(ordersByProduct).sort((a, b) => b.orders - a.orders),
+        total: totalRevenue,
+        totalOrders: orders.length
+      });
 
-    fetchData();
+      if (analyticsRes.status === 'fulfilled' && analyticsRes.value?.data?.data) {
+        const a = analyticsRes.value.data.data;
+        setVisitorStats(prev => ({ ...prev, total: a.totalVisitors ?? a.totalPageViews ?? prev.total }));
+        setPageViewStats(prev => ({ ...prev, total: a.totalPageViews ?? prev.total }));
+      }
+    } catch (err) {
+      console.error('Error fetching analytics data:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    const onFocus = () => fetchData();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchData]);
 
   if (loading) {
     return (
@@ -105,10 +100,20 @@ export default function Analytics() {
 
   return (
     <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-display font-black mb-2">Analytics Dashboard</h1>
-        <p className="text-gray-500">Track visitors, product clicks, blog reach, and order statistics</p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-black mb-2">Analytics Dashboard</h1>
+          <p className="text-gray-500">Track visitors, product clicks, blog reach, and order statistics</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => fetchData()}
+          disabled={loading}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold disabled:opacity-60 transition-colors self-start sm:self-auto"
+        >
+          <Refresh sx={{ fontSize: 20 }} />
+          {loading ? 'Loading…' : 'Refresh'}
+        </button>
       </div>
 
       {/* Summary Cards */}

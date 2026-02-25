@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Edit,
   Delete,
@@ -12,10 +12,13 @@ import {
   CalendarToday,
   AttachMoney,
   ShoppingCart,
-  Close
+  Close,
+  Refresh
 } from '@mui/icons-material';
 import { adminAPI } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const ORDERS_FETCH_LIMIT = 1000;
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
@@ -36,13 +39,11 @@ export default function Orders() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  // Fetch orders from API using axios (interceptor handles x-admin-password)
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await adminAPI.getAllOrders();
-      // Backend returns { success: true, data: { orders: [...], pagination: {...} } }
-      // Axios wraps it, so we need response.data.data.orders
+      setError(null);
+      const response = await adminAPI.getAllOrders({ limit: ORDERS_FETCH_LIMIT, page: 1 });
       setOrders(response.data?.data?.orders || response.data?.orders || []);
     } catch (err) {
       console.error('Error fetching orders:', err);
@@ -50,11 +51,17 @@ export default function Orders() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    const onFocus = () => fetchOrders();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchOrders]);
 
   // Filter orders based on search and status
   const filteredOrders = orders.filter(order => {
@@ -113,10 +120,20 @@ export default function Orders() {
 
   return (
     <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-display font-black mb-2">Orders Management</h1>
-        <p className="text-gray-500">Manage customer orders, update status, and track deliveries</p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-black mb-2">Orders Management</h1>
+          <p className="text-gray-500">Manage customer orders, update status, and track deliveries</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => fetchOrders()}
+          disabled={loading}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold disabled:opacity-60 transition-colors"
+        >
+          <Refresh sx={{ fontSize: 20 }} />
+          {loading ? 'Loading…' : 'Refresh'}
+        </button>
       </div>
 
       {/* Stats Grid */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   FitnessCenter,
   TrendingUp,
@@ -6,7 +6,8 @@ import {
   People,
   CalendarToday,
   AccessTime,
-  CalendarViewMonth
+  CalendarViewMonth,
+  Refresh
 } from '@mui/icons-material';
 import { adminAPI } from '../../services/api';
 
@@ -27,11 +28,7 @@ export default function GeneratorStats() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('7d'); // 7d, 30d, all
 
-  useEffect(() => {
-    fetchStats();
-  }, [timeRange]);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
       const response = await adminAPI.getGeneratorStats({ range: timeRange });
@@ -46,7 +43,17 @@ export default function GeneratorStats() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  useEffect(() => {
+    const onFocus = () => fetchStats();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchStats]);
 
   const statCards = [
     {
@@ -139,6 +146,15 @@ export default function GeneratorStats() {
             }`}
           >
             All Time
+          </button>
+          <button
+            type="button"
+            onClick={() => fetchStats()}
+            disabled={loading}
+            className="px-4 py-2 rounded-lg font-medium bg-amber-500 hover:bg-amber-400 text-black disabled:opacity-60 transition-colors inline-flex items-center gap-2"
+          >
+            <Refresh sx={{ fontSize: 18 }} />
+            {loading ? 'Loading…' : 'Refresh'}
           </button>
         </div>
       </div>

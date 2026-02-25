@@ -10,6 +10,9 @@ router.get('/status', adminController.getAdminStatus);
 // Admin stats (protected - require x-admin-password)
 router.get('/stats/calories', adminAuth, adminController.getCalorieStatsWithSubmissions);
 router.get('/stats/generator', adminAuth, adminController.getGeneratorStatsWithSubmissions);
+router.get('/stats/analytics', adminAuth, adminController.getAnalyticsStats);
+router.get('/emails-sent', adminAuth, adminController.getEmailsSent);
+router.get('/free-program-limits', adminAuth, adminController.getFreeProgramLimits);
 
 // Generator feedback (admin list + delete)
 router.get('/feedback', adminAuth, adminController.getFeedbackListAdmin);

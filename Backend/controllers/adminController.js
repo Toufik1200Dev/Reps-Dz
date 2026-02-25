@@ -5,6 +5,8 @@ const CalorieSubmission = require('../models/CalorieSubmission');
 const ProgramSave = require('../models/ProgramSave');
 const SixWeekRequest = require('../models/SixWeekRequest');
 const GeneratorFeedback = require('../models/GeneratorFeedback');
+const AnalyticsEvent = require('../models/AnalyticsEvent');
+const FreeProgramLimit = require('../models/FreeProgramLimit');
 const adminIpWhitelist = require('../middleware/adminIpWhitelist');
 
 /**
@@ -316,6 +318,160 @@ const updateIpWhitelist = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get program PDF emails sent with pagination (free 1-week + paid 6/12-week)
+ * @route   GET /api/admin/emails-sent?page=1&limit=20
+ * @access  Private (Admin)
+ */
+const getEmailsSent = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(10, parseInt(req.query.limit, 10) || 20));
+    const skip = (page - 1) * limit;
+
+    const [free1WeekCount, paidCount, list] = await Promise.all([
+      ProgramSave.countDocuments({ deviceId: { $exists: true, $ne: '' } }),
+      SixWeekRequest.countDocuments({}),
+      ProgramSave.aggregate([
+        {
+          $project: {
+            email: '$deviceId',
+            userName: { $ifNull: ['$userName', '—'] },
+            sentAt: '$createdAt',
+            type: { $literal: 'free_1week' },
+            programSaveId: '$_id',
+            level: 1
+          }
+        },
+        { $match: { email: { $exists: true, $ne: '' } } },
+        {
+          $unionWith: {
+            coll: 'sixweekrequests',
+            pipeline: [
+              {
+                $project: {
+                  email: 1,
+                  userName: { $ifNull: ['$userName', '—'] },
+                  sentAt: '$createdAt',
+                  type: { $literal: 'paid_6week' },
+                  programSaveId: null,
+                  level: 1
+                }
+              }
+            ]
+          }
+        },
+        { $sort: { sentAt: -1 } },
+        { $skip: skip },
+        { $limit: limit }
+      ])
+    ]);
+
+    const totalEmailsSent = free1WeekCount + paidCount;
+    const totalPages = Math.max(1, Math.ceil(totalEmailsSent / limit));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalEmailsSent,
+        free1WeekCount,
+        paidCount,
+        list,
+        pagination: {
+          page,
+          limit,
+          totalPages,
+          totalItems: totalEmailsSent,
+          hasNext: page < totalPages,
+          hasPrev: page > 1
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching emails sent:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching emails sent',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Get all free program limits (freeprogramlimits collection) with pagination
+ * @route   GET /api/admin/free-program-limits?page=1&limit=20
+ * @access  Private (Admin)
+ */
+const getFreeProgramLimits = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(10, parseInt(req.query.limit, 10) || 20));
+    const skip = (page - 1) * limit;
+
+    const [totalItems, list] = await Promise.all([
+      FreeProgramLimit.countDocuments({}),
+      FreeProgramLimit.find({})
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        list,
+        pagination: {
+          page,
+          limit,
+          totalPages,
+          totalItems,
+          hasNext: page < totalPages,
+          hasPrev: page > 1
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching free program limits:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching free program limits',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Get analytics stats (page views, visitors) for dashboard
+ * @route   GET /api/admin/stats/analytics
+ * @access  Private (Admin)
+ */
+const getAnalyticsStats = async (req, res) => {
+  try {
+    const totalPageViews = await AnalyticsEvent.countDocuments({ type: 'page_view' });
+    const totalVisits = await AnalyticsEvent.countDocuments({ type: 'visit' });
+    const distinctVisitors = await AnalyticsEvent.distinct('visitorId', { visitorId: { $exists: true, $ne: '' } });
+    const totalVisitors = distinctVisitors.filter(Boolean).length;
+    res.status(200).json({
+      success: true,
+      data: {
+        totalPageViews,
+        totalVisitors: totalVisitors > 0 ? totalVisitors : totalPageViews,
+        totalVisits
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching analytics stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching analytics stats',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   verifyAdminPassword,
   getAdminStatus,
@@ -324,5 +480,8 @@ module.exports = {
   getFeedbackListAdmin,
   deleteFeedback,
   getIpWhitelist,
-  updateIpWhitelist
+  updateIpWhitelist,
+  getAnalyticsStats,
+  getEmailsSent,
+  getFreeProgramLimits
 };

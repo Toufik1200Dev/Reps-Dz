@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { RateReview, Delete, CalendarMonth, ArrowBack } from '@mui/icons-material';
+import React, { useState, useEffect, useCallback } from 'react';
+import { RateReview, Delete, CalendarMonth, ArrowBack, Refresh } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../../services/api';
+
+const FEEDBACK_FETCH_LIMIT = 500;
 
 export default function AdminFeedback() {
   const navigate = useNavigate();
@@ -10,10 +12,11 @@ export default function AdminFeedback() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchFeedback = async () => {
+  const fetchFeedback = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await adminAPI.getFeedbackList({ limit: 200 });
+      setError(null);
+      const res = await adminAPI.getFeedbackList({ limit: FEEDBACK_FETCH_LIMIT });
       const data = res.data?.data;
       setList(data?.feedback || []);
       setTotal(data?.total ?? (data?.feedback || []).length);
@@ -23,11 +26,17 @@ export default function AdminFeedback() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchFeedback();
-  }, []);
+  }, [fetchFeedback]);
+
+  useEffect(() => {
+    const onFocus = () => fetchFeedback();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchFeedback]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this feedback?')) return;
@@ -72,10 +81,21 @@ export default function AdminFeedback() {
           <h1 className="text-2xl sm:text-3xl font-display font-black mb-1">Generator Feedback</h1>
           <p className="text-gray-500 text-sm">Comments from users who used the program generator</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-100">
-          <RateReview className="text-amber-600" />
-          <span className="font-bold text-gray-800">{total}</span>
-          <span className="text-gray-600 text-sm">total</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => fetchFeedback()}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold disabled:opacity-60 transition-colors"
+          >
+            <Refresh sx={{ fontSize: 20 }} />
+            {loading ? 'Loading…' : 'Refresh'}
+          </button>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-100">
+            <RateReview className="text-amber-600" />
+            <span className="font-bold text-gray-800">{total}</span>
+            <span className="text-gray-600 text-sm">total</span>
+          </div>
         </div>
       </div>
 

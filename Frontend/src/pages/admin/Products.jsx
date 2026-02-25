@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -9,7 +9,8 @@ import {
   CloudUpload as CloudUploadIcon,
   Check as CheckIcon,
   Inventory as InventoryIcon,
-  AttachMoney as ActionIcon
+  AttachMoney as ActionIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { productsAPI, apiUtils } from '../../services/api';
 import { PLACEHOLDER_PRODUCT } from '../../assets/placeholders';
@@ -615,11 +616,10 @@ export default function ProductsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await productsAPI.getAllProducts();
-      // getAllProducts uses fetch, so res is the JSON object directly (not wrapped in data)
+      const res = await productsAPI.getAllProducts({ limit: 500, page: 1 });
       const productsList = res.products || [];
       setProducts(productsList);
     } catch (error) {
@@ -633,11 +633,17 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    const onFocus = () => fetchProducts();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchProducts]);
 
   const handleEdit = (product) => {
     setEditingProduct(product);
@@ -707,13 +713,24 @@ export default function ProductsPage() {
           <h1 className="text-4xl font-display font-black mb-2">Products Management</h1>
           <p className="text-gray-500">Add, edit, and organize your equipment inventory.</p>
         </div>
-        <button
-          onClick={() => { setEditingProduct(null); setModalOpen(true); }}
-          className="bg-black text-secondary px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-900 transition-transform hover:-translate-y-1 shadow-lg shadow-black/20"
-        >
-          <AddIcon />
-          <span>Add New Product</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => fetchProducts()}
+            disabled={loading}
+            className="px-4 py-3 rounded-xl font-bold flex items-center gap-2 border-2 border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-60 transition-colors"
+          >
+            <RefreshIcon />
+            <span>{loading ? 'Loading…' : 'Refresh'}</span>
+          </button>
+          <button
+            onClick={() => { setEditingProduct(null); setModalOpen(true); }}
+            className="bg-black text-secondary px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-900 transition-transform hover:-translate-y-1 shadow-lg shadow-black/20"
+          >
+            <AddIcon />
+            <span>Add New Product</span>
+          </button>
+        </div>
       </div>
 
       {/* Toolbar */}

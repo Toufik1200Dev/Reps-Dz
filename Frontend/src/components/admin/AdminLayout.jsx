@@ -26,6 +26,7 @@ const menuItems = [
   { text: 'Products', icon: <Inventory />, path: '/admin/products' },
   { text: 'Orders', icon: <ShoppingCart />, path: '/admin/orders' },
   { text: 'Programs & plans', icon: <FitnessCenter />, path: '/admin/generator-stats' },
+  { text: 'Emails sent', icon: <Email />, path: '/admin/emails-sent' },
   { text: 'Saved Programs', icon: <Description />, path: '/admin/saved-programs' },
   { text: 'Calorie calculator', icon: <Calculate />, path: '/admin/calorie-stats' },
   { text: 'Feedback', icon: <RateReview />, path: '/admin/feedback' },

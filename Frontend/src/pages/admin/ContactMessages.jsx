@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Email,
   Delete,
@@ -9,9 +9,12 @@ import {
   Person,
   CalendarToday,
   Close,
+  Refresh,
 } from '@mui/icons-material';
 import { contactAPI } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const CONTACTS_FETCH_LIMIT = 500;
 
 const statusColors = {
   new: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -31,37 +34,49 @@ export default function ContactMessages() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [stats, setStats] = useState(null);
 
-  const fetchContacts = async () => {
+  const fetchContacts = useCallback(async () => {
     try {
       setLoading(true);
-      const params = {};
+      setError(null);
+      const params = { limit: CONTACTS_FETCH_LIMIT, page: 1 };
       if (searchTerm) params.search = searchTerm;
       if (statusFilter !== 'all') params.status = statusFilter;
       const response = await contactAPI.getAll(params);
-      const data = response.data?.data || response.data;
-      setContacts(data?.contacts || data || []);
+      const data = response.data?.data ?? response.data;
+      setContacts(Array.isArray(data) ? data : (data?.contacts || []));
     } catch (err) {
       console.error('Error fetching contacts:', err);
       setError(err.message || 'Failed to fetch contact messages');
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm, statusFilter]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await contactAPI.getStats();
-      const data = response.data?.data || response.data;
+      const data = response.data?.data ?? response.data;
       setStats(data);
     } catch (err) {
       console.error('Error fetching contact stats:', err);
     }
-  };
+  }, []);
+
+  const refreshAll = useCallback(() => {
+    fetchContacts();
+    fetchStats();
+  }, [fetchContacts, fetchStats]);
 
   useEffect(() => {
     fetchContacts();
     fetchStats();
-  }, []);
+  }, [fetchContacts, fetchStats]);
+
+  useEffect(() => {
+    const onFocus = () => refreshAll();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [refreshAll]);
 
   useEffect(() => {
     const t = setTimeout(() => fetchContacts(), 300);
@@ -133,9 +148,20 @@ export default function ContactMessages() {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="mb-6 md:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-display font-black mb-2">Contact Messages</h1>
-        <p className="text-gray-500 text-sm sm:text-base">View and manage messages from the contact form</p>
+      <div className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-display font-black mb-2">Contact Messages</h1>
+          <p className="text-gray-500 text-sm sm:text-base">View and manage messages from the contact form</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => refreshAll()}
+          disabled={loading}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold disabled:opacity-60 transition-colors self-start sm:self-auto"
+        >
+          <Refresh sx={{ fontSize: 20 }} />
+          {loading ? 'Loading…' : 'Refresh'}
+        </button>
       </div>
 
       {/* Stats - responsive */}

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  FitnessCenter,
   Download,
   Visibility,
   Close,
-  CheckCircle
+  CheckCircle,
+  Refresh
 } from '@mui/icons-material';
 import { adminAPI } from '../../services/api';
 import { downloadProgramPdf } from '../../utils/programPdf';
@@ -15,11 +15,7 @@ export default function SavedPrograms() {
   const [viewRow, setViewRow] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
 
-  useEffect(() => {
-    fetchPrograms();
-  }, []);
-
-  const fetchPrograms = async () => {
+  const fetchPrograms = useCallback(async () => {
     try {
       setLoading(true);
       const response = await adminAPI.getGeneratorStats({ range: 'all' });
@@ -32,7 +28,18 @@ export default function SavedPrograms() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPrograms();
+  }, [fetchPrograms]);
+
+  // Refetch when user returns to this tab so latest data is shown
+  useEffect(() => {
+    const onFocus = () => fetchPrograms();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchPrograms]);
 
   const handleDownload = async (row) => {
     const program = row.program;
@@ -72,9 +79,20 @@ export default function SavedPrograms() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Saved Weekly Programs</h1>
-        <p className="text-gray-600">View and download all weekly calisthenics programs saved by users.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Saved Weekly Programs</h1>
+          <p className="text-gray-600">View and download all weekly calisthenics programs saved by users.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => fetchPrograms()}
+          disabled={loading}
+          className="touch-manipulation inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+        >
+          <Refresh sx={{ fontSize: 20 }} />
+          {loading ? 'Loading…' : 'Refresh'}
+        </button>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
