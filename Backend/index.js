@@ -46,7 +46,6 @@ const adminRoutes = require('./routes/adminRoutes');
 
 // Import middleware
 const adminAuth = require('./middleware/adminAuth');
-const adminIpWhitelist = require('./middleware/adminIpWhitelist');
 
 const app = express();
 
@@ -202,8 +201,7 @@ app.use('/api/calories', calorieRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
-// Admin routes (IP whitelist applied to all /api/admin/*)
-app.use('/api/admin', adminIpWhitelist);
+// Admin routes (password only)
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/orders', adminAuth, orderRoutes);
 

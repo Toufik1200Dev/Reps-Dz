@@ -288,10 +288,6 @@ export const adminAPI = {
   // Generator feedback (admin)
   getFeedbackList: (params) => api.get('/admin/feedback', { params }),
   deleteFeedback: (id) => api.delete(`/admin/feedback/${id}`),
-
-  // IP Whitelist Settings
-  getIpWhitelist: () => api.get('/admin/settings/ip-whitelist'),
-  updateIpWhitelist: (ips) => api.put('/admin/settings/ip-whitelist', { ips }),
 };
 
 // Orders API (public routes)

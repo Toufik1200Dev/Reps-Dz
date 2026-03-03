@@ -708,7 +708,7 @@ export default function Programs() {
               </ul>
               <p className={`text-base font-bold pt-3 border-t border-gray-200 mt-auto flex items-center justify-center gap-2 ${plan === 'paid' ? 'text-amber-800' : 'text-gray-600'}`}>
                 <Payment sx={{ fontSize: 20 }} />
-                {t('programs.planPaidPrice') || '$39.99'}
+                {t('programs.planPaidPrice') || '$15'}
               </p>
             </button>
 
@@ -773,7 +773,7 @@ export default function Programs() {
               </ul>
               <p className={`text-base font-bold pt-3 border-t border-gray-200 mt-auto flex items-center justify-center gap-2 ${plan === 'paid12' ? 'text-amber-800' : 'text-gray-600'}`}>
                 <Payment sx={{ fontSize: 20 }} />
-                $54.99 – Best Value
+                {t('programs.planPaid12Price') || '$25'} – Best Value
               </p>
             </button>
 
@@ -1228,7 +1228,7 @@ export default function Programs() {
             API_CONFIG.PAYPAL_CLIENT_ID ? (
               <div className="w-full flex justify-center">
                 <div className="w-full max-w-md rounded-xl p-4">
-                  <p className="text-gray-900 font-semibold text-sm mb-2">Pay {plan === 'paid12' ? '$54.99' : '$39.99'} with</p>
+                  <p className="text-gray-900 font-semibold text-sm mb-2">Pay {plan === 'paid12' ? (t('programs.planPaid12Price') || '$25') : (t('programs.planPaidPrice') || '$15')} with</p>
                   <PayPalScriptProvider options={{ clientId: API_CONFIG.PAYPAL_CLIENT_ID, currency: 'USD', intent: 'capture' }}>
                     <PayPalButtons
                       style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay', height: 40 }}

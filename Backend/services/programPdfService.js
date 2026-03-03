@@ -369,17 +369,16 @@ function buildProgramHtml(programData, options = {}) {
     `;
   }).join('');
 
-  const weeksHtml = program.map(week => {
+  function renderWeekBlock(week) {
     const intensityKey = week.intensityColor || WEEK_INTENSITY[week.week] || 'yellow';
     const ic = INTENSITY_COLORS[intensityKey] || INTENSITY_COLORS.yellow;
-    const bg = ic.bg;
     const barColor = ic.bar;
     const scheduleHtml = (week.weekSchedule || []).map(s =>
       `<li>${escapeHtml(s.dayLabel)}: ${s.isRest ? 'Rest' : escapeHtml(s.focus)}</li>`
     ).join('');
     const allDaysHtml = (week.days || []).map(day => {
       const exercises = (day.exercises || []).filter(ex => ex.type !== 'warmup' && ex.type !== 'cooldown');
-      const exHtml = exercises.map(ex => {
+      const exHtml = (exercises.length > 0 ? exercises : [{ name: 'Active recovery', sets: 'Light mobility, stretching, or walk 15–20 min. Follow warm-up protocol if desired.', rest: '', note: '' }]).map(ex => {
         const name = (ex.name || '').replace(/^Exercise \d+:\s*/i, '').trim() || 'Exercise';
         const sets = (ex.sets || '').toString().split('\n').filter(Boolean).map(l => `<div class="ex-line">${escapeHtml(l.trim())}</div>`).join('');
         const rest = ex.rest ? `<div class="ex-rest">Rest: ${escapeHtml(ex.rest)}</div>` : '';
@@ -402,20 +401,31 @@ function buildProgramHtml(programData, options = {}) {
       `;
     }).join('');
     const intensityLabel = week.intensityLabel || ic.label;
-    const weekHeader = `
-      <div class="week-bar" style="background: ${barColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
-      <h1 class="week-title">Week ${week.week}</h1>
-      <p class="week-intensity-badge" style="background-color: ${barColor}; color: ${(intensityKey === 'red' || intensityKey === 'orange' || intensityKey === 'blue') ? '#fff' : '#0f172a'}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${escapeHtml(intensityLabel)}</p>
-      ${(week.week === 6 || week.week === 12) ? '<p class="week-subtitle">Test your limits</p>' : ''}
-      ${scheduleHtml ? `<ul class="week-schedule">${scheduleHtml}</ul>` : ''}
-    `;
     return `
-      <div class="page week-page" style="background-color: ${bg}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+      <div class="week-block">
+        <div class="week-bar" style="background: ${barColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
+        <h2 class="week-title-sm">Week ${week.week}</h2>
+        <p class="week-intensity-badge" style="background-color: ${barColor}; color: ${(intensityKey === 'red' || intensityKey === 'orange' || intensityKey === 'blue') ? '#fff' : '#0f172a'}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${escapeHtml(intensityLabel)}</p>
+        ${(week.week === 6 || week.week === 12) ? '<p class="week-subtitle">Test your limits</p>' : ''}
+        ${scheduleHtml ? `<ul class="week-schedule">${scheduleHtml}</ul>` : ''}
+        <div class="days">${allDaysHtml}</div>
+        ${coachReview['week' + week.week] ? `<div class="coach-review-box"><h4>Coach Notes – Week ${week.week}</h4><div class="coach-review-text">${formatCoachNoteAsSections(coachReview['week' + week.week])}</div></div>` : ''}
+      </div>
+    `;
+  }
+
+  const WEEKS_PER_PAGE = 2;
+  const weekChunks = [];
+  for (let i = 0; i < program.length; i += WEEKS_PER_PAGE) {
+    weekChunks.push(program.slice(i, i + WEEKS_PER_PAGE));
+  }
+  const weeksHtml = weekChunks.map((chunk) => {
+    const blocksHtml = chunk.map(w => renderWeekBlock(w)).join('');
+    return `
+      <div class="page week-page" style="background-color: #fffbeb; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
         <div class="cover-bar"></div>
-        <div class="page-content week-page-inner">
-          ${weekHeader}
-          <div class="days">${allDaysHtml}</div>
-${coachReview["week" + week.week] ? `<div class="coach-review-box"><h4>Coach Notes – Week ${week.week}</h4><div class="coach-review-text">${formatCoachNoteAsSections(coachReview["week" + week.week])}</div></div>` : ""}
+        <div class="page-content week-page-inner week-multi">
+          ${blocksHtml}
         </div>
       </div>
     `;
@@ -429,9 +439,9 @@ ${coachReview["week" + week.week] ? `<div class="coach-review-box"><h4>Coach Not
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.45; color: #1e293b; background: #fffbeb; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page { padding: 24px 32px; page-break-after: always; background: #fffbeb; min-height: 297mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { padding: 24px 32px; page-break-after: always; background: #fffbeb; min-height: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .page-cover { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 0; }
-    .page:not(.page-cover) { min-height: 297mm; display: flex; flex-direction: column; }
+    .page:not(.page-cover) { min-height: 0; display: flex; flex-direction: column; }
     .page:last-child { page-break-after: auto; }
     .page-content { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; }
     .section-page { page-break-before: always; padding: 28px 36px; background: #fffbeb; }
@@ -521,13 +531,17 @@ ${coachReview["week" + week.week] ? `<div class="coach-review-box"><h4>Coach Not
     .nutrition-meal .meal-name { font-weight: 700; margin-bottom: 6px; color: #0f172a; }
     .nutrition-meal .meal-time { font-size: 12px; color: #eab308; font-weight: 600; margin-bottom: 4px; }
     .nutrition-meal ul { margin: 6px 0 0 16px; font-size: 13px; line-height: 1.6; }
-    .page.week-page { min-height: 297mm; display: flex; flex-direction: column; }
-    .week-page { padding: 20px 28px; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page.week-page { min-height: 0; display: flex; flex-direction: column; }
+    .week-page { padding: 16px 24px; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .week-page .page-content { flex: 1; min-height: 0; }
-    .week-bar { height: 10px; background: linear-gradient(90deg, #eab308 0%, #ca8a04 100%); margin-bottom: 16px; }
+    .week-page-inner.week-multi { gap: 20px; }
+    .week-block { margin-bottom: 18px; page-break-inside: avoid; }
+    .week-block:last-child { margin-bottom: 0; }
+    .week-title-sm { font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 4px; color: #0f172a; }
+    .week-bar { height: 8px; background: linear-gradient(90deg, #eab308 0%, #ca8a04 100%); margin-bottom: 10px; }
     .week-title { font-family: 'Oswald', sans-serif; font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 6px; }
-    .week-subtitle { font-size: 14px; text-align: center; margin-bottom: 16px; opacity: 0.9; }
-    .week-schedule { list-style: none; margin-bottom: 10px; font-size: 14px; }
+    .week-subtitle { font-size: 12px; text-align: left; margin-bottom: 8px; opacity: 0.9; }
+    .week-schedule { list-style: none; margin-bottom: 8px; font-size: 12px; }
     .week-schedule li { padding: 2px 0; }
     .week-intensity-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-bottom: 8px; }
     .intensity-section-inline { page-break-inside: avoid; }
@@ -538,14 +552,14 @@ ${coachReview["week" + week.week] ? `<div class="coach-review-box"><h4>Coach Not
     .week-summary-row { padding: 10px 14px; margin-bottom: 8px; background: #fff; border-radius: 8px; font-size: 14px; line-height: 1.5; border-left: 4px solid #ca8a04; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .intensity-note { font-size: 13px; color: #64748b; font-style: italic; }
     .protocols-and-intensity-page { min-height: 0; }
-    .day-block { margin-bottom: 14px; page-break-inside: avoid; }
-    .day-title { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .day-block { margin-bottom: 10px; page-break-inside: avoid; }
+    .day-title { font-size: 16px; font-weight: 700; text-align: left; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
     .day-icon { display: inline-flex; flex-shrink: 0; color: inherit; opacity: 0.9; }
-    .exercise { margin-bottom: 10px; padding-left: 12px; border-left: 4px solid rgba(0,0,0,0.25); page-break-inside: avoid; }
-    .ex-name { font-weight: 700; margin-bottom: 4px; font-size: 17px; }
-    .ex-line { margin-bottom: 3px; font-size: 16px; line-height: 1.5; }
-    .ex-rest { font-style: italic; font-size: 14px; margin-top: 2px; opacity: 0.9; }
-    .ex-note { font-size: 13px; color: #64748b; margin-top: 4px; font-style: italic; }
+    .exercise { margin-bottom: 6px; padding-left: 10px; border-left: 3px solid rgba(0,0,0,0.25); page-break-inside: avoid; }
+    .ex-name { font-weight: 700; margin-bottom: 2px; font-size: 14px; }
+    .ex-line { margin-bottom: 2px; font-size: 13px; line-height: 1.4; }
+    .ex-rest { font-style: italic; font-size: 12px; margin-top: 1px; opacity: 0.9; }
+    .ex-note { font-size: 11px; color: #64748b; margin-top: 2px; font-style: italic; }
     .week-dark { color: #fff; }
     .week-dark .week-title, .week-dark .day-title, .week-dark .ex-name { color: #fff; }
     .week-dark .week-schedule li, .week-dark .ex-line, .week-dark .ex-rest, .week-dark .ex-note { color: rgba(255,255,255,0.92); }
@@ -581,25 +595,20 @@ ${coachReview["week" + week.week] ? `<div class="coach-review-box"><h4>Coach Not
       <p class="footer">Toufik Calisthenics · toufik-calisthenics.com</p>
     </div>
   </div>
-  <div class="page materials-page">
+  <div class="page">
     <div class="cover-bar"></div>
-    <div class="page-content combined-page materials-page-content">
+    <div class="page-content combined-page">
       <div class="section-block materials-section">
         <h1>Materials Used</h1>
         <p class="sub">Equipment you need for this program</p>
         <table class="materials-table"><thead><tr><th>Equipment</th><th>Use</th></tr></thead><tbody>${(getMaterialsList() || []).map((m, i) => `<tr><td class="material-name">${escapeHtml(m.name)}</td><td class="material-use">${escapeHtml(m.use)}</td></tr>`).join('')}</tbody></table>
       </div>
-    </div>
-  </div>
-  <div class="page">
-    <div class="cover-bar"></div>
-    <div class="page-content combined-page">
       <div class="nutrition-section">
         <h1>Nutrition Guidelines</h1>
         <p class="sub">Support your training with simple, sustainable nutrition</p>
         ${buildNutritionSection6Week(nutrition, goals)}
       </div>
-      <div class="methods-section" style="margin-top: 24px;">
+      <div class="methods-section" style="margin-top: 20px;">
         <h1>Training Methods Used</h1>
         <p class="sub">Endurance-focused definitions – don't skip!</p>
         <table class="methods-table"><thead><tr><th>Method</th><th>Definition</th></tr></thead><tbody>${methodsHtml}</tbody></table>
@@ -758,7 +767,7 @@ function build1WeekProgramHtml(programData, options = {}) {
 
   const daysHtml = (week?.days || []).map(day => {
     const exercises = (day.exercises || []).filter(ex => ex.type !== 'warmup' && ex.type !== 'cooldown');
-    const exHtml = exercises.map(ex => {
+    const exHtml = (exercises.length > 0 ? exercises : [{ name: 'Active recovery', sets: 'Light mobility, stretching, or walk 15–20 min.', rest: '', note: '' }]).map(ex => {
       const name = (ex.name || '').replace(/^Exercise \d+:\s*/i, '').trim() || 'Exercise';
       const sets = (ex.sets || '').toString().split('\n').filter(Boolean).map(l => `<div class="ex-line">${escapeHtml(l.trim())}</div>`).join('');
       const rest = ex.rest ? `<div class="ex-rest">Rest: ${escapeHtml(ex.rest)}</div>` : '';
@@ -780,9 +789,9 @@ function build1WeekProgramHtml(programData, options = {}) {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.45; color: #1e293b; background: #fffbeb; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page { padding: 24px 32px; page-break-after: always; background: #fffbeb; min-height: 297mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page-cover { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
-    .page:not(.page-cover) { min-height: 297mm; display: flex; flex-direction: column; }
+    .page { padding: 24px 32px; page-break-after: always; background: #fffbeb; min-height: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page-cover { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 0; }
+    .page:not(.page-cover) { min-height: 0; display: flex; flex-direction: column; }
     .page:last-child { page-break-after: auto; }
     .page-content { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; }
     .section-page { page-break-before: always; padding: 28px 36px; background: #fffbeb; }
@@ -841,20 +850,20 @@ function build1WeekProgramHtml(programData, options = {}) {
     .week-summary-list { width: 100%; }
     .week-summary-row { padding: 12px 16px; margin-bottom: 10px; background: #fff; border-radius: 8px; font-size: 14px; line-height: 1.5; border-left: 4px solid #ca8a04; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .intensity-note { font-size: 13px; color: #64748b; font-style: italic; }
-    .page.week-page { min-height: 297mm; display: flex; flex-direction: column; }
+    .page.week-page { min-height: 0; display: flex; flex-direction: column; }
     .week-page { padding: 28px 36px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .week-page .page-content { flex: 1; min-height: 0; }
     .week-bar { height: 10px; margin-bottom: 16px; }
     .week-title { font-family: 'Oswald', sans-serif; font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 6px; }
     .week-intensity-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-bottom: 8px; }
-    .day-block { margin-bottom: 14px; page-break-inside: avoid; }
-    .day-title { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .day-block { margin-bottom: 10px; page-break-inside: avoid; }
+    .day-title { font-size: 16px; font-weight: 700; text-align: left; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
     .day-icon { display: inline-flex; flex-shrink: 0; color: inherit; opacity: 0.9; }
-    .exercise { margin-bottom: 10px; padding-left: 12px; border-left: 4px solid rgba(0,0,0,0.25); page-break-inside: avoid; }
-    .ex-name { font-weight: 700; margin-bottom: 4px; font-size: 17px; }
-    .ex-line { margin-bottom: 3px; font-size: 16px; line-height: 1.5; }
-    .ex-rest { font-style: italic; font-size: 14px; margin-top: 2px; opacity: 0.9; }
-    .ex-note { font-size: 13px; color: #64748b; margin-top: 4px; font-style: italic; }
+    .exercise { margin-bottom: 6px; padding-left: 10px; border-left: 3px solid rgba(0,0,0,0.25); page-break-inside: avoid; }
+    .ex-name { font-weight: 700; margin-bottom: 2px; font-size: 14px; }
+    .ex-line { margin-bottom: 2px; font-size: 13px; line-height: 1.4; }
+    .ex-rest { font-style: italic; font-size: 12px; margin-top: 1px; opacity: 0.9; }
+    .ex-note { font-size: 11px; color: #64748b; margin-top: 2px; font-style: italic; }
     .no-break { page-break-inside: avoid; }
   </style>
 </head>

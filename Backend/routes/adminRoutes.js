@@ -18,8 +18,4 @@ router.get('/free-program-limits', adminAuth, adminController.getFreeProgramLimi
 router.get('/feedback', adminAuth, adminController.getFeedbackListAdmin);
 router.delete('/feedback/:id', adminAuth, adminController.deleteFeedback);
 
-// Admin settings - IP whitelist (protected)
-router.get('/settings/ip-whitelist', adminAuth, adminController.getIpWhitelist);
-router.put('/settings/ip-whitelist', adminAuth, adminController.updateIpWhitelist);
-
 module.exports = router;

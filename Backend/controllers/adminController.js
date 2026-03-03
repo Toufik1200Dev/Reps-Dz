@@ -7,7 +7,6 @@ const SixWeekRequest = require('../models/SixWeekRequest');
 const GeneratorFeedback = require('../models/GeneratorFeedback');
 const AnalyticsEvent = require('../models/AnalyticsEvent');
 const FreeProgramLimit = require('../models/FreeProgramLimit');
-const adminIpWhitelist = require('../middleware/adminIpWhitelist');
 
 /**
  * @desc    Verify admin password
@@ -271,54 +270,6 @@ const deleteFeedback = async (req, res) => {
 };
 
 /**
- * @desc    Get IP whitelist and current client IP
- * @route   GET /api/admin/settings/ip-whitelist
- * @access  Private (Admin)
- */
-const getIpWhitelist = async (req, res) => {
-  try {
-    const ips = adminIpWhitelist.getWhitelist();
-    const currentClientIp = adminIpWhitelist.getClientIp(req);
-    res.status(200).json({
-      success: true,
-      data: { ips, currentClientIp }
-    });
-  } catch (error) {
-    console.error('Error fetching IP whitelist:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching IP whitelist',
-      error: error.message
-    });
-  }
-};
-
-/**
- * @desc    Update IP whitelist
- * @route   PUT /api/admin/settings/ip-whitelist
- * @access  Private (Admin)
- */
-const updateIpWhitelist = async (req, res) => {
-  try {
-    const { ips } = req.body;
-    const list = Array.isArray(ips) ? ips.map((ip) => String(ip).trim()).filter(Boolean) : [];
-    adminIpWhitelist.saveWhitelist(list);
-    res.status(200).json({
-      success: true,
-      message: 'IP whitelist updated',
-      data: { ips: list }
-    });
-  } catch (error) {
-    console.error('Error updating IP whitelist:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating IP whitelist',
-      error: error.message
-    });
-  }
-};
-
-/**
  * @desc    Get program PDF emails sent with pagination (free 1-week + paid 6/12-week)
  * @route   GET /api/admin/emails-sent?page=1&limit=20
  * @access  Private (Admin)
@@ -479,8 +430,6 @@ module.exports = {
   getGeneratorStatsWithSubmissions,
   getFeedbackListAdmin,
   deleteFeedback,
-  getIpWhitelist,
-  updateIpWhitelist,
   getAnalyticsStats,
   getEmailsSent,
   getFreeProgramLimits

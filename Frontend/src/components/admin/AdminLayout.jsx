@@ -16,7 +16,7 @@ import {
   Description,
   RateReview
 } from '@mui/icons-material';
-import { useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { useLocation, Outlet } from 'react-router-dom';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from '../../assets/logo/toufikcalisthenicsLogo.png';
@@ -37,10 +37,14 @@ const menuItems = [
 
 export default function AdminLayout() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { logout } = useAdminAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
+  const handleNavClick = (path) => {
+    setSidebarOpen(false);
+    window.location.href = path;
+  };
 
   const handleLogout = () => {
     logout();
@@ -69,8 +73,7 @@ export default function AdminLayout() {
             <button
               key={item.text}
               onClick={() => {
-                navigate(item.path);
-                setSidebarOpen(false);
+                handleNavClick(item.path);
               }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
                 ? 'bg-secondary text-black font-bold shadow-lg shadow-gold/20'
@@ -170,10 +173,10 @@ export default function AdminLayout() {
                       exit={{ opacity: 0, y: 10 }}
                       className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-20 py-2"
                     >
-                      <button onClick={() => { navigate('/admin/profile'); }} className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-black flex items-center gap-2">
+                      <button onClick={() => { handleNavClick('/admin/profile'); }} className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-black flex items-center gap-2">
                         <AccountCircle className="text-lg" /> Profile
                       </button>
-                      <button onClick={() => { navigate('/admin/settings'); }} className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-black flex items-center gap-2">
+                      <button onClick={() => { handleNavClick('/admin/settings'); }} className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-black flex items-center gap-2">
                         <Settings className="text-lg" /> Settings
                       </button>
                       <div className="h-px bg-gray-100 my-1" />

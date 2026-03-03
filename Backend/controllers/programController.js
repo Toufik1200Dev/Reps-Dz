@@ -2028,7 +2028,7 @@ const createPayPalOrderHandler = async (req, res) => {
       }
     }
 
-    const amountCents = plan === '12week' ? 5499 : 3999; // 54.99 or 39.99 USD
+    const amountCents = plan === '12week' ? 2500 : 1500; // 25.00 or 15.00 USD
     const { id: orderId } = await createPayPalOrder(amountCents, 'USD');
 
     const ageNum = userAge != null && typeof userAge === 'number' && userAge >= 13 && userAge <= 120 ? userAge : undefined;
@@ -2177,7 +2177,7 @@ async function fulfillProgramFromPayPalData(pending) {
     heightCm: heightCm || undefined,
     weightKg: weightKg || undefined,
     stripeSessionId: orderId,
-    amountPaid: is12Week ? 5499 : 3999,
+    amountPaid: is12Week ? 2500 : 1500,
     currency: 'usd',
     paymentStatus: 'paid'
   }).catch((err) => console.error('Error saving SixWeekRequest:', err));
