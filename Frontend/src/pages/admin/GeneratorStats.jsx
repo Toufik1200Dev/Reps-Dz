@@ -252,7 +252,7 @@ export default function GeneratorStats() {
                 <th className="p-3 font-bold text-gray-600">Max Reps</th>
                 <th className="p-3 font-bold text-gray-600">H/W</th>
                 <th className="p-3 font-bold text-gray-600">Payment</th>
-                <th className="p-3 font-bold text-gray-600">Date</th>
+                <th className="p-3 font-bold text-gray-600">Date & time</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -296,7 +296,7 @@ export default function GeneratorStats() {
                 <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Pull / Dips / Push / Squats / Legs</th>
                 <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Muscle-ups</th>
                 <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Height / Weight</th>
-                <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Date</th>
+                <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Date & time</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">

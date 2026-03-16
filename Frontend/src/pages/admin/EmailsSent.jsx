@@ -157,7 +157,7 @@ export default function EmailsSent() {
                 <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Name</th>
                 <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Type</th>
                 <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Level</th>
-                <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Sent at</th>
+                <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Date & time</th>
                 <th className="p-3 font-bold text-gray-600 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>

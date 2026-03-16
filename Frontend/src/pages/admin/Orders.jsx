@@ -235,7 +235,7 @@ export default function Orders() {
                 <th className="p-4 font-bold text-gray-600 text-sm">Products</th>
                 <th className="p-4 font-bold text-gray-600 text-sm">Total</th>
                 <th className="p-4 font-bold text-gray-600 text-sm">Status</th>
-                <th className="p-4 font-bold text-gray-600 text-sm">Date</th>
+                <th className="p-4 font-bold text-gray-600 text-sm">Date & time</th>
                 <th className="p-4 font-bold text-gray-600 text-sm text-right">Actions</th>
               </tr>
             </thead>
@@ -267,8 +267,8 @@ export default function Orders() {
                       {order.status}
                     </span>
                   </td>
-                  <td className="p-4 text-sm text-gray-500">
-                    {new Date(order.orderDate).toLocaleDateString()}
+                  <td className="p-4 text-sm text-gray-500 whitespace-nowrap">
+                    {new Date(order.orderDate).toLocaleString()}
                   </td>
                   <td className="p-4">
                     <div className="flex justify-end gap-2">
@@ -413,7 +413,7 @@ export default function Orders() {
                         {selectedOrder.status}
                       </span>
                     </p>
-                    <p><span className="font-bold">Date:</span> {new Date(selectedOrder.orderDate).toLocaleDateString()}</p>
+                    <p><span className="font-bold">Date & time:</span> {new Date(selectedOrder.orderDate).toLocaleString()}</p>
                     <p><span className="font-bold">Payment:</span> {selectedOrder.paymentMethod}</p>
                   </div>
                 </div>

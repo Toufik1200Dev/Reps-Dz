@@ -105,7 +105,7 @@ export default function SavedPrograms() {
                 <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Pull / Dips / Push / Squats / Legs</th>
                 <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Muscle-ups</th>
                 <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Height / Weight</th>
-                <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Saved</th>
+                <th className="p-3 font-bold text-gray-600 whitespace-nowrap">Date & time</th>
                 <th className="p-3 font-bold text-gray-600 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>

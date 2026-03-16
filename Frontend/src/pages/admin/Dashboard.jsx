@@ -72,7 +72,7 @@ export default function Dashboard() {
           customer: o.customer?.fullName || '—',
           amount: o.totalAmount ?? 0,
           status: o.status || 'pending',
-          date: o.orderDate ? new Date(o.orderDate).toLocaleDateString() : '—',
+          date: o.orderDate ? new Date(o.orderDate).toLocaleString() : '—',
         }));
 
         const products = productsRes.status === 'fulfilled' ? productsRes.value : null;
